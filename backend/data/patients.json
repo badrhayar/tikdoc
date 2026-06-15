@@ -1,0 +1,9 @@
+[
+  {"id":1,"name":"Fatima Zahra El Amrani","phone":"06 12 34 56 78","email":"f.elamrani@email.ma","cin":"BK284517","dob":"1989-03-14","sex":"Femme","blood":"O+","allergies":"Pénicilline","chronic":"Aucune","address":"12 Rue Ibn Sina, Anfa","city":"Casablanca","insurance":"CNSS"},
+  {"id":2,"name":"Amina Benali","phone":"06 23 45 67 89","email":"amina.benali@email.ma","cin":"AB905142","dob":"1992-07-02","sex":"Femme","blood":"A+","allergies":"Aucune connue","chronic":"Hypothyroïdie","address":"45 Av. Hassan II","city":"Rabat","insurance":"CNOPS"},
+  {"id":3,"name":"Salma El Haddad","phone":"06 34 56 78 90","email":"salma.h@email.ma","cin":"C447821","dob":"1995-11-28","sex":"Femme","blood":"B+","allergies":"Aucune connue","chronic":"Aucune","address":"8 Rue de Marrakech","city":"Casablanca","insurance":"Mutuelle privée"},
+  {"id":4,"name":"Youssef Alaoui","phone":"06 45 67 89 01","email":"youssef@email.ma","cin":"AB123456","dob":"1987-01-19","sex":"Homme","blood":"O+","allergies":"Aucune connue","chronic":"Aucune","address":"23 Bd Mohammed V","city":"Casablanca","insurance":"CNSS"},
+  {"id":5,"name":"Meryem Zouari","phone":"06 56 78 90 12","email":"meryem.zouari@email.ma","cin":"BE338910","dob":"1990-05-09","sex":"Femme","blood":"AB+","allergies":"Aspirine","chronic":"Asthme","address":"17 Rue Tarik Ibn Ziad","city":"Tanger","insurance":"CNSS"},
+  {"id":6,"name":"Khadija Mansouri","phone":"06 67 89 01 23","email":"k.mansouri@email.ma","cin":"D192047","dob":"1983-09-22","sex":"Femme","blood":"A-","allergies":"Aucune connue","chronic":"Diabète type 2","address":"5 Rue Al Massira","city":"Fès","insurance":"CNOPS"},
+  {"id":7,"name":"Hassan Benkirane","phone":"06 78 90 12 34","email":"hassan.b@email.ma","cin":"BJ560318","dob":"1978-12-04","sex":"Homme","blood":"B-","allergies":"Iode","chronic":"Hypertension","address":"90 Av. des FAR","city":"Marrakech","insurance":"Sans assurance"}
+]

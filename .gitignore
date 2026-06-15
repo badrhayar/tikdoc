@@ -1,0 +1,23 @@
+# Root-level ignores
+
+# Dependencies
+node_modules/
+
+# Environment variables — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+
+# Supabase CLI local files
+.supabase/
+supabase/.temp/
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
