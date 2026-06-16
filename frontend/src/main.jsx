@@ -8,3 +8,15 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// ── PWA service worker registration ─────────────────────────────────────────
+// Registered only in the production build so it never interferes with Vite's
+// dev server / hot-reload. On the deployed site it enables offline support and
+// installability.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => console.log('TikDoc SW registered', reg))
+      .catch((err) => console.log('SW registration failed', err));
+  });
+}

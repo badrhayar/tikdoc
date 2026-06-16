@@ -113,6 +113,15 @@ html, body, #root { max-width: 100%; overflow-x: hidden; }
   html[dir="rtl"] body { font-size: 15px; }
 }
 
+/* Arabic renders in a proper Arabic typeface when RTL is active. */
+html[dir="rtl"] body,
+html[dir="rtl"] button,
+html[dir="rtl"] input,
+html[dir="rtl"] select,
+html[dir="rtl"] textarea {
+  font-family: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
+}
+
 /* Images never overflow their container. */
 img { max-width: 100%; }
 

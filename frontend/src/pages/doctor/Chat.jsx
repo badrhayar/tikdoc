@@ -180,7 +180,7 @@ export default function Chat({ state, setState }) {
                   <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                     {msg.type === 'image' ? (
                       <div style={{ position: 'relative', maxWidth: 200 }}>
-                        <img src={msg.url} alt="img" style={{ borderRadius: 12, maxWidth: 200, maxHeight: 150, objectFit: 'cover', display: 'block' }} />
+                        <img loading="lazy" src={msg.url} alt="img" style={{ borderRadius: 12, maxWidth: 200, maxHeight: 150, objectFit: 'cover', display: 'block' }} />
                       </div>
                     ) : msg.type === 'audio' ? (
                       <div style={{ background: isMe ? PRIMARY : '#fff', color: isMe ? '#fff' : DARK, borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', border: isMe ? 'none' : `1px solid ${BORDER}`, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, maxWidth: '68%' }}>

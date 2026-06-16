@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import PWAInstall from './components/PWAInstall';
 
 const Landing        = lazy(() => import('./pages/Landing'));
 const Search         = lazy(() => import('./pages/Search'));
@@ -50,6 +51,8 @@ function AppShell() {
       <Suspense fallback={null}>
         <Screen />
       </Suspense>
+
+      <PWAInstall />
 
       {toastShow && (
         <div

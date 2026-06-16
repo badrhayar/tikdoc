@@ -65,7 +65,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: `0 ${padX}px`, height: isPhone ? 60 : 70, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 28 }}>
           {/* Logo */}
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
+            <img loading="lazy" src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
               Tik<span style={{ color: PRIMARY }}>Doc</span>
             </span>
@@ -368,7 +368,7 @@ export default function Landing() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.4fr 1fr 1fr 1fr', gap: isPhone ? 24 : 40, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
             <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
-                <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 26, height: 26, borderRadius: 7 }} />
+                <img loading="lazy" src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 26, height: 26, borderRadius: 7 }} />
                 <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', fontWeight: 800, fontSize: 18 }}>
                   Tik<span style={{ color: PRIMARY }}>Doc</span>
                 </span>

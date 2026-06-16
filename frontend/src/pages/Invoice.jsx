@@ -100,7 +100,7 @@ export default function Invoice() {
             justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src="/tikdoc-logo.png" alt="TikDoc" style={{ height: 40 }} />
+              <img loading="lazy" src="/tikdoc-logo.png" alt="TikDoc" style={{ height: 40 }} />
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{
