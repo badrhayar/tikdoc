@@ -87,3 +87,28 @@ button:focus-visible{
   body{background:#fff;}
   .invoice-sheet{box-shadow:none!important;border:none!important;margin:0!important;}
 }
+
+/* ── Mobile / responsive globals ──────────────────────────────────────────── */
+/* Never allow the page to scroll sideways (a fixed-width element somewhere is
+   the usual culprit; this is the safety net). */
+html, body, #root { max-width: 100%; overflow-x: hidden; }
+
+/* Horizontal swipe rows (used for card carousels on mobile). */
+.sa-hscroll {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.sa-hscroll::-webkit-scrollbar { display: none; }
+.sa-snap { scroll-snap-align: start; }
+
+@media (max-width: 767px) {
+  /* iOS zooms the page when focusing an input smaller than 16px — force 16px on
+     phones. !important is required to beat inline font-size styles. */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Arabic body text is hard to read very small — lift the floor a touch. */
+  html[dir="rtl"] body { font-size: 15px; }
+}

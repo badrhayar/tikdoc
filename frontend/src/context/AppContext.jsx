@@ -154,6 +154,14 @@ export function AppProvider({ children }) {
     dispatch({ screen });
   };
 
+  // Apply text direction at the <html> level so RTL flips the whole document
+  // (cards, drawers, forms) — not just individual components.
+  useEffect(() => {
+    const dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', state.lang || 'fr');
+  }, [state.lang]);
+
   // Countdown timer: update now every second
   useEffect(() => {
     const id = setInterval(() => dispatch({ now: Date.now() }), 1000);
