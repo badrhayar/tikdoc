@@ -19,20 +19,17 @@ export default function BookingInfo() {
   const { state, setState, go, reloadAppointments, isSupabaseConfigured } = useApp();
   const { isMobile } = useViewport();
   const col2 = isMobile ? '1fr' : '1fr 1fr';
-  const { info = {}, payMethod = 'cash', selDoc, bookDay, bookSlot, patient, appUser } = state;
+  const { info = {}, payMethod = 'cash', selDoc, bookSlot, bookDate, patient, appUser } = state;
 
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
   const price = doc?.price || 300;
 
-  const BOOK_DAYS = [
-    { wd: 'Lun', num: 13 }, { wd: 'Mar', num: 14 }, { wd: 'Mer', num: 15 },
-    { wd: 'Jeu', num: 16 }, { wd: 'Ven', num: 17 }, { wd: 'Sam', num: 18 }, { wd: 'Dim', num: 19 },
-  ];
-  const dayIdx  = bookDay ?? 2;
-  const slot    = bookSlot || '14:00';
-  const dayObj  = BOOK_DAYS[dayIdx] || BOOK_DAYS[2];
-  const dateStr = `${dayObj.wd} ${dayObj.num} Mai 2024 à ${slot}`;
+  const slot = bookSlot || '';
+  const dateObj = bookDate ? new Date(`${bookDate}T00:00:00`) : null;
+  const dateStr = dateObj
+    ? `${dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}${slot ? ' à ' + slot : ''}`
+    : 'Date à choisir';
 
   const setInfo = (field, value) =>
     setState({ info: { ...info, [field]: value } });
@@ -46,7 +43,7 @@ export default function BookingInfo() {
         return;
       }
       try {
-        const iso = new Date(`2024-05-${String(dayObj.num).padStart(2, '0')}T${slot}:00`).toISOString();
+        const iso = new Date(`${bookDate}T${slot || '09:00'}:00`).toISOString();
         const appt = await createAppointment({
           patientId: appUser.id,
           doctorId:  doc.id,

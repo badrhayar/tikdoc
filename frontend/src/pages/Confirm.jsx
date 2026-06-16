@@ -13,8 +13,9 @@ export default function Confirm() {
   const { state, go } = useApp();
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
   const doc = doctors.find(d => d.id === state.selDoc) || doctors[0];
-  const dayObj = BOOK_DAYS[state.bookDay] || BOOK_DAYS[0];
-  const dateLabel = dayObj.wd + ' ' + dayObj.num + ' Mai 2024';
+  const dateLabel = state.bookDate
+    ? new Date(`${state.bookDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+    : 'Date confirmée';
 
   return (
     <div style={{

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { I18N, initials } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -14,6 +15,7 @@ export default function About() {
   const { lang, langOpen, patient } = state;
   const t = I18N[lang] || I18N.fr;
   const dir = t.dir || 'ltr';
+  const { isMobile } = useViewport();
   const [hoveredNav, setHoveredNav] = useState(null);
   const [hoveredLang, setHoveredLang] = useState(null);
 
@@ -64,20 +66,22 @@ export default function About() {
     <div dir={dir} style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px', height: isMobile ? 58 : 68, display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 28 }}>
           {/* Logo */}
           <button
             onClick={() => go('home')}
             style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
             <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
-            <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
-              Tik<span style={{ color: PRIMARY }}>Doc</span>
-            </span>
+            {!isMobile && (
+              <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
+                Tik<span style={{ color: PRIMARY }}>Doc</span>
+              </span>
+            )}
           </button>
 
-          {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+          {/* Nav — horizontally scrollable on mobile (no wrap, hidden scrollbar) */}
+          <nav className="sa-navscroll" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
             {navItems.map((item) => (
               <button
                 key={item.key}
@@ -166,7 +170,7 @@ export default function About() {
                   {patient.name?.split(' ')[0]}
                 </span>
               </button>
-            ) : (
+            ) : !isMobile ? (
               <>
                 <button
                   onClick={() => go('plogin')}
@@ -189,13 +193,13 @@ export default function About() {
                   {t.btnRegister}
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section style={{ background: 'linear-gradient(180deg, #EAF6F0 0%, #F4F8F5 100%)', padding: '80px 24px 72px' }}>
+      <section style={{ background: 'linear-gradient(180deg, #EAF6F0 0%, #F4F8F5 100%)', padding: isMobile ? '44px 16px 40px' : '80px 24px 72px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -205,7 +209,7 @@ export default function About() {
             <span>🌿</span>
             <span>{lang === 'ar' ? 'من نحن' : lang === 'en' ? 'About TikDoc' : 'À propos de TikDoc'}</span>
           </div>
-          <h1 style={{ fontSize: 40, fontWeight: 800, color: DARK, lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.4px' }}>
+          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 800, color: DARK, lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.4px' }}>
             {lang === 'ar'
               ? 'نُيسّر الوصول إلى الرعاية الصحية في المغرب'
               : lang === 'en'
@@ -223,8 +227,8 @@ export default function About() {
       </section>
 
       {/* Stats */}
-      <section style={{ padding: '56px 24px', background: '#fff' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+      <section style={{ padding: isMobile ? '36px 16px' : '56px 24px', background: '#fff' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 14 : 24 }}>
           {stats.map((s, i) => (
             <div
               key={i}
@@ -245,12 +249,12 @@ export default function About() {
       </section>
 
       {/* Features */}
-      <section style={{ padding: '56px 24px 72px', background: BG }}>
+      <section style={{ padding: isMobile ? '36px 16px 48px' : '56px 24px 72px', background: BG }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', marginBottom: 40, letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: isMobile ? 23 : 28, fontWeight: 800, color: DARK, textAlign: 'center', marginBottom: isMobile ? 28 : 40, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'قيمنا' : lang === 'en' ? 'Our Values' : 'Nos valeurs'}
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 14 : 24 }}>
             {features.map((f, i) => (
               <div
                 key={i}

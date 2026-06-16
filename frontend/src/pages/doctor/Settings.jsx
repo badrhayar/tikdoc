@@ -324,6 +324,8 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 <div key={svc.id} style={{
                   display: 'flex',
                   gap: 10,
+                  rowGap: 10,
+                  flexWrap: 'wrap',
                   alignItems: 'center',
                   padding: '12px 14px',
                   background: BG,
@@ -335,7 +337,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                     onChange={e => updateService(svc.id, 'name', e.target.value)}
                     placeholder="Nom du service"
                     style={{
-                      flex: 2,
+                      flex: isMobile ? '1 1 100%' : 2,
                       border: `1px solid ${BORDER}`,
                       borderRadius: 6,
                       padding: '7px 10px',
@@ -346,7 +348,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                       minWidth: 0,
                     }}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: isMobile ? '1 1 110px' : 1, minWidth: 0 }}>
                     <input
                       type="number"
                       value={svc.price}

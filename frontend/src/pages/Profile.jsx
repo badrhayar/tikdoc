@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor } from '../shared.jsx';
@@ -9,23 +10,55 @@ const BORDER  = '#EAEFEC';
 const MUTED   = '#6B7B76';
 const GRAD    = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)';
 
+const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const FR_DOW = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const pad2 = (n) => String(n).padStart(2, '0');
+const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
 export default function Profile() {
   const { state, setState, go } = useApp();
   const { isMobile } = useViewport();
-  const { selDoc, bookDay, bookSlot, patient } = state;
+  const { selDoc, bookSlot, bookDate, patient } = state;
 
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
   const si  = SPEC_INFO[doc.spec] || {};
   const [avatarBg, avatarFg] = tint(doctors.indexOf(doc));
 
-  const startConfirm = () => {
-    if (patient) go('confirm');
-    else go('pinfo');
+  // ── Booking calendar state (defaults to the real current month) ──
+  const today = new Date();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const [viewY, setViewY] = useState(today.getFullYear());
+  const [viewM, setViewM] = useState(today.getMonth());
+
+  const selectedSlot = bookSlot || '';
+  const selectedDate = bookDate || '';
+
+  const atFirstMonth = viewY === today.getFullYear() && viewM === today.getMonth();
+  const prevMonth = () => {
+    if (atFirstMonth) return;            // don't browse into the past
+    const m = viewM - 1;
+    if (m < 0) { setViewM(11); setViewY(viewY - 1); } else setViewM(m);
+  };
+  const nextMonth = () => {
+    const m = viewM + 1;
+    if (m > 11) { setViewM(0); setViewY(viewY + 1); } else setViewM(m);
   };
 
-  const selectedSlot = bookSlot || BOOK_SLOTS[0];
-  const selectedDay  = bookDay ?? 2;
+  // Build the month grid (weeks start Monday).
+  const firstDow = (new Date(viewY, viewM, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const startConfirm = () => {
+    if (!selectedDate || !selectedSlot) return;
+    // Always go through the booking-info step — that's where the appointment is
+    // actually written to the database (for logged-in patients too).
+    go('pinfo');
+  };
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
@@ -171,74 +204,94 @@ export default function Profile() {
 
         {/* Right: Booking card */}
         <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 18 : 28, border: `1px solid ${BORDER}`, position: isMobile ? 'static' : 'sticky', top: 86, boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 20 }}>Choisissez une date et une heure</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 16 }}>Choisissez une date et une heure</div>
 
-          {/* Date nav */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <button style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <span style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Mai 2024</span>
-            <button style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+          {/* Month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <button onClick={prevMonth} disabled={atFirstMonth} aria-label="Mois précédent" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, width: 44, height: 44, cursor: atFirstMonth ? 'default' : 'pointer', fontSize: 18, color: atFirstMonth ? '#C9D6D1' : DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+            <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{FR_MONTHS[viewM]} {viewY}</span>
+            <button onClick={nextMonth} aria-label="Mois suivant" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, width: 44, height: 44, cursor: 'pointer', fontSize: 18, color: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
           </div>
 
-          {/* Day buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 14 }}>
-            {BOOK_DAYS.map((day, i) => {
-              const isActive = selectedDay === i;
+          {/* Weekday headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+            {FR_DOW.map((d) => (
+              <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: MUTED }}>{d}</div>
+            ))}
+          </div>
+
+          {/* Month grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 14 }}>
+            {cells.map((day, idx) => {
+              if (!day) return <div key={`e${idx}`} />;
+              const date = new Date(viewY, viewM, day);
+              const iso = isoOf(date);
+              const isToday = iso === isoOf(today);
+              const isPast = date < todayMid;
+              const isSunday = date.getDay() === 0;
+              const available = !isPast && !isSunday;
+              const selected = selectedDate === iso;
               return (
                 <button
-                  key={i}
-                  onClick={() => setState({ bookDay: i })}
+                  key={iso}
+                  onClick={() => available && setState({ bookDate: iso, bookSlot: '' })}
+                  disabled={!available}
                   style={{
-                    padding: '9px 4px', borderRadius: 11, cursor: 'pointer',
-                    border: `1.5px solid ${isActive ? 'transparent' : BORDER}`,
-                    background: isActive ? GRAD : '#fff',
-                    color: isActive ? '#fff' : DARK,
-                    fontSize: 12, fontWeight: 700, textAlign: 'center',
-                    boxShadow: isActive ? '0 6px 14px -6px rgba(22,160,106,0.6)' : 'none',
-                    transition: 'all 0.15s',
+                    height: 44, borderRadius: 11, cursor: available ? 'pointer' : 'default',
+                    border: selected ? '1.5px solid transparent' : (isToday ? `1.5px solid ${PRIMARY}` : `1px solid ${BORDER}`),
+                    background: selected ? GRAD : (available ? '#fff' : '#F4F6F5'),
+                    color: selected ? '#fff' : (available ? DARK : '#C0CBC6'),
+                    fontSize: 14, fontWeight: selected || isToday ? 800 : 600,
+                    boxShadow: selected ? '0 6px 14px -6px rgba(22,160,106,0.6)' : 'none',
+                    transition: 'all 0.12s',
                   }}
                 >
-                  <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 2 }}>{day.wd}</div>
-                  <div>{day.num}</div>
+                  {day}
                 </button>
               );
             })}
           </div>
 
-          {/* Date label */}
-          <div style={{ fontSize: 13, color: MUTED, marginBottom: 14, textAlign: 'center' }}>
-            {BOOK_DAYS[selectedDay].wd} {BOOK_DAYS[selectedDay].num} Mai 2024
+          {/* Legend */}
+          <div style={{ display: 'flex', gap: 14, marginBottom: 14, fontSize: 11, color: MUTED, flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: `1.5px solid ${PRIMARY}` }} /> Aujourd'hui</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: '#F4F6F5', border: `1px solid ${BORDER}` }} /> Indisponible</span>
           </div>
 
           {/* Time slots */}
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 10 }}>Horaires disponibles</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 7 }}>
-              {BOOK_SLOTS.map((slot) => {
-                const isActive = selectedSlot === slot;
-                return (
-                  <button
-                    key={slot}
-                    onClick={() => setState({ bookSlot: slot })}
-                    style={{
-                      padding: '10px 4px', borderRadius: 10, cursor: 'pointer',
-                      border: `1.5px solid ${isActive ? 'transparent' : BORDER}`,
-                      background: isActive ? GRAD : '#fff',
-                      color: isActive ? '#fff' : DARK,
-                      fontSize: 13, fontWeight: 700, textAlign: 'center',
-                      boxShadow: isActive ? '0 6px 14px -6px rgba(22,160,106,0.6)' : 'none',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 10 }}>
+              {selectedDate ? 'Horaires disponibles' : 'Sélectionnez d\'abord une date'}
             </div>
+            {selectedDate ? (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
+                {BOOK_SLOTS.map((slot) => {
+                  const isActive = selectedSlot === slot;
+                  return (
+                    <button
+                      key={slot}
+                      onClick={() => setState({ bookSlot: slot })}
+                      style={{
+                        minHeight: 44, padding: '10px 4px', borderRadius: 10, cursor: 'pointer',
+                        border: `1.5px solid ${isActive ? 'transparent' : BORDER}`,
+                        background: isActive ? GRAD : '#fff',
+                        color: isActive ? '#fff' : DARK,
+                        fontSize: 14, fontWeight: 700, textAlign: 'center',
+                        boxShadow: isActive ? '0 6px 14px -6px rgba(22,160,106,0.6)' : 'none',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: '18px 14px', textAlign: 'center', color: MUTED, fontSize: 13, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
+                Touchez une date disponible dans le calendrier ci-dessus.
+              </div>
+            )}
           </div>
-
-          {/* Local time note */}
-          <div style={{ fontSize: 11, color: MUTED, textAlign: 'center', marginBottom: 18 }}>🌐 Heure locale (GMT+1)</div>
 
           {/* Info box */}
           <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
@@ -259,15 +312,16 @@ export default function Profile() {
           {/* Confirm button */}
           <button
             onClick={startConfirm}
+            disabled={!selectedDate || !selectedSlot}
             style={{
-              width: '100%', background: GRAD, color: '#fff',
-              border: 'none', borderRadius: 13, padding: '15px 20px',
-              fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              width: '100%', background: (!selectedDate || !selectedSlot) ? '#C9D6D1' : GRAD, color: '#fff',
+              border: 'none', borderRadius: 13, padding: '15px 20px', minHeight: 50,
+              fontSize: 15, fontWeight: 700, cursor: (!selectedDate || !selectedSlot) ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: '0 10px 22px -8px rgba(22,160,106,0.6)',
+              boxShadow: (!selectedDate || !selectedSlot) ? 'none' : '0 10px 22px -8px rgba(22,160,106,0.6)',
             }}
           >
-            Confirmer le rendez-vous · {selectedSlot}
+            {selectedDate && selectedSlot ? `Confirmer · ${selectedSlot}` : 'Choisissez une date et une heure'}
           </button>
         </div>
       </div>

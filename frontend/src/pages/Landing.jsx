@@ -351,7 +351,7 @@ export default function Landing() {
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: isPhone ? 'column' : 'row', gap: 12, flexShrink: 0 }}>
-              <button onClick={() => go('dregister')} style={{ background: '#fff', color: PRIMARY, border: 'none', borderRadius: 12, padding: '14px 26px', fontSize: 15, fontWeight: 700, cursor: 'pointer', minHeight: 48, boxShadow: '0 10px 24px -8px rgba(0,0,0,0.3)' }}>
+              <button onClick={() => go('docregister')} style={{ background: '#fff', color: PRIMARY, border: 'none', borderRadius: 12, padding: '14px 26px', fontSize: 15, fontWeight: 700, cursor: 'pointer', minHeight: 48, boxShadow: '0 10px 24px -8px rgba(0,0,0,0.3)' }}>
                 {tr('Inscrire mon cabinet', 'Register my practice', 'سجّل عيادتي')}
               </button>
               <button onClick={() => go('login')} style={{ background: 'rgba(255,255,255,0.14)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 12, padding: '14px 24px', fontSize: 15, fontWeight: 700, cursor: 'pointer', minHeight: 48 }}>

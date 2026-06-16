@@ -112,3 +112,21 @@ html, body, #root { max-width: 100%; overflow-x: hidden; }
   /* Arabic body text is hard to read very small — lift the floor a touch. */
   html[dir="rtl"] body { font-size: 15px; }
 }
+
+/* Images never overflow their container. */
+img { max-width: 100%; }
+
+/* Horizontally scrollable bar (e.g. top nav with many items): scrolls with the
+   finger, no visible scrollbar, items never wrap to a second line. */
+.sa-navscroll {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.sa-navscroll::-webkit-scrollbar { display: none; }
+.sa-navscroll > * { flex-shrink: 0; }
+
+/* Smooth momentum scrolling for any scroll container on iOS. */
+.sa-hscroll, .sa-navscroll, .sa-yscroll { -webkit-overflow-scrolling: touch; }

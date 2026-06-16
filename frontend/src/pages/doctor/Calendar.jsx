@@ -34,10 +34,11 @@ const SERVICE_OPTS = Object.keys(SVC_COLORS);
 const PAY_OPTS    = ['Espèces', 'CMI', 'M-Wallet'];
 const STATUS_OPTS = ['Payé', 'En attente', 'Annulé'];
 
-// Reference: Monday 2024-05-13 = weekOffset 0
-const BASE_MONDAY = new Date('2024-05-13T00:00:00');
-// "today" in the mock data context
-const TODAY_STR = '2024-05-17';
+// weekOffset 0 = the week containing the real "today".
+const _now = new Date();
+const _dow = (_now.getDay() + 6) % 7; // Monday = 0
+const BASE_MONDAY = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _dow);
+const TODAY_STR = isoDate(_now);
 
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -145,7 +146,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
   // ── Shared grid body ───────────────────────────────────────────────────────
   const renderGridBody = (days) => (
-    <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 310px)' }}>
+    <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 310px)', paddingTop: 10 }}>
       {/* Time axis */}
       <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }}>
         {HOURS.map((h, i) => (

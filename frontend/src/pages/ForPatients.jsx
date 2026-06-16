@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { I18N, initials } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -14,6 +15,7 @@ export default function ForPatients() {
   const { lang, langOpen, patient } = state;
   const t = I18N[lang] || I18N.fr;
   const dir = t.dir || 'ltr';
+  const { isMobile } = useViewport();
   const [hoveredNav, setHoveredNav] = useState(null);
   const [hoveredLang, setHoveredLang] = useState(null);
 
@@ -73,20 +75,22 @@ export default function ForPatients() {
     <div dir={dir} style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px', height: isMobile ? 58 : 68, display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 28 }}>
           {/* Logo */}
           <button
             onClick={() => go('home')}
             style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
             <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
-            <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
-              Tik<span style={{ color: PRIMARY }}>Doc</span>
-            </span>
+            {!isMobile && (
+              <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
+                Tik<span style={{ color: PRIMARY }}>Doc</span>
+              </span>
+            )}
           </button>
 
-          {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+          {/* Nav — horizontally scrollable on mobile */}
+          <nav className="sa-navscroll" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
             {navItems.map((item) => (
               <button
                 key={item.key}
@@ -176,7 +180,7 @@ export default function ForPatients() {
                   {patient.name?.split(' ')[0]}
                 </span>
               </button>
-            ) : (
+            ) : !isMobile ? (
               <>
                 <button
                   onClick={() => go('plogin')}
@@ -199,7 +203,7 @@ export default function ForPatients() {
                   {t.btnRegister}
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
@@ -379,7 +383,7 @@ export default function ForPatients() {
           <p style={{ textAlign: 'center', color: MUTED, fontSize: 15, marginBottom: 40 }}>
             {lang === 'ar' ? 'مزايا مصممة لتجربة صحية أفضل' : lang === 'en' ? 'Features designed for a better health experience' : 'Des fonctionnalités pensées pour une meilleure expérience santé'}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>
             {features.map((f, i) => (
               <div
                 key={i}

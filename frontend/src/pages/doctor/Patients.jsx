@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -32,6 +33,7 @@ const STATS = [
 ];
 
 export default function Patients({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [activeFilter, setActiveFilter] = useState('Tous');
   const [patientSearch, setPatientSearch] = useState('');
 
@@ -51,7 +53,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   });
 
   return (
-    <div style={{ padding: '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
@@ -71,7 +73,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 16, marginBottom: 20 }}>
         {STATS.map(stat => (
           <div key={stat.label} style={{
             background: '#fff', borderRadius: 12, border: `1px solid ${BORDER_STRONG}`,
