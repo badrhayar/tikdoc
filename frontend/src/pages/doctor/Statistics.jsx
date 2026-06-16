@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -109,6 +110,7 @@ function ConsultCard({ label, value, trend, trendDir, sub }) {
 }
 
 export default function Statistics({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [period, setPeriod] = useState('30 jours');
 
   const consultations = state?.consultations || [];
@@ -169,7 +171,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const RANK_COLORS = [PRIMARY, '#3B82F6', '#8B5CF6', '#F59E0B', MUTED];
 
   return (
-    <div style={{ padding: 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
@@ -318,7 +320,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         <SectionTitle emoji="👥" title="Démographie patients" borderColor="#8B5CF6" />
 
         {/* 2-column: Genre + Age */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 14 : 24, marginBottom: isMobile ? 16 : 32 }}>
 
           {/* Genre */}
           <div style={{
@@ -488,7 +490,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         <SectionTitle emoji="📊" title="Indicateurs détaillés" borderColor={DARK} />
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
           gap: 16,
         }}>
           {MINI_STATS.map((s) => (

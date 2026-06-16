@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
 import { createAppointment } from '../lib/api';
 
@@ -16,6 +17,8 @@ const PAY_OPTIONS = [
 
 export default function BookingInfo() {
   const { state, setState, go, reloadAppointments, isSupabaseConfigured } = useApp();
+  const { isMobile } = useViewport();
+  const col2 = isMobile ? '1fr' : '1fr 1fr';
   const { info = {}, payMethod = 'cash', selDoc, bookDay, bookSlot, patient, appUser } = state;
 
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
@@ -155,7 +158,7 @@ export default function BookingInfo() {
           <h1 style={{ fontSize: 20, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>Vos informations</h1>
 
           {/* 2-col grid: name + CIN */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>Nom complet</label>
               <input
@@ -179,7 +182,7 @@ export default function BookingInfo() {
           </div>
 
           {/* 2-col grid: phone + email */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>Téléphone</label>
               <div style={{ display: 'flex', border: `1.5px solid ${BORDER}`, borderRadius: 9, overflow: 'hidden', background: '#fff' }}>

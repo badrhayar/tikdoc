@@ -63,14 +63,17 @@ function Toggle({ on, onToggle }) {
   );
 }
 
+import { useViewport } from '../../hooks/useViewport';
+
 export default function Notifications({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [activeTab, setActiveTab] = useState(0);
   const [toggles, setToggles] = useState(() => Object.fromEntries(automatedRules.map(r => [r.id, r.defaultOn])));
 
   const tabs = ['SMS Envoyés', 'Rappels automatiques', 'Modèles SMS'];
 
   return (
-    <div style={{ padding: 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Notifications & SMS</h1>

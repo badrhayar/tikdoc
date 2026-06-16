@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 import { fetchConversations, fetchMessages, sendMessage } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -29,6 +30,7 @@ const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString('fr-FR'
 export default function Chat({ state, setState }) {
   const appUser = state?.appUser;
   const isDoctor = appUser?.role === 'doctor';
+  const { isMobile } = useViewport();
 
   const [convs, setConvs] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -46,7 +48,8 @@ export default function Chat({ state, setState }) {
         const list = await fetchConversations();
         const mapped = list.map((c, i) => ({ id: c.id, ci: i, peer: isDoctor ? c.patientName : c.doctorName }));
         setConvs(mapped);
-        setActiveId((prev) => prev || (mapped[0]?.id ?? null));
+        // On mobile, show the list first (no auto-open); on desktop open the first.
+        setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
       } catch (e) { console.warn('[TikDoc] fetchConversations failed', e); }
     })();
   }, [isDoctor]);
@@ -101,7 +104,7 @@ export default function Chat({ state, setState }) {
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
       {/* Left Panel */}
-      <div style={{ width: 300, flexShrink: 0, borderRight: `1px solid ${BORDER_STRONG}`, background: '#fff', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: isMobile ? '100%' : 300, flexShrink: 0, borderRight: `1px solid ${BORDER_STRONG}`, background: '#fff', display: (isMobile && activeId) ? 'none' : 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER_STRONG}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: HEADER_BG }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Messages</span>
         </div>
@@ -143,11 +146,14 @@ export default function Chat({ state, setState }) {
       </div>
 
       {/* Right Panel */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: BG, minWidth: 0 }}>
+      <div style={{ flex: 1, display: (isMobile && !activeId) ? 'none' : 'flex', flexDirection: 'column', background: BG, minWidth: 0 }}>
         {active ? (
           <>
             {/* Chat header */}
-            <div style={{ background: '#fff', borderBottom: `1px solid ${BORDER_STRONG}`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: '#fff', borderBottom: `1px solid ${BORDER_STRONG}`, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              {isMobile && (
+                <button onClick={() => setActiveId(null)} aria-label="Retour" style={{ width: 40, height: 40, borderRadius: 11, background: BG, border: `1px solid ${BORDER_STRONG}`, cursor: 'pointer', fontSize: 20, color: DARK, flexShrink: 0 }}>‹</button>
+              )}
               {(() => {
                 const [tBg, tFg] = TINTS[active.ci % TINTS.length];
                 return (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 import { fetchMyDoctor, fetchAvailability, saveAvailability } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -76,6 +77,7 @@ function TimeInput({ value, onChange }) {
 }
 
 export default function Availability({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [dayToggles, setDayToggles] = useState([true, true, true, true, true, true, false]);
   const [dayStartTimes, setDayStartTimes] = useState(DAYS.map(() => '09:00'));
   const [dayEndTimes, setDayEndTimes] = useState(DAYS.map(() => '18:00'));
@@ -188,7 +190,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   };
 
   return (
-    <div style={{ padding: '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
@@ -235,7 +237,9 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 16,
+                    flexWrap: 'wrap',
+                    gap: isMobile ? 10 : 16,
+                    rowGap: 10,
                     padding: '14px 0',
                     borderBottom: i < DAYS.length - 1 ? `1px solid ${BORDER}` : 'none',
                     opacity: isOn ? 1 : 0.45,

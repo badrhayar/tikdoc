@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -10,6 +11,7 @@ const GRAD    = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)'
 
 export default function Profile() {
   const { state, setState, go } = useApp();
+  const { isMobile } = useViewport();
   const { selDoc, bookDay, bookSlot, patient } = state;
 
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
@@ -29,7 +31,7 @@ export default function Profile() {
     <div style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
 
       {/* ── Header ── */}
-      <header style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, height: 66, display: 'flex', alignItems: 'center', padding: '0 28px', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+      <header style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, height: isMobile ? 60 : 66, display: 'flex', alignItems: 'center', padding: isMobile ? '0 16px' : '0 28px', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
         <button
           onClick={() => go('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -74,7 +76,7 @@ export default function Profile() {
       </div>
 
       {/* ── 2-col grid ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto 40px', padding: '0 24px', display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: 24, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto 40px', padding: isMobile ? '0 16px' : '0 24px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.1fr', gap: isMobile ? 16 : 24, alignItems: 'start' }}>
 
         {/* Left: Doctor card */}
         <div style={{ background: '#fff', borderRadius: 20, padding: 28, border: `1px solid ${BORDER}`, boxShadow: '0 2px 14px -6px rgba(13,43,30,0.12)' }}>
@@ -168,7 +170,7 @@ export default function Profile() {
         </div>
 
         {/* Right: Booking card */}
-        <div style={{ background: '#fff', borderRadius: 20, padding: 28, border: `1px solid ${BORDER}`, position: 'sticky', top: 86, boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
+        <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 18 : 28, border: `1px solid ${BORDER}`, position: isMobile ? 'static' : 'sticky', top: 86, boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 20 }}>Choisissez une date et une heure</div>
 
           {/* Date nav */}
@@ -211,7 +213,7 @@ export default function Profile() {
           {/* Time slots */}
           <div style={{ marginBottom: 6 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 10 }}>Horaires disponibles</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 7 }}>
               {BOOK_SLOTS.map((slot) => {
                 const isActive = selectedSlot === slot;
                 return (

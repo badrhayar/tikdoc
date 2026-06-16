@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -73,6 +74,7 @@ function dateToNav(d) {
 
 export default function Calendar({ state, setState, go, openNewAppt }) {
   const consultations = state?.consultations || [];
+  const { isMobile } = useViewport();
 
   const [view, setView]               = useState('Semaine');
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -259,7 +261,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const lbl = { fontSize: 12, fontWeight: 600, color: DARK, marginBottom: 4, display: 'block' };
 
   return (
-    <div style={{ padding: 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 4 : 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
 
       {/* ── Top bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
@@ -292,7 +294,8 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
       {/* ── Week view ── */}
       {view === 'Semaine' && (
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflowX: isMobile ? 'auto' : 'hidden', overflowY: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
+         <div style={{ minWidth: isMobile ? 640 : 'auto' }}>
           {/* Day headers */}
           <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}` }}>
             <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }} />
@@ -318,6 +321,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             })}
           </div>
           {renderGridBody(weekDays)}
+         </div>
         </div>
       )}
 

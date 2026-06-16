@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import { createReview, getOrCreateConversation, sendMessage } from '../lib/api';
 
@@ -51,6 +52,7 @@ const PATIENT_MSGS = [
 
 export default function PatientAccount() {
   const { state, setState, go, authSignOut } = useApp();
+  const { isMobile } = useViewport();
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
   const [patientMsgInput, setPatientMsgInput] = useState('');
@@ -127,7 +129,7 @@ export default function PatientAccount() {
   return (
     <div>
       <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}` }}>
-        <div style={{ maxWidth:1040, margin:'0 auto', padding:'0 24px', height:64, display:'flex', alignItems:'center', gap:16 }}>
+        <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 16px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?10:16 }}>
           <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap:9, cursor:'pointer' }}>
             <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width:28, height:28, objectFit:'contain' }} />
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tik<span style={{ color:G }}>Doc</span></span>
@@ -142,7 +144,7 @@ export default function PatientAccount() {
         </div>
       </header>
 
-      <main style={{ maxWidth:1040, margin:'0 auto', padding:'28px 24px 50px' }}>
+      <main style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'20px 16px 44px':'28px 24px 50px' }}>
         <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName} 👋</h1>
         <p style={{ margin:'0 0 24px', fontSize:14, color:MUT }}>Gérez vos informations et vos rendez-vous.</p>
 
@@ -175,11 +177,11 @@ export default function PatientAccount() {
           )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1.15fr 1fr', gap:22, alignItems:'start' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1.15fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
           {/* Info form */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
             <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1fr 1fr', gap:14 }}>
               {[['Nom complet','name'],['CIN','cin'],['Téléphone','phone'],['Email','email']].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
@@ -188,7 +190,7 @@ export default function PatientAccount() {
               ))}
             </div>
             <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1fr 1fr 1fr', gap:14 }}>
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
@@ -369,9 +371,9 @@ export default function PatientAccount() {
             <h2 style={{ margin:0, fontSize:16, fontWeight:700, color:DARK }}>Mes consultations</h2>
             <span style={{ fontSize:13, fontWeight:700, color:G }}>Total payé : {totalPaid} MAD</span>
           </div>
-          <div style={{ borderRadius:11, overflow:'hidden', border:`1px solid ${BORDER_STRONG}` }}>
+          <div style={{ borderRadius:11, overflow:'hidden', overflowX: isMobile?'auto':'hidden', border:`1px solid ${BORDER_STRONG}` }}>
             {/* Table header */}
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1.6fr 1.6fr 0.9fr 0.9fr', background:HEADER_BG, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'9px 14px', gap:8 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1.6fr 1.6fr 0.9fr 0.9fr', minWidth: isMobile?620:'auto', background:HEADER_BG, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'9px 14px', gap:8 }}>
               {['Médecin','Motif','Date','Montant','Statut'].map(col => (
                 <span key={col} style={{ fontSize:11, fontWeight:700, color:MUT, textTransform:'uppercase', letterSpacing:.5 }}>{col}</span>
               ))}
@@ -385,7 +387,7 @@ export default function PatientAccount() {
               const [ciBg, ciFg] = TINTS[i % TINTS.length];
               const pill = STATUS_PILL[c.status] || STATUS_PILL.pending;
               return (
-                <div key={c.id} style={{ display:'grid', gridTemplateColumns:'2fr 1.6fr 1.6fr 0.9fr 0.9fr', background: i % 2 === 0 ? '#fff' : ROW_ALT, borderBottom: i < myConsultations.length - 1 ? `1px solid ${BORDER_STRONG}` : 'none', padding:'11px 14px', gap:8, alignItems:'center' }}>
+                <div key={c.id} style={{ display:'grid', gridTemplateColumns:'2fr 1.6fr 1.6fr 0.9fr 0.9fr', minWidth: isMobile?620:'auto', background: i % 2 === 0 ? '#fff' : ROW_ALT, borderBottom: i < myConsultations.length - 1 ? `1px solid ${BORDER_STRONG}` : 'none', padding:'11px 14px', gap:8, alignItems:'center' }}>
                   {/* Médecin */}
                   <div style={{ display:'flex', alignItems:'center', gap:9 }}>
                     <div style={{ width:34, height:34, borderRadius:9, background:ciBg, color:ciFg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11.5, fontWeight:800, flexShrink:0 }}>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -11,6 +12,7 @@ const INPUT_BORDER = '#DCE5E0';
 
 export default function DoctorLogin() {
   const { go, authSignIn, isSupabaseConfigured } = useApp();
+  const { isMobile } = useViewport();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -203,12 +205,12 @@ export default function DoctorLogin() {
         </div>
       </div>
 
-      {/* Right column: green gradient with illustration */}
+      {/* Right column: green gradient with illustration (desktop only) */}
       <div
         style={{
           flex: '1 1 50%',
           background: 'linear-gradient(145deg, #12935F 0%, #16A06A 40%, #1DB87A 100%)',
-          display: 'flex',
+          display: isMobile ? 'none' : 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',

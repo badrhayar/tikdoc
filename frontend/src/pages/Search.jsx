@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -14,6 +16,10 @@ export default function Search() {
     scQ = '', scCity = 'all', scSpec = 'all', scSort = 'pertinence',
     scType = 'all', scConv = false, selPin, patient,
   } = state;
+
+  const { isMobile } = useViewport();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = (scSpec !== 'all' ? 1 : 0) + (scCity !== 'all' ? 1 : 0) + (scType !== 'all' ? 1 : 0) + (scConv ? 1 : 0);
 
   // Doctors come from Supabase (loaded into global state); fall back to the
   // bundled mock list while they load or if the DB is unreachable.
@@ -65,7 +71,7 @@ export default function Search() {
     <div style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
 
       {/* ── Header ── */}
-      <header style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, height: 66, display: 'flex', alignItems: 'center', padding: '0 28px', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+      <header style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, height: isMobile ? 60 : 66, display: 'flex', alignItems: 'center', padding: isMobile ? '0 16px' : '0 28px', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
         <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 31, height: 31, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
@@ -87,56 +93,105 @@ export default function Search() {
       </header>
 
       {/* ── Sticky filter bar ── */}
-      <div style={{ position: 'sticky', top: 66, zIndex: 20, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: `1px solid ${BORDER}`, padding: '13px 24px' }}>
+      <div style={{ position: 'sticky', top: isMobile ? 60 : 66, zIndex: 20, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: `1px solid ${BORDER}`, padding: isMobile ? '10px 16px' : '13px 24px' }}>
+        {/* Search input (always visible) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-
-          {/* Search input */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '0 13px', flex: '1 1 180px', minWidth: 160 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '0 13px', flex: '1 1 180px', minWidth: 140 }}>
             <span style={{ color: PRIMARY, fontSize: 15 }}>🔍</span>
-            <input placeholder="Médecin, spécialité, clinique…" value={scQ} onChange={(e) => setState({ scQ: e.target.value })} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: DARK, padding: '10px 0', width: '100%' }} />
+            <input placeholder="Médecin, spécialité…" value={scQ} onChange={(e) => setState({ scQ: e.target.value })} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: DARK, padding: '11px 0', width: '100%' }} />
           </div>
 
-          <select value={scSpec} onChange={(e) => setState({ scSpec: e.target.value })} style={selectStyle}>
-            <option value="all">Toutes spécialités</option>
-            {SPEC_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-          </select>
-
-          <select value={scCity} onChange={(e) => setState({ scCity: e.target.value })} style={selectStyle}>
-            <option value="all">Toutes les villes</option>
-            {CITY_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-          </select>
-
-          {/* Type toggle */}
-          <div style={{ display: 'flex', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3, gap: 2 }}>
-            {typeBtn('all', 'Tout')}
-            {typeBtn('cabinet', 'Cabinet')}
-            {typeBtn('tele', 'Téléconsult.')}
-          </div>
-
-          {/* Conventionné */}
-          <button
-            onClick={() => setState({ scConv: !scConv })}
-            style={{ padding: '9px 15px', fontSize: 13, fontWeight: 600, borderRadius: 10, cursor: 'pointer', border: `1px solid ${scConv ? PRIMARY : BORDER}`, background: scConv ? '#E7F6EE' : '#fff', color: scConv ? PRIMARY : MUTED, display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <span style={{ fontSize: 11 }}>{scConv ? '✓' : '○'}</span>
-            Conventionné
-          </button>
-
-          <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, marginLeft: 'auto' }}>
-            <option value="pertinence">Pertinence</option>
-            <option value="rating">Meilleures notes</option>
-            <option value="distance">Distance</option>
-            <option value="price_asc">Prix croissant</option>
-            <option value="price_desc">Prix décroissant</option>
-          </select>
+          {/* Mobile: a single "Filtres" button opens the panel */}
+          {isMobile ? (
+            <button onClick={() => setFiltersOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 44, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              Filtres{activeFilterCount > 0 && <span style={{ background: PRIMARY, color: '#fff', borderRadius: 99, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
+            </button>
+          ) : (
+            <>
+              <select value={scSpec} onChange={(e) => setState({ scSpec: e.target.value })} style={selectStyle}>
+                <option value="all">Toutes spécialités</option>
+                {SPEC_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              <select value={scCity} onChange={(e) => setState({ scCity: e.target.value })} style={selectStyle}>
+                <option value="all">Toutes les villes</option>
+                {CITY_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+              <div style={{ display: 'flex', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3, gap: 2 }}>
+                {typeBtn('all', 'Tout')}
+                {typeBtn('cabinet', 'Cabinet')}
+                {typeBtn('tele', 'Téléconsult.')}
+              </div>
+              <button onClick={() => setState({ scConv: !scConv })} style={{ padding: '9px 15px', fontSize: 13, fontWeight: 600, borderRadius: 10, cursor: 'pointer', border: `1px solid ${scConv ? PRIMARY : BORDER}`, background: scConv ? '#E7F6EE' : '#fff', color: scConv ? PRIMARY : MUTED, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11 }}>{scConv ? '✓' : '○'}</span>
+                Conventionné
+              </button>
+              <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, marginLeft: 'auto' }}>
+                <option value="pertinence">Pertinence</option>
+                <option value="rating">Meilleures notes</option>
+                <option value="distance">Distance</option>
+                <option value="price_asc">Prix croissant</option>
+                <option value="price_desc">Prix décroissant</option>
+              </select>
+            </>
+          )}
         </div>
       </div>
 
+      {/* ── Mobile filters panel (slide-in) ── */}
+      {isMobile && filtersOpen && (
+        <>
+          <div onClick={() => setFiltersOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.45)', zIndex: 60 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 61, background: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(13,43,30,0.25)', animation: 'saRise .22s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Filtres</span>
+              <button onClick={() => setFiltersOpen(false)} style={{ width: 40, height: 40, borderRadius: 11, background: BG, border: `1px solid ${BORDER}`, fontSize: 20, color: MUTED, cursor: 'pointer' }}>×</button>
+            </div>
+
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '6px 0' }}>Spécialité</label>
+            <select value={scSpec} onChange={(e) => setState({ scSpec: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+              <option value="all">Toutes spécialités</option>
+              {SPEC_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>Ville</label>
+            <select value={scCity} onChange={(e) => setState({ scCity: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+              <option value="all">Toutes les villes</option>
+              {CITY_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>Type de consultation</label>
+            <div style={{ display: 'flex', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3, gap: 2 }}>
+              {typeBtn('all', 'Tout')}
+              {typeBtn('cabinet', 'Cabinet')}
+              {typeBtn('tele', 'Téléconsult.')}
+            </div>
+
+            <button onClick={() => setState({ scConv: !scConv })} style={{ width: '100%', marginTop: 14, padding: '12px 15px', fontSize: 14, fontWeight: 600, borderRadius: 10, cursor: 'pointer', border: `1px solid ${scConv ? PRIMARY : BORDER}`, background: scConv ? '#E7F6EE' : '#fff', color: scConv ? PRIMARY : MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48 }}>
+              <span style={{ fontSize: 12 }}>{scConv ? '✓' : '○'}</span> Conventionné uniquement
+            </button>
+
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>Trier par</label>
+            <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+              <option value="pertinence">Pertinence</option>
+              <option value="rating">Meilleures notes</option>
+              <option value="distance">Distance</option>
+              <option value="price_asc">Prix croissant</option>
+              <option value="price_desc">Prix décroissant</option>
+            </select>
+
+            <button onClick={() => setFiltersOpen(false)} style={{ width: '100%', marginTop: 20, padding: 14, borderRadius: 12, border: 'none', background: GRAD, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', minHeight: 50 }}>
+              Voir {list.length} médecin{list.length !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </>
+      )}
+
       {/* ── Split content ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 130px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: 'calc(100vh - 130px)' }}>
 
         {/* Left: doctor list */}
-        <div style={{ padding: '22px 24px', overflowY: 'auto' }}>
+        <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto' }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 16 }}>
             {list.length} médecin{list.length !== 1 ? 's' : ''} <span style={{ color: MUTED, fontWeight: 500 }}>disponible{list.length !== 1 ? 's' : ''}</span>
           </p>
@@ -202,8 +257,8 @@ export default function Search() {
           </div>
         </div>
 
-        {/* Right: stylized map */}
-        <div style={{ position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
+        {/* Right: stylized map (desktop only) */}
+        <div style={{ display: isMobile ? 'none' : 'block', position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
           <div style={{ height: '100%', minHeight: 560, borderRadius: 20, background: 'linear-gradient(135deg, #c8dfc8 0%, #d8ecd4 40%, #b8d4b8 100%)', position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
             <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
             <div style={{ position: 'absolute', top: '30%', left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.4)', borderRadius: 2 }} />

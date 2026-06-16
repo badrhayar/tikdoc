@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 import { createDoctorProfile } from '../lib/api';
 
@@ -29,6 +30,7 @@ const CITY_OPTS = [
 
 export default function DoctorRegister() {
   const { state, setState, go, authSignUp, isSupabaseConfigured } = useApp();
+  const { isMobile } = useViewport();
 
   const dreg = state.dreg || {
     name: '', spec: 'generaliste', inpe: '', ordre: '',
@@ -151,7 +153,7 @@ export default function DoctorRegister() {
         style={{
           flex: '1.05 1 0',
           overflowY: 'auto',
-          padding: '40px 48px',
+          padding: isMobile ? '28px 18px' : '40px 48px',
           background: '#fff',
         }}
       >
@@ -462,12 +464,12 @@ export default function DoctorRegister() {
         </div>
       </div>
 
-      {/* Right column: green gradient with benefits */}
+      {/* Right column: green gradient with benefits (desktop only) */}
       <div
         style={{
           flex: '0.95 1 0',
           background: 'linear-gradient(145deg, #12935F 0%, #16A06A 45%, #1DB87A 100%)',
-          display: 'flex',
+          display: isMobile ? 'none' : 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',

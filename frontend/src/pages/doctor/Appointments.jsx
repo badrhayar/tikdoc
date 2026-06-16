@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import { updateAppointmentStatus, STATUS_FR } from '../../lib/api';
 
@@ -26,6 +27,7 @@ const pad = (n) => String(n).padStart(2, '0');
 export default function Appointments({ state, setState, go, openNewAppt }) {
   const [activeTab, setActiveTab] = useState('Tous');
   const [searchQ, setSearchQ] = useState('');
+  const { isMobile } = useViewport();
 
   const tabs = ['Tous', 'Confirmé', 'En attente', 'Annulé', 'Terminé'];
 
@@ -72,7 +74,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   });
 
   return (
-    <div style={{ padding: '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>

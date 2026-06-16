@@ -1,4 +1,5 @@
 import { STATUS_FR } from '../../lib/api';
+import { useViewport } from '../../hooks/useViewport';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -52,6 +53,7 @@ const TrendPill = ({ badge, up }) => (
 );
 
 export default function Dashboard({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   // Real appointments for the signed-in doctor (soonest first).
   const agenda = (state?.myAppointments || [])
     .slice()
@@ -69,7 +71,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const apptCount = (state?.myAppointments || []).length;
 
   return (
-    <div style={{ padding: 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
 
       {/* Header */}
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -83,7 +85,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       </div>
 
       {/* Row 1: KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18, marginBottom: 26 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 18, marginBottom: isMobile ? 16 : 26 }}>
         {KPIS.map((card, i) => (
           <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: 20, boxShadow: CARD_SHADOW }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -100,7 +102,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       </div>
 
       {/* Row 2: Agenda + Messages */}
-      <div style={{ display: 'flex', gap: 22, marginBottom: 26 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 22, marginBottom: isMobile ? 16 : 26 }}>
 
         {/* Agenda */}
         <div style={{ flex: 1.2, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, overflow: 'hidden', boxShadow: CARD_SHADOW }}>
@@ -170,7 +172,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       </div>
 
       {/* Row 3: Secondary stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 12 : 18 }}>
         {[
           { icon: '✓', iconBg: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)', iconColor: '#0E7C52', label: "Taux d'acceptation", value: '94%', sub: 'Des demandes acceptées' },
           { icon: '⏱', iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0', label: 'Durée moy. consultation', value: '22 min', sub: 'Par patient en moyenne' },

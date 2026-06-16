@@ -133,7 +133,10 @@ const defaultServices = [
   { id: 4, name: 'Suivi', price: 200, duration: '15' },
 ];
 
+import { useViewport } from '../../hooks/useViewport';
+
 export default function Settings({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [form, setForm] = useState({
     prenom: 'Khalid',
     nom: 'Benali',
@@ -185,7 +188,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   return (
-    <div style={{ padding: '32px', background: BG, minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '10px' : '32px', background: BG, minHeight: '100vh' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>

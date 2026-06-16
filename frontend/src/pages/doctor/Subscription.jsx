@@ -15,7 +15,10 @@ const invoices = [
   { id: 'TK-2023-12-001', period: 'Déc 2023', date: '17/12/2023', amount: 299, month: 'Déc 2023' },
 ];
 
+import { useViewport } from '../../hooks/useViewport';
+
 export default function Subscription({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [annual, setAnnual] = useState(false);
 
   const proPrice = annual ? 239 : 299;
@@ -32,7 +35,7 @@ export default function Subscription({ state, setState, go, openNewAppt, openAdd
   const selectedInvoice = state?.invoiceRow || invoices[0];
 
   return (
-    <div style={{ padding: '32px', background: BG, minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh' }}>
 
       {/* Header */}
       <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 28px 0' }}>

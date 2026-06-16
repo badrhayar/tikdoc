@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 import { uploadDocument, listDocuments, getDocumentUrl } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -33,6 +34,7 @@ const MOCK_DOCUMENTS = [
 const DOC_TYPES = ['Ordonnance', "Résultats d'analyses", 'Compte-rendu', 'Autre'];
 
 export default function Documents({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const [docType, setDocType] = useState('Ordonnance');
   const [docTab, setDocTab] = useState('Tous');
   const [docPatient, setDocPatient] = useState(null);
@@ -74,7 +76,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const filteredDocs = docs;
 
   return (
-    <div style={{ padding: '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: DARK }}>Documents médicaux</h1>
@@ -82,7 +84,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
       </div>
 
       {/* 2-column layout */}
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 24, alignItems: 'stretch' }}>
 
         {/* LEFT COL — Send a document */}
         <div style={{ flex: 1 }}>

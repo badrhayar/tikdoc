@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
 import { updateAppointment } from '../../lib/api';
 
 const STATUS_TO_ENUM = { 'Payé': 'completed', 'En attente': 'pending', 'Annulé': 'cancelled', 'Terminé': 'completed', 'Absent': 'no_show' };
@@ -36,6 +37,7 @@ function fmtDate(iso) {
 }
 
 export default function History({ state, setState, go, openNewAppt, openAddPatient }) {
+  const { isMobile } = useViewport();
   const consultations = state.consultations || [];
 
   const [editOpen, setEditOpen] = useState(false);
@@ -118,7 +120,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
               Modifier la consultation — {editData.patient}
             </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
               {/* Service */}
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Service</label>
@@ -277,7 +279,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
       </div>
 
       {/* Summary cards — computed from live data */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
         {[
           { label: 'Total consultations', value: totalCount.toString(), icon: '🗓️' },
           { label: 'Total encaissé',      value: totalEncaisse.toLocaleString('fr-FR') + ' MAD', icon: '💰' },
@@ -296,8 +298,8 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflowX: isMobile ? 'auto' : 'hidden', overflowY: 'hidden' }}>
+        <table style={{ width: '100%', minWidth: isMobile ? 820 : '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: HEADER_BG }}>
               {['Patient', 'Âge / Sexe', 'Service', 'Date & Heure', 'Montant', 'Paiement', 'Statut', 'Actions'].map(col => (

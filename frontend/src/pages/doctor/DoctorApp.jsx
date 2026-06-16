@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS } from '../../shared.jsx';
 import Dashboard from './Dashboard';
 import Calendar from './Calendar';
@@ -55,6 +56,9 @@ export default function DoctorApp() {
   const [popBell, setPopBell] = useState(false);
   const [popChat, setPopChat] = useState(false);
   const [popAvatar, setPopAvatar] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const { isMobile } = useViewport();
+  const goNav = (sc) => { setNavOpen(false); go(sc); };
 
   const closePops = () => { setPopBell(false); setPopChat(false); setPopAvatar(false); };
 
@@ -94,9 +98,16 @@ export default function DoctorApp() {
 
   return (
     <div style={{ display:'flex', minHeight:'100vh' }}>
+      {/* Mobile drawer overlay */}
+      {isMobile && navOpen && (
+        <div onClick={() => setNavOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(13,43,30,0.45)', zIndex:99 }} />
+      )}
       {/* Sidebar */}
-      <aside style={{ width:252, flexShrink:0, background:'#fff', borderRight:`1px solid #E8EFEB`, display:'flex', flexDirection:'column', position:'sticky', top:0, height:'100vh', overflowY:'auto' }}>
-        <div onClick={() => go('doctor')} style={{ display:'flex', alignItems:'center', gap:9, padding:'22px 22px 18px', cursor:'pointer' }}>
+      <aside style={{ width:252, flexShrink:0, background:'#fff', borderRight:`1px solid #E8EFEB`, display:'flex', flexDirection:'column', overflowY:'auto',
+        ...(isMobile
+          ? { position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(13,43,30,0.3)' : 'none' }
+          : { position:'sticky', top:0, height:'100vh' }) }}>
+        <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:9, padding:'22px 22px 18px', cursor:'pointer' }}>
           <img src="/tikdoc-icon.png" alt="TikDoc" style={{ width:31, height:31, borderRadius:9, objectFit:'contain', boxShadow:'0 4px 12px -3px rgba(22,160,106,0.5)' }} />
           <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tik<span style={{ color:G }}>Doc</span></span>
         </div>
@@ -106,7 +117,7 @@ export default function DoctorApp() {
             return (
               <button
                 key={sc}
-                onClick={() => go(sc)}
+                onClick={() => goNav(sc)}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F8F5'; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 14px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'linear-gradient(135deg,#E9F8F0,#DBF1E6)' : 'transparent', color: active ? '#0E7C52' : MUT, textAlign:'start', boxShadow: active ? 'inset 0 1px 1px rgba(255,255,255,0.6), 0 4px 12px -6px rgba(22,160,106,0.4)' : 'none' }}
@@ -134,14 +145,21 @@ export default function DoctorApp() {
       {/* Main column */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column' }}>
         {/* Topbar */}
-        <header style={{ background:'rgba(255,255,255,0.85)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', borderBottom:`1px solid #E8EFEB`, height:66, display:'flex', alignItems:'center', gap:16, padding:'0 26px', position:'sticky', top:0, zIndex:20 }}>
-          <div style={{ flex:1, maxWidth:440, display:'flex', alignItems:'center', gap:9, background:'#F4F8F5', border:`1px solid #E4EEE9`, borderRadius:11, padding:'10px 14px' }}>
-            <span style={{ color:'#9AA8A2', fontSize:15 }}>⌕</span>
-            <input placeholder="Rechercher un patient, un rendez-vous…" style={{ border:'none', outline:'none', background:'none', width:'100%', fontSize:13.5 }} />
-          </div>
+        <header style={{ background:'rgba(255,255,255,0.85)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', borderBottom:`1px solid #E8EFEB`, height:64, display:'flex', alignItems:'center', gap:isMobile?10:16, padding:isMobile?'0 14px':'0 26px', position:'sticky', top:0, zIndex:20 }}>
+          {isMobile && (
+            <button onClick={() => setNavOpen(true)} aria-label="Menu" style={{ width:42, height:42, borderRadius:11, background:'#fff', border:`1px solid ${BORDER}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:DARK, flexShrink:0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+          )}
+          {!isMobile && (
+            <div style={{ flex:1, maxWidth:440, display:'flex', alignItems:'center', gap:9, background:'#F4F8F5', border:`1px solid #E4EEE9`, borderRadius:11, padding:'10px 14px' }}>
+              <span style={{ color:'#9AA8A2', fontSize:15 }}>⌕</span>
+              <input placeholder="Rechercher un patient, un rendez-vous…" style={{ border:'none', outline:'none', background:'none', width:'100%', fontSize:13.5 }} />
+            </div>
+          )}
           <div style={{ flex:1 }} />
-          <button onClick={openNewAppt} style={{ background:'linear-gradient(135deg,#1AAE74,#12875A)', color:'#fff', border:'none', cursor:'pointer', padding:'10px 17px', borderRadius:11, fontSize:13.5, fontWeight:700, display:'flex', alignItems:'center', gap:7, boxShadow:'0 8px 18px -6px rgba(22,160,106,.55)' }}>
-            <span style={{ fontSize:16, lineHeight:1 }}>+</span> Nouveau rendez-vous
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ background:'linear-gradient(135deg,#1AAE74,#12875A)', color:'#fff', border:'none', cursor:'pointer', padding:isMobile?0:'10px 17px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':11, fontSize:13.5, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:7, flexShrink:0, boxShadow:'0 8px 18px -6px rgba(22,160,106,.55)' }}>
+            <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
           {/* Bell */}
@@ -234,7 +252,7 @@ export default function DoctorApp() {
           </div>
         </header>
 
-        <main style={{ flex:1, padding: screen==='dchat' ? 0 : 26, overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
+        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
           <SubScreen state={state} setState={setState} go={go} openNewAppt={openNewAppt} openAddPatient={openAddPatient} />
         </main>
 
