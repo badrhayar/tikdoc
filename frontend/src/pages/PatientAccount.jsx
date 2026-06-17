@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
@@ -56,6 +56,11 @@ export default function PatientAccount() {
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
   const [patientMsgInput, setPatientMsgInput] = useState('');
+  const composeRef = useRef(null);
+  const openMessagerie = () => {
+    composeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => composeRef.current?.focus(), 350);
+  };
 
   // Real appointments for the signed-in patient (loaded into global state).
   const appts = state.myAppointments || [];
@@ -127,19 +132,21 @@ export default function PatientAccount() {
   const [tintBg2, tintFg2] = tint(2);
 
   return (
-    <div>
-      <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}` }}>
-        <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 16px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?10:16 }}>
-          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer' }}>
+    <div style={{ overflowX:'hidden', maxWidth:'100vw' }}>
+      <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}`, position:'sticky', top:0, zIndex:30 }}>
+        <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 12px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?8:16 }}>
+          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer', flexShrink:0 }}>
             <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width:28, height:28, objectFit:'contain' }} />
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tik<span style={{ color:G }}>Doc</span></span>
           </div>
-          <div style={{ flex:1 }} />
-          <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding:'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700 }}>
-            Prendre un rendez-vous
+          <div style={{ flex:1, minWidth:8 }} />
+          <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight:44, display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? 'RDV' : 'Prendre un rendez-vous'}
           </button>
-          <button onClick={() => authSignOut()} style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding:'9px 14px', borderRadius:9, fontSize:13.5, fontWeight:700 }}>
-            Déconnexion
+          <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            {isMobile ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            ) : 'Déconnexion'}
           </button>
         </div>
       </header>
@@ -151,7 +158,7 @@ export default function PatientAccount() {
         {/* Countdown card */}
         <div style={{ background:'linear-gradient(135deg,#16A06A,#0E7E52)', borderRadius:18, padding:'22px 24px', marginBottom:22, display:'flex', alignItems:'center', gap:22, flexWrap:'wrap', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px), repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px)' }} />
-          <div style={{ position:'relative', flex:1, minWidth:230 }}>
+          <div style={{ position:'relative', flex:1, minWidth: isMobile?140:230 }}>
             <div style={{ fontSize:11.5, fontWeight:800, color:'#BFF0DA', textTransform:'uppercase', letterSpacing:.6, marginBottom:9 }}>⏱ Prochain rendez-vous</div>
             {nextAppt ? (
               <>
@@ -177,11 +184,11 @@ export default function PatientAccount() {
           )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1.15fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1.15fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
           {/* Info form */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
             <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1fr 1fr', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
               {[['Nom complet','name'],['CIN','cin'],['Téléphone','phone'],['Email','email']].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
@@ -190,7 +197,7 @@ export default function PatientAccount() {
               ))}
             </div>
             <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'1fr':'1fr 1fr 1fr', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
@@ -227,7 +234,7 @@ export default function PatientAccount() {
           </div>
 
           {/* Appointments column */}
-          <div style={{ display:'flex', flexDirection:'column', gap:22 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:22, minWidth:0 }}>
             {/* Upcoming */}
             <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
               <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>Mes rendez-vous</h2>
@@ -415,15 +422,15 @@ export default function PatientAccount() {
             })}
           </div>
           <div style={{ marginTop:12, textAlign:'center' }}>
-            <span style={{ fontSize:13, fontWeight:600, color:G, cursor:'pointer', textDecoration:'underline' }}>Voir tout l'historique</span>
+            <button onClick={() => setState({ toast:"Historique complet bientôt disponible", toastShow:true })} style={{ background:'none', border:'none', fontSize:13, fontWeight:600, color:G, cursor:'pointer', textDecoration:'underline', minHeight:44 }}>Voir tout l'historique</button>
           </div>
         </div>
 
         {/* Messagerie */}
         <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW, marginTop:22 }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14 }}>
             <h2 style={{ margin:0, fontSize:16, fontWeight:700, color:DARK }}>💬 Messagerie</h2>
-            <span style={{ fontSize:13, color:G, cursor:'pointer' }}>Ouvrir la messagerie complète</span>
+            <button onClick={openMessagerie} style={{ background:'none', border:'none', fontSize:13, color:G, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, padding:'6px 0' }}>Ouvrir la messagerie</button>
           </div>
 
           {/* Message list */}
@@ -456,11 +463,12 @@ export default function PatientAccount() {
           {/* Compose mini-bar */}
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
             <input
+              ref={composeRef}
               value={patientMsgInput}
               onChange={e => setPatientMsgInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMsg()}
               placeholder="Envoyer un message à votre médecin…"
-              style={{ flex:1, background:BG, border:`1px solid ${BORDER_STRONG}`, borderRadius:20, padding:'9px 14px', fontSize:13, outline:'none' }}
+              style={{ flex:1, minWidth:0, background:BG, border:`1px solid ${BORDER_STRONG}`, borderRadius:20, padding:'9px 14px', fontSize:13, outline:'none' }}
             />
             <button
               onClick={sendMsg}
