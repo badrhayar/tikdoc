@@ -263,14 +263,15 @@ export default function ForPatients() {
       </section>
 
       {/* Map Banner Card */}
-      <section style={{ padding: '48px 24px 0', background: '#fff' }}>
+      <section style={{ padding: isMobile ? '32px 16px 0' : '48px 24px 0', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{
             borderRadius: 20, overflow: 'hidden',
             background: 'linear-gradient(135deg, #16A06A 0%, #0D7A50 60%, #0A5C3B 100%)',
-            padding: '48px 48px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 40, boxShadow: '0 8px 40px rgba(22,160,106,0.22)',
+            padding: isMobile ? '28px 22px' : '48px 48px',
+            display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+            alignItems: 'center', justifyContent: 'space-between',
+            gap: isMobile ? 26 : 40, boxShadow: '0 8px 40px rgba(22,160,106,0.22)',
             position: 'relative',
           }}>
             {/* Decorative circles */}
@@ -286,7 +287,7 @@ export default function ForPatients() {
             }} />
 
             {/* Text side */}
-            <div style={{ position: 'relative', zIndex: 1, maxWidth: 460 }}>
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: isMobile ? '100%' : 460, textAlign: isMobile ? 'center' : (dir === 'rtl' ? 'right' : 'left') }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px',
@@ -295,14 +296,14 @@ export default function ForPatients() {
                 <span>📍</span>
                 <span>{lang === 'ar' ? '12 مدينة' : lang === 'en' ? '12 cities' : '12 villes'}</span>
               </div>
-              <h2 style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+              <h2 style={{ fontSize: isMobile ? 23 : 28, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
                 {lang === 'ar'
                   ? 'أطباء في كل أنحاء المغرب'
                   : lang === 'en'
                   ? 'Doctors across all of Morocco'
                   : 'Des médecins partout au Maroc'}
               </h2>
-              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 24 }}>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.6, marginBottom: 24 }}>
                 {lang === 'ar'
                   ? 'شبكتنا تغطي 12 مدينة مغربية — الدار البيضاء، الرباط، مراكش، طنجة وأكثر.'
                   : lang === 'en'
@@ -313,25 +314,28 @@ export default function ForPatients() {
                 onClick={() => go('search')}
                 style={{
                   background: '#fff', color: PRIMARY, border: 'none',
-                  borderRadius: 8, padding: '10px 22px',
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  borderRadius: 10, padding: '12px 22px', minHeight: 48,
+                  fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                  width: isMobile ? '100%' : 'auto',
                 }}
               >
                 {lang === 'ar' ? 'استكشف الأطباء' : lang === 'en' ? 'Explore doctors' : 'Explorer les médecins'}
               </button>
             </div>
 
-            {/* Mini map illustration */}
+            {/* Mini map illustration — scales to fit on mobile */}
             <div style={{
               position: 'relative', zIndex: 1,
-              width: 280, height: 220, flexShrink: 0,
+              width: isMobile ? '100%' : 280,
+              maxWidth: 320,
+              aspectRatio: '280 / 220',
+              flexShrink: 0,
               background: 'rgba(255,255,255,0.12)', borderRadius: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px solid rgba(255,255,255,0.20)',
               overflow: 'hidden',
             }}>
-              {/* Map grid lines */}
-              <svg width="280" height="220" viewBox="0 0 280 220" style={{ position: 'absolute', inset: 0 }}>
+              {/* Map grid lines (scale with the box) */}
+              <svg viewBox="0 0 280 220" preserveAspectRatio="xMidYMid meet" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
                 {[40, 80, 120, 160, 200].map((y) => (
                   <line key={y} x1="0" y1={y} x2="280" y2={y} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
@@ -339,7 +343,7 @@ export default function ForPatients() {
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
               </svg>
-              {/* City pins */}
+              {/* City pins (positioned as % so they scale with the box) */}
               {[
                 { x: 104, y: 134, label: 'Casa', big: true },
                 { x: 126, y: 108, label: 'Rabat', big: false },
@@ -349,7 +353,8 @@ export default function ForPatients() {
               ].map((pin) => (
                 <div key={pin.label} style={{
                   position: 'absolute',
-                  left: pin.x, top: pin.y,
+                  left: `${(pin.x / 280 * 100).toFixed(2)}%`,
+                  top: `${(pin.y / 220 * 100).toFixed(2)}%`,
                   transform: 'translate(-50%, -50%)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 }}>
@@ -361,12 +366,12 @@ export default function ForPatients() {
                     border: pin.big ? '2px solid rgba(22,160,106,0.6)' : 'none',
                     boxShadow: pin.big ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none',
                   }} />
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {pin.label}
                   </span>
                 </div>
               ))}
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
                 Maroc · 12 villes
               </div>
             </div>
