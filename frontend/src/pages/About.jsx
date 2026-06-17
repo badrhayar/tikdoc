@@ -70,9 +70,9 @@ export default function About() {
           {/* Logo */}
           <button
             onClick={() => go('home')}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
-            <img loading="lazy" src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
             {!isMobile && (
               <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
                 Tik<span style={{ color: PRIMARY }}>Doc</span>
@@ -312,8 +312,8 @@ export default function About() {
 
       {/* Footer */}
       <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', fontSize: 13 }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <img loading="lazy" src="/tikdoc-icon.png" alt="TikDoc" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
+        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
           <span>© 2024 TikDoc. Tous droits réservés.</span>
         </div>
       </footer>

@@ -130,8 +130,8 @@ export default function PatientAccount() {
     <div>
       <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}` }}>
         <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 16px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?10:16 }}>
-          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap:9, cursor:'pointer' }}>
-            <img loading="lazy" src="/tikdoc-icon.png" alt="TikDoc" style={{ width:28, height:28, objectFit:'contain' }} />
+          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer' }}>
+            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width:28, height:28, objectFit:'contain' }} />
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tik<span style={{ color:G }}>Doc</span></span>
           </div>
           <div style={{ flex:1 }} />

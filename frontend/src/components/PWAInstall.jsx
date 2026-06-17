@@ -124,7 +124,7 @@ export default function PWAInstall() {
             }}
           >
             <div style={{ width: 40, height: 4, borderRadius: 99, background: '#E0E6E3', margin: '0 auto 16px' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center', marginBottom: 14 }}>
               <img src="/icons/icon-192.png" width={40} height={40} style={{ borderRadius: 10 }} alt="TikDoc" />
               <span style={{ fontSize: 19, fontWeight: 800, color: TEAL }}>TikDoc</span>
             </div>
