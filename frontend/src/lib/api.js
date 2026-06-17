@@ -227,6 +227,37 @@ export async function getCurrentAppUser() {
   return data;
 }
 
+// ── Bookable slots ────────────────────────────────────────────────────────────
+/** Times already booked for a doctor on a given Morocco-local date (HH:MM[]). */
+export async function fetchBookedSlots(doctorId, dateISO) {
+  const { data, error } = await supabase.rpc('doctor_booked_slots', { d: doctorId, day: dateISO });
+  if (error) throw error;
+  return (data || []).map((r) => (typeof r === 'string' ? r : r.slot));
+}
+
+/** A doctor's recurring blocked slots: [{ day_of_week, slot }]. Public. */
+export async function fetchBlockedSlots(doctorId) {
+  const { data, error } = await supabase
+    .from('slot_blocks')
+    .select('day_of_week, slot')
+    .eq('doctor_id', doctorId);
+  if (error) throw error;
+  return data || [];
+}
+
+/** Replace a doctor's whole set of blocked slots. */
+export async function saveBlockedSlots(doctorId, rows) {
+  const del = await supabase.from('slot_blocks').delete().eq('doctor_id', doctorId);
+  if (del.error) throw del.error;
+  if (rows.length) {
+    const { error } = await supabase
+      .from('slot_blocks')
+      .insert(rows.map((r) => ({ doctor_id: doctorId, day_of_week: r.day_of_week, slot: r.slot })));
+    if (error) throw error;
+  }
+  return true;
+}
+
 /** The doctors row owned by the current user (or null). */
 export async function fetchMyDoctor() {
   const u = await getCurrentAppUser();

@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
 import { createAppointment } from '../lib/api';
+import { moroccoToUTCISO } from '../lib/time.js';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -43,7 +44,7 @@ export default function BookingInfo() {
         return;
       }
       try {
-        const iso = new Date(`${bookDate}T${slot || '09:00'}:00`).toISOString();
+        const iso = moroccoToUTCISO(bookDate, slot || '09:00');
         const appt = await createAppointment({
           patientId: appUser.id,
           doctorId:  doc.id,

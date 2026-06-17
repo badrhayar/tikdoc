@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchMyDoctor, fetchAvailability, saveAvailability } from '../../lib/api';
+import { fetchMyDoctor, fetchAvailability, saveAvailability, fetchBlockedSlots, saveBlockedSlots } from '../../lib/api';
+import { BOOK_SLOTS } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -92,6 +93,46 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
+  // ── Bookable-slot blocks (slots the doctor turns OFF) ──
+  const [blocks, setBlocks] = useState(new Set());   // keys: `${uiDay}-${slot}`
+  const [selDay, setSelDay] = useState(0);            // which day's slots are shown (0=Lundi)
+  const [slotsSaving, setSlotsSaving] = useState(false);
+  const [slotsMsg, setSlotsMsg] = useState('');
+
+  const isBlocked = (ui, slot) => blocks.has(`${ui}-${slot}`);
+  const toggleSlot = (ui, slot) => {
+    setBlocks((prev) => {
+      const next = new Set(prev);
+      const k = `${ui}-${slot}`;
+      next.has(k) ? next.delete(k) : next.add(k);
+      return next;
+    });
+  };
+  const setWholeDay = (ui, block) => {
+    setBlocks((prev) => {
+      const next = new Set(prev);
+      BOOK_SLOTS.forEach((s) => { const k = `${ui}-${s}`; block ? next.add(k) : next.delete(k); });
+      return next;
+    });
+  };
+  const saveSlots = async () => {
+    if (!doctorId) { setSlotsMsg('Profil médecin introuvable.'); return; }
+    setSlotsSaving(true); setSlotsMsg('');
+    try {
+      const rows = [...blocks].map((k) => {
+        const i = k.indexOf('-');
+        return { day_of_week: UI_TO_DOW(+k.slice(0, i)), slot: k.slice(i + 1) };
+      });
+      await saveBlockedSlots(doctorId, rows);
+      setSlotsMsg('Créneaux enregistrés ✓');
+      setTimeout(() => setSlotsMsg(''), 2500);
+    } catch (e) {
+      setSlotsMsg('Échec : ' + (e?.message || 'erreur'));
+    } finally {
+      setSlotsSaving(false);
+    }
+  };
+
   // Load the doctor's saved availability from the database.
   useEffect(() => {
     let active = true;
@@ -100,6 +141,10 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         const doc = await fetchMyDoctor();
         if (!doc || !active) return;
         setDoctorId(doc.id);
+        try {
+          const blk = await fetchBlockedSlots(doc.id);
+          if (active) setBlocks(new Set(blk.map((b) => `${DOW_TO_UI(b.day_of_week)}-${b.slot}`)));
+        } catch { /* ignore */ }
         const rows = await fetchAvailability(doc.id);
         if (!active || !rows.length) return;
         const on = [false, false, false, false, false, false, false];
@@ -223,6 +268,59 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+        {/* Section 0: Bookable slots (turn individual slots on/off) */}
+        <div style={{ background: '#fff', borderRadius: 14, border: `2px solid ${PRIMARY}`, padding: isMobile ? 16 : 24 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: DARK }}>Créneaux réservables</h2>
+              <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.5 }}>Désactivez les créneaux sur lesquels vous ne souhaitez pas recevoir de rendez-vous. Les créneaux déjà réservés sont automatiquement masqués côté patient.</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              {slotsMsg && <span style={{ fontSize: 13, fontWeight: 600, color: slotsMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{slotsMsg}</span>}
+              <button onClick={saveSlots} disabled={slotsSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: slotsSaving ? 'default' : 'pointer', opacity: slotsSaving ? 0.7 : 1, minHeight: 44, whiteSpace: 'nowrap' }}>
+                {slotsSaving ? 'Enregistrement…' : 'Enregistrer les créneaux'}
+              </button>
+            </div>
+          </div>
+
+          {/* Day selector */}
+          <div className="sa-navscroll" style={{ display: 'flex', gap: 8, margin: '14px 0', minWidth: 0 }}>
+            {DAYS.map((d, i) => {
+              const active = selDay === i;
+              const offCount = BOOK_SLOTS.filter((s) => isBlocked(i, s)).length;
+              return (
+                <button key={d} onClick={() => setSelDay(i)} style={{ flexShrink: 0, padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${active ? PRIMARY : BORDER}`, background: active ? '#E7F6EE' : '#fff', color: active ? PRIMARY : DARK, fontSize: 13, fontWeight: 700, cursor: 'pointer', minHeight: 44 }}>
+                  {d.slice(0, 3)}{offCount > 0 && <span style={{ marginLeft: 6, fontSize: 10.5, color: '#C2466A', fontWeight: 800 }}>−{offCount}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick actions */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button onClick={() => setWholeDay(selDay, false)} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Tout activer</button>
+            <button onClick={() => setWholeDay(selDay, true)} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Tout désactiver</button>
+          </div>
+
+          {/* Slots grid for the selected day */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: 8 }}>
+            {BOOK_SLOTS.map((slot) => {
+              const off = isBlocked(selDay, slot);
+              return (
+                <button key={slot} onClick={() => toggleSlot(selDay, slot)} title={off ? 'Désactivé' : 'Réservable'} style={{
+                  minHeight: 44, padding: '8px 4px', borderRadius: 10, cursor: 'pointer',
+                  border: `1.5px solid ${off ? '#EDF1EF' : PRIMARY}`,
+                  background: off ? '#F4F6F5' : '#E7F6EE',
+                  color: off ? '#B7C2BD' : '#0E7C52',
+                  fontSize: 13.5, fontWeight: 700, textAlign: 'center',
+                  textDecoration: off ? 'line-through' : 'none', transition: 'all .12s',
+                }}>{slot}</button>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: MUTED }}>🟢 Vert = réservable · ⚪ Gris = désactivé. Pensez à enregistrer.</div>
+        </div>
 
         {/* Section 1: Working hours */}
         <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24 }}>
