@@ -61,6 +61,23 @@ export const DOC_TYPE_OPTS = [
   'Résultat','Ordonnance','Compte-rendu','Facture','Radiographie','Certificat','Échographie',
 ];
 
+// Shared demo patient roster — used by the Patients directory and the Documents
+// recipient selector so both always show the same complete list.
+export const DEMO_PATIENTS = [
+  { id: 1,  name: 'Fatima Zahra Benali',  initials: 'FZ', color: '#16A06A', age: 34, sex: 'F', cin: 'BK123456', phone: '+212 6 12 34 56 78', lastVisit: '2026-06-10', nextAppt: '2026-06-20', statut: 'Actif' },
+  { id: 2,  name: 'Mohamed Rachid Alami', initials: 'MR', color: '#2563EB', age: 52, sex: 'M', cin: 'A654321',  phone: '+212 6 23 45 67 89', lastVisit: '2026-06-05', nextAppt: '2026-06-18', statut: 'Actif' },
+  { id: 3,  name: 'Khadija Oumghar',      initials: 'KO', color: '#9333EA', age: 28, sex: 'F', cin: 'CB987654', phone: '+212 6 34 56 78 90', lastVisit: '2026-05-28', nextAppt: '—',          statut: 'Actif' },
+  { id: 4,  name: 'Youssef El Mansouri',  initials: 'YM', color: '#EA580C', age: 45, sex: 'M', cin: 'JA112233', phone: '+212 6 45 67 89 01', lastVisit: '2026-04-15', nextAppt: '2026-07-01', statut: 'Actif' },
+  { id: 5,  name: 'Nadia Benbrahim',      initials: 'NB', color: '#DB2777', age: 61, sex: 'F', cin: 'BE445566', phone: '+212 6 56 78 90 12', lastVisit: '2026-03-20', nextAppt: '—',          statut: 'Archivé' },
+  { id: 6,  name: 'Hassan Berrada',       initials: 'HB', color: '#0891B2', age: 38, sex: 'M', cin: 'D778899',  phone: '+212 6 67 89 01 23', lastVisit: '2026-06-12', nextAppt: '2026-06-19', statut: 'Actif' },
+  { id: 7,  name: 'Amina Tazi',           initials: 'AT', color: '#16A06A', age: 22, sex: 'F', cin: 'F334455',  phone: '+212 6 78 90 12 34', lastVisit: '2026-06-08', nextAppt: '2026-06-22', statut: 'Actif' },
+  { id: 8,  name: 'Omar Chraibi',         initials: 'OC', color: '#854D0E', age: 67, sex: 'M', cin: 'BK667788', phone: '+212 6 89 01 23 45', lastVisit: '2026-05-30', nextAppt: '2026-06-30', statut: 'Actif' },
+  { id: 9,  name: 'Souad Kettani',        initials: 'SK', color: '#9333EA', age: 41, sex: 'F', cin: 'AA990011', phone: '+212 6 90 12 34 56', lastVisit: '2026-02-14', nextAppt: '—',          statut: 'Archivé' },
+  { id: 10, name: 'Karim Bensouda',       initials: 'KB', color: '#2563EB', age: 29, sex: 'M', cin: 'CB223344', phone: '+212 6 01 23 45 67', lastVisit: '2026-06-11', nextAppt: '2026-06-25', statut: 'Actif' },
+  { id: 11, name: 'Layla Cherkaoui',      initials: 'LC', color: '#DB2777', age: 35, sex: 'F', cin: 'G556677',  phone: '+212 6 11 22 33 44', lastVisit: '2026-06-13', nextAppt: '2026-07-05', statut: 'Actif' },
+  { id: 12, name: 'Driss El Fassi',       initials: 'DF', color: '#EA580C', age: 58, sex: 'M', cin: 'JB889900', phone: '+212 6 22 33 44 55', lastVisit: '2026-05-10', nextAppt: '—',          statut: 'Actif' },
+];
+
 export const DOCTORS = [
   {id:1,name:'Dr. Leila Marmioui',spec:'gyneco',city:'Tanger',clinic:'Clinique du Parc',rating:4.8,reviews:128,price:300,conv:true,tele:true,langs:['Français','Arabe'],exp:15,next:'tomorrow',x:60,y:18},
   {id:2,name:'Dr. Karim Benali',spec:'cardio',city:'Casablanca',clinic:'Institut Cardio Casa',rating:4.9,reviews:208,price:500,conv:true,tele:false,langs:['Français','Arabe'],exp:20,next:'today',x:37,y:61},

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
+import { DEMO_PATIENTS } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -11,35 +12,40 @@ const BORDER_STRONG = '#D5E5DD';
 const HEADER_BG = '#EDF5F0';
 const CARD_SHADOW = '0 2px 12px rgba(21,49,74,0.08)';
 
-const SAMPLE_PATIENTS = [
-  { id: 1, name: 'Fatima Zahra Benali', initials: 'FZ', color: '#16A06A', age: 34, cin: 'BK123456', phone: '+212 6 12 34 56 78', lastVisit: '2026-06-10', nextAppt: '2026-06-20', statut: 'Actif' },
-  { id: 2, name: 'Mohamed Rachid Alami', initials: 'MR', color: '#2563EB', age: 52, cin: 'A654321', phone: '+212 6 23 45 67 89', lastVisit: '2026-06-05', nextAppt: '2026-06-18', statut: 'Actif' },
-  { id: 3, name: 'Khadija Oumghar', initials: 'KO', color: '#9333EA', age: 28, cin: 'CB987654', phone: '+212 6 34 56 78 90', lastVisit: '2026-05-28', nextAppt: '—', statut: 'Actif' },
-  { id: 4, name: 'Youssef El Mansouri', initials: 'YM', color: '#EA580C', age: 45, cin: 'JA112233', phone: '+212 6 45 67 89 01', lastVisit: '2026-04-15', nextAppt: '2026-07-01', statut: 'Actif' },
-  { id: 5, name: 'Nadia Benbrahim', initials: 'NB', color: '#DB2777', age: 61, cin: 'BE445566', phone: '+212 6 56 78 90 12', lastVisit: '2026-03-20', nextAppt: '—', statut: 'Archivé' },
-  { id: 6, name: 'Hassan Berrada', initials: 'HB', color: '#0891B2', age: 38, cin: 'D778899', phone: '+212 6 67 89 01 23', lastVisit: '2026-06-12', nextAppt: '2026-06-19', statut: 'Actif' },
-  { id: 7, name: 'Amina Tazi', initials: 'AT', color: '#16A06A', age: 22, cin: 'F334455', phone: '+212 6 78 90 12 34', lastVisit: '2026-06-08', nextAppt: '2026-06-22', statut: 'Actif' },
-  { id: 8, name: 'Omar Chraibi', initials: 'OC', color: '#854D0E', age: 67, cin: 'BK667788', phone: '+212 6 89 01 23 45', lastVisit: '2026-05-30', nextAppt: '2026-06-30', statut: 'Actif' },
-  { id: 9, name: 'Souad Kettani', initials: 'SK', color: '#9333EA', age: 41, cin: 'AA990011', phone: '+212 6 90 12 34 56', lastVisit: '2026-02-14', nextAppt: '—', statut: 'Archivé' },
-  { id: 10, name: 'Karim Bensouda', initials: 'KB', color: '#2563EB', age: 29, cin: 'CB223344', phone: '+212 6 01 23 45 67', lastVisit: '2026-06-11', nextAppt: '2026-06-25', statut: 'Actif' },
-  { id: 11, name: 'Layla Cherkaoui', initials: 'LC', color: '#DB2777', age: 35, cin: 'G556677', phone: '+212 6 11 22 33 44', lastVisit: '2026-06-13', nextAppt: '2026-07-05', statut: 'Actif' },
-  { id: 12, name: 'Driss El Fassi', initials: 'DF', color: '#EA580C', age: 58, cin: 'JB889900', phone: '+212 6 22 33 44 55', lastVisit: '2026-05-10', nextAppt: '—', statut: 'Actif' },
-];
+const menuItemStyle = {
+  display: 'block', width: '100%', textAlign: 'start', background: 'none', border: 'none',
+  padding: '11px 14px', fontSize: 13, fontWeight: 600, color: '#15314A', cursor: 'pointer',
+};
 
-const STATS = [
-  { label: 'Total patients', value: 142, icon: '👥', color: '#EFF6FF', textColor: '#1D4ED8' },
-  { label: 'Nouveaux ce mois', value: 12, icon: '🆕', color: '#F0FDF4', textColor: '#166534' },
-  { label: 'Actifs', value: 118, icon: '✅', color: '#FDF4FF', textColor: '#7E22CE' },
-];
+// Professional line icons (no emojis).
+const IconUsers = ({ c }) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
+const IconNew = ({ c }) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>);
+const IconCheck = ({ c }) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>);
 
 export default function Patients({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
   const [activeFilter, setActiveFilter] = useState('Tous');
   const [patientSearch, setPatientSearch] = useState('');
+  const [patientList, setPatientList] = useState(DEMO_PATIENTS);
+  const [viewPatient, setViewPatient] = useState(null);   // detail modal
+  const [menuId, setMenuId] = useState(null);             // open "…" menu row
 
   const filters = ['Tous', 'Actifs', 'Nouveaux', 'Archivés'];
 
-  const filtered = SAMPLE_PATIENTS.filter(p => {
+  const totalCount = patientList.length;
+  const activeCount = patientList.filter(p => p.statut === 'Actif').length;
+  const STATS = [
+    { label: 'Total patients',   value: totalCount,  Icon: IconUsers, color: '#EFF6FF' },
+    { label: 'Nouveaux ce mois', value: 12,          Icon: IconNew,   color: '#F0FDF4' },
+    { label: 'Actifs',           value: activeCount, Icon: IconCheck, color: '#FDF4FF' },
+  ];
+
+  const toggleArchive = (id) => {
+    setPatientList(list => list.map(p => p.id === id ? { ...p, statut: p.statut === 'Archivé' ? 'Actif' : 'Archivé' } : p));
+    setMenuId(null);
+  };
+
+  const filtered = patientList.filter(p => {
     const matchFilter =
       activeFilter === 'Tous' ||
       (activeFilter === 'Actifs' && p.statut === 'Actif') ||
@@ -83,8 +89,8 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12, background: stat.color,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0,
-            }}>{stat.icon}</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}><stat.Icon c={PRIMARY} /></div>
             <div>
               <div style={{ fontSize: 26, fontWeight: 700, color: DARK, lineHeight: 1 }}>{stat.value}</div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 3 }}>{stat.label}</div>
@@ -201,33 +207,52 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
                   </td>
                   {/* Actions */}
                   <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6, position: 'relative' }}>
                       <button
                         title="Voir le dossier"
+                        onClick={() => setViewPatient(patient)}
                         style={{
                           background: '#EFF6FF', border: 'none', borderRadius: 8,
-                          width: 32, height: 32, cursor: 'pointer', fontSize: 15,
+                          width: 32, height: 32, cursor: 'pointer', color: '#1D4ED8',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
-                      >👁</button>
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </button>
                       <button
                         title="Planifier un RDV"
                         onClick={openNewAppt}
                         style={{
                           background: '#F0FDF4', border: 'none', borderRadius: 8,
-                          width: 32, height: 32, cursor: 'pointer', fontSize: 15,
+                          width: 32, height: 32, cursor: 'pointer', color: PRIMARY,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
-                      >📅</button>
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                      </button>
                       <button
                         title="Plus d'options"
+                        onClick={() => setMenuId(menuId === patient.id ? null : patient.id)}
                         style={{
                           background: BG, border: 'none', borderRadius: 8,
-                          width: 32, height: 32, cursor: 'pointer', fontSize: 16,
+                          width: 32, height: 32, cursor: 'pointer', color: MUTED,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: MUTED, fontWeight: 700, letterSpacing: 1,
                         }}
-                      >···</button>
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                      </button>
+                      {menuId === patient.id && (
+                        <>
+                          <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+                          <div style={{ position: 'absolute', top: 38, right: 0, width: 188, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: '0 14px 34px rgba(21,49,74,0.16)', overflow: 'hidden', zIndex: 40 }}>
+                            <button onClick={() => { setViewPatient(patient); setMenuId(null); }} style={menuItemStyle}>Voir le dossier</button>
+                            <button onClick={() => { openNewAppt(); setMenuId(null); }} style={menuItemStyle}>Planifier un RDV</button>
+                            <button onClick={() => toggleArchive(patient.id)} style={{ ...menuItemStyle, color: patient.statut === 'Archivé' ? PRIMARY : '#D9536B', borderTop: `1px solid ${BORDER}` }}>
+                              {patient.statut === 'Archivé' ? 'Réactiver' : 'Archiver'}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -249,7 +274,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           padding: '14px 20px', borderTop: `1px solid ${BORDER_STRONG}`, background: HEADER_BG,
         }}>
           <span style={{ fontSize: 13, color: MUTED }}>
-            Affichage 1–{filtered.length} sur 142 patients
+            Affichage 1–{filtered.length} sur {totalCount} patients
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button style={{
@@ -263,6 +288,45 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           </div>
         </div>
       </div>
+
+      {/* Patient detail modal */}
+      {viewPatient && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setViewPatient(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.45)', zIndex: 200, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', padding: isMobile ? '20px 12px' : 24, overflowY: 'auto' }}
+        >
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(21,49,74,0.3)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: viewPatient.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 17, flexShrink: 0 }}>
+                {viewPatient.initials}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{viewPatient.name}</div>
+                <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{viewPatient.age} ans · {viewPatient.sex === 'F' ? 'Femme' : 'Homme'}</div>
+              </div>
+              <button onClick={() => setViewPatient(null)} style={{ background: BG, border: `1px solid ${BORDER}`, cursor: 'pointer', width: 32, height: 32, borderRadius: 9, color: MUTED, fontSize: 15, flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                ['CIN', viewPatient.cin],
+                ['Téléphone', viewPatient.phone],
+                ['Dernière visite', viewPatient.lastVisit],
+                ['Prochain RDV', viewPatient.nextAppt],
+                ['Statut', viewPatient.statut],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, fontSize: 13.5 }}>
+                  <span style={{ color: MUTED }}>{k}</span>
+                  <span style={{ color: DARK, fontWeight: 600, direction: 'ltr' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '0 24px 22px', display: 'flex', gap: 10 }}>
+              <button onClick={() => { setViewPatient(null); openNewAppt(); }} style={{ flex: 1, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 11, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Planifier un RDV</button>
+              <button onClick={() => setViewPatient(null)} style={{ flex: 1, background: BG, color: '#5A6B65', border: `1px solid ${BORDER}`, borderRadius: 11, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

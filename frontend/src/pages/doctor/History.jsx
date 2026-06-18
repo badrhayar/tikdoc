@@ -64,6 +64,30 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
     setEditOpen(true);
   }
 
+  // Build a CSV from the currently filtered rows and trigger a download.
+  function exportCSV() {
+    const cols = ['Patient', 'Âge', 'Sexe', 'Service', 'Date', 'Heure', 'Montant (MAD)', 'Paiement', 'Statut'];
+    const esc = (v) => {
+      const s = String(v ?? '');
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [cols.join(',')];
+    for (const c of filtered) {
+      lines.push([c.patient, c.age, c.sex, c.service, c.date, c.time, c.amount, c.pay, c.status].map(esc).join(','));
+    }
+    // BOM so Excel reads the accents correctly.
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `consultations_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (filtered.length === 0) setState({ toast: 'Aucune consultation à exporter.', toastShow: true });
+  }
+
   async function saveEdit() {
     // Optimistic local update (also refreshes Calendar / Statistics).
     setState({ consultations: state.consultations.map(c => c.id === editData.id ? editData : c) });
@@ -217,13 +241,14 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: DARK }}>Historique des consultations</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13.5, color: MUTED }}>Consultez et exportez l'ensemble de vos consultations</p>
         </div>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', border: `1.5px solid ${BORDER_STRONG}`, borderRadius: 10, background: '#fff', color: DARK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
-          <span style={{ fontSize: 15 }}>↓</span> Exporter CSV
+        <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 18px', border: `1.5px solid ${BORDER_STRONG}`, borderRadius: 10, background: '#fff', color: DARK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Exporter CSV
         </button>
       </div>
 

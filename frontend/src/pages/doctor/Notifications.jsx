@@ -104,15 +104,15 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
       {activeTab === 0 && (
         <div>
           {/* Stats Row */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? 10 : 16, marginBottom: 28 }}>
             {[
               { label: 'SMS ce mois', value: '124' },
               { label: 'Taux de livraison', value: '98.4%' },
               { label: 'Confirmations', value: '89' },
             ].map((stat, i) => (
               <div key={i} style={{
-                flex: 1, backgroundColor: '#fff', border: `1px solid ${BORDER}`,
-                borderRadius: 12, padding: '16px 20px',
+                flex: isMobile ? '1 1 100%' : 1, backgroundColor: '#fff', border: `1px solid ${BORDER}`,
+                borderRadius: 12, padding: '16px 20px', minWidth: isMobile ? 0 : 140,
               }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: DARK }}>{stat.value}</div>
                 <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{stat.label}</div>
@@ -120,9 +120,9 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
             ))}
           </div>
 
-          {/* Table */}
-          <div style={{ backgroundColor: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          {/* Table — horizontally scrollable so no column is cropped on mobile */}
+          <div style={{ backgroundColor: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`, overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: BG }}>
                   {['Patient', 'Téléphone', 'Message', 'Envoyé le', 'Statut'].map((col) => (

@@ -22,6 +22,13 @@ const STATUS_CONFIG = {
   'Absent':     { bg: '#F3F4F6', color: '#374151', border: MUTED },
 };
 
+const PAYMENT_CONFIG = {
+  'Payé':       { bg: '#D1FAE5', color: '#065F46' },
+  'En attente': { bg: '#FEF3C7', color: '#92400E' },
+  'Non payé':   { bg: '#FEE2E2', color: '#991B1B' },
+  '—':          { bg: '#F3F4F6', color: '#6B7B76' },
+};
+
 const pad = (n) => String(n).padStart(2, '0');
 
 export default function Appointments({ state, setState, go, openNewAppt }) {

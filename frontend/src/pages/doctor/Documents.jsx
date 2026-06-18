@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { uploadDocument, listDocuments, getDocumentUrl } from '../../lib/api';
+import { DEMO_PATIENTS } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -12,13 +13,8 @@ const fileIcon = (path = '') => /\.(png|jpe?g|gif|webp)$/i.test(path) ? '🖼' :
 const fileName = (path = '') => (path.split('/').pop() || path).replace(/^\d+_/, '');
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-const MOCK_PATIENTS = [
-  { id: 1, name: 'Amina Benali' },
-  { id: 2, name: 'Youssef El Fassi' },
-  { id: 3, name: 'Fatima Zahra Alaoui' },
-  { id: 4, name: 'Omar Chraibi' },
-  { id: 5, name: 'Leila Tazi' },
-];
+// Full patient roster — same list shown in the Patients directory.
+const PATIENT_OPTS = DEMO_PATIENTS.map(p => ({ id: p.id, name: p.name }));
 
 const MOCK_DOCUMENTS = [
   { id: 1, icon: '📄', name: 'ordonnance_benali_14juin.pdf', patient: 'Amina Benali', date: '14/06/2026', size: '128 Ko', status: 'Envoyé', statusColor: PRIMARY },
@@ -56,13 +52,14 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
 
   const handleUpload = async () => {
     if (!appUser) { setState({ toast: 'Connectez-vous en tant que médecin.', toastShow: true }); return; }
+    if (!docPatient) { setState({ toast: 'Sélectionnez d’abord un patient.', toastShow: true }); return; }
     if (!file) { setState({ toast: 'Choisissez un fichier d’abord.', toastShow: true }); return; }
     setBusy(true);
     try {
       await uploadDocument({ file, ownerId: appUser.id, fileType: docType });
-      setFile(null); setDocNotes('');
+      setFile(null); setDocNotes(''); setDocPatient(null);
       await refresh();
-      setState({ toast: 'Document envoyé ✓', toastShow: true });
+      setState({ toast: `Document envoyé à ${docPatient.name} ✓`, toastShow: true });
     } catch (e) {
       setState({ toast: 'Échec de l’envoi : ' + (e?.message || 'erreur'), toastShow: true });
     } finally { setBusy(false); }
@@ -115,38 +112,43 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                   <span style={{ color: MUTED, fontSize: 12 }}>{showPatientDrop ? '▲' : '▼'}</span>
                 </div>
                 {showPatientDrop && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 4px)',
-                    left: 0,
-                    right: 0,
-                    background: '#fff',
-                    border: `1.5px solid ${BORDER}`,
-                    borderRadius: 10,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
-                    zIndex: 100,
-                    overflow: 'hidden',
-                  }}>
-                    {MOCK_PATIENTS.map(p => (
-                      <div
-                        key={p.id}
-                        onClick={() => { setDocPatient(p); setShowPatientDrop(false); }}
-                        style={{
-                          padding: '11px 14px',
-                          cursor: 'pointer',
-                          fontSize: 14,
-                          color: DARK,
-                          background: docPatient?.id === p.id ? BG : '#fff',
-                          borderBottom: `1px solid ${BORDER}`,
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = BG}
-                        onMouseLeave={e => e.currentTarget.style.background = docPatient?.id === p.id ? BG : '#fff'}
-                      >
-                        {p.name}
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    {/* Click-away layer: closes the menu when clicking anywhere else */}
+                    <div onClick={() => setShowPatientDrop(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      right: 0,
+                      background: '#fff',
+                      border: `1.5px solid ${BORDER}`,
+                      borderRadius: 10,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                      zIndex: 100,
+                      overflowY: 'auto',
+                      maxHeight: 260,
+                    }}>
+                      {PATIENT_OPTS.map(p => (
+                        <div
+                          key={p.id}
+                          onClick={() => { setDocPatient(p); setShowPatientDrop(false); }}
+                          style={{
+                            padding: '11px 14px',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            color: DARK,
+                            background: docPatient?.id === p.id ? BG : '#fff',
+                            borderBottom: `1px solid ${BORDER}`,
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = BG}
+                          onMouseLeave={e => e.currentTarget.style.background = docPatient?.id === p.id ? BG : '#fff'}
+                        >
+                          {p.name}
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

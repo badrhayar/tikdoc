@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS } from '../../shared.jsx';
+import { moroccoNow } from '../../lib/time.js';
 import Dashboard from './Dashboard';
 import Calendar from './Calendar';
 import Appointments from './Appointments';
@@ -36,31 +37,23 @@ const NAV = [
   { screen:'dsettings', icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>, label:'Paramètres' },
 ];
 
-const NOTIF_LIST = [
-  { icon:'📅', text:'Nouveau rendez-vous — Nouria Alaoui le 16 Mai à 08:30', ago:'il y a 3 min', ci:0 },
-  { icon:'✓',  text:'Rappel SMS envoyé à Ilyas Tahiri', ago:'il y a 12 min', ci:3 },
-  { icon:'❌', text:'Annulation — Karim Bensaid a annulé son rdv du 16 Mai', ago:'il y a 1 h', ci:2 },
-  { icon:'⭐', text:'Nouveau avis 5★ de Mariem Essafi', ago:'il y a 2 h', ci:0 },
-];
-
-const MSG_LIST = [
-  { name:'Fatima El Amrani', text:'Bonjour docteur, j\'ai une question…', ago:'09:14', ci:0 },
-  { name:'Youssef Alaoui',   text:'Merci pour la consultation !',          ago:'08:40', ci:1 },
-  { name:'Meryem Zouari',    text:'Est-ce que je dois à jeun ?',           ago:'hier',  ci:2 },
-];
-
 export default function DoctorApp() {
   const { state, setState, go } = useApp();
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
 
-  const [popBell, setPopBell] = useState(false);
-  const [popChat, setPopChat] = useState(false);
   const [popAvatar, setPopAvatar] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const { isMobile } = useViewport();
   const goNav = (sc) => { setNavOpen(false); go(sc); };
 
-  const closePops = () => { setPopBell(false); setPopChat(false); setPopAvatar(false); };
+  const closePops = () => { setPopAvatar(false); };
+
+  // Signed-in doctor identity (falls back gracefully when not yet loaded).
+  const docName  = state.appUser?.full_name || 'Mon cabinet';
+  const docEmail = state.appUser?.email || '';
+  const todayISO = moroccoNow().dateISO;
+  // The motif list must mirror exactly the services the doctor defined.
+  const motifOpts = (state.services?.length ? state.services.map(s => s.motif) : MOTIF_OPTS);
 
   const SUB = {
     doctor: Dashboard, dcal: Calendar, dappts: Appointments, dhist: History,
@@ -70,10 +63,33 @@ export default function DoctorApp() {
   };
   const SubScreen = SUB[screen] || Dashboard;
 
-  const openNewAppt = () => { closePops(); setState({ newApptOpen:true, apptCreated:false }); };
+  const openNewAppt = () => {
+    closePops();
+    // Always open on a clean form anchored to today's real (Morocco) date.
+    setState({
+      newApptOpen:true, apptCreated:false, naMatch:null, naSuggestOpen:false,
+      newAppt:{ name:'', phone:'', cin:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', notes:'' },
+    });
+  };
   const closeNewAppt = () => setState({ newApptOpen:false });
   const submitNewAppt = () => {
-    setState({ newApptOpen:false, apptCreated:true });
+    const na = state.newAppt || {};
+    if (!na.name || !na.date || !na.time) {
+      setState({ toast:'Renseignez le nom du patient, la date et l’heure.', toastShow:true });
+      return;
+    }
+    const dt = new Date(`${na.date}T${na.time}:00`);
+    const id = 'local_' + Date.now();
+    // Add to the appointment list (Rendez-vous) and the consultations list
+    // (Calendrier / Historique / Statistiques) so it shows up everywhere.
+    const appt = { id, datetime: dt.toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
+    const svc  = (state.services || []).find(s => s.motif === na.motif);
+    const consult = { id, patient: na.name, age:'—', sex:'F', service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
+    setState({
+      newApptOpen:false, apptCreated:true,
+      myAppointments: [appt, ...(state.myAppointments || [])],
+      consultations:  [consult, ...(state.consultations || [])],
+    });
     setTimeout(() => setState({ apptCreated:false }), 3000);
   };
 
@@ -133,8 +149,8 @@ export default function DoctorApp() {
             <svg width="28" height="32" viewBox="0 0 26 30" fill="#16A06A" opacity=".4"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Dr. Leila Marmioui</div>
-            <div style={{ fontSize:11.5, color:MUT }}>Gynécologue</div>
+            <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docName}</div>
+            <div style={{ fontSize:11.5, color:MUT, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', direction:'ltr' }}>{docEmail || 'Médecin'}</div>
           </div>
           <button onClick={() => go('home')} title="Déconnexion" style={{ background:'#fff', border:'1px solid #E2EBE6', borderRadius:9, cursor:'pointer', color:'#9AA8A2', padding:7, display:'flex' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -162,70 +178,17 @@ export default function DoctorApp() {
             <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
-          {/* Bell */}
-          <div style={{ position:'relative', zIndex:40 }}>
-            <button onClick={() => { setPopBell(b=>!b); setPopChat(false); setPopAvatar(false); }} style={{ position:'relative', background:BG, border:`1px solid ${BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color:'#5A6B65', fontSize:16 }}>
-              🔔<span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#E2748A', border:'1.5px solid #fff' }} />
-            </button>
-            {popBell && (
-              <>
-                <div onClick={() => setPopBell(false)} style={{ position:'fixed', inset:0, zIndex:30 }} />
-                <div style={{ position:'absolute', top:46, right:0, width:316, background:'#fff', border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:'0 18px 44px rgba(21,49,74,.16)', overflow:'hidden', animation:'saFade .14s ease', zIndex:40 }}>
-                  <div style={{ padding:'12px 14px', borderBottom:'1px solid #F0F3F2', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <span style={{ fontSize:13.5, fontWeight:800, color:DARK }}>Notifications</span>
-                    <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'2px 8px', borderRadius:99 }}>4 nouvelles</span>
-                  </div>
-                  <div style={{ maxHeight:312, overflowY:'auto' }}>
-                    {NOTIF_LIST.map((n, i) => {
-                      const [bg, fg] = tint(n.ci);
-                      return (
-                        <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start', padding:'11px 14px', borderBottom:'1px solid #F5F7F6' }}>
-                          <span style={{ width:30, height:30, borderRadius:9, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0 }}>{n.icon}</span>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:12.5, color:DARK, lineHeight:1.4 }}>{n.text}</div>
-                            <div style={{ fontSize:11, color:'#9AA8A2', marginTop:1 }}>{n.ago}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => { go('dnotif'); setPopBell(false); }} style={{ width:'100%', padding:11, background:'none', border:'none', borderTop:'1px solid #F0F3F2', cursor:'pointer', color:G, fontSize:12.5, fontWeight:700 }}>
-                    Voir toutes les notifications
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          {/* Bell → full Notifications page */}
+          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dnotif' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dnotif' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#E2748A', border:'1.5px solid #fff' }} />
+          </button>
 
-          {/* Chat */}
-          <div style={{ position:'relative', zIndex:40 }}>
-            <button onClick={() => { setPopChat(c=>!c); setPopBell(false); setPopAvatar(false); }} style={{ position:'relative', background:BG, border:`1px solid ${BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color:'#5A6B65', fontSize:15 }}>
-              💬<span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:G, border:'1.5px solid #fff' }} />
-            </button>
-            {popChat && (
-              <>
-                <div onClick={() => setPopChat(false)} style={{ position:'fixed', inset:0, zIndex:30 }} />
-                <div style={{ position:'absolute', top:46, right:0, width:316, background:'#fff', border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:'0 18px 44px rgba(21,49,74,.16)', overflow:'hidden', zIndex:40 }}>
-                  <div style={{ padding:'12px 14px', borderBottom:'1px solid #F0F3F2' }}><span style={{ fontSize:13.5, fontWeight:800, color:DARK }}>Messages</span></div>
-                  {MSG_LIST.map((m, i) => {
-                    const [bg, fg] = tint(m.ci);
-                    return (
-                      <div key={i} style={{ display:'flex', gap:11, alignItems:'center', padding:'11px 14px', borderBottom:'1px solid #F5F7F6' }}>
-                        <span style={{ width:34, height:34, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>{initials(m.name)}</span>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
-                            <span style={{ fontSize:12.5, fontWeight:700, color:DARK }}>{m.name}</span>
-                            <span style={{ fontSize:11, color:'#9AA8A2' }}>{m.ago}</span>
-                          </div>
-                          <div style={{ fontSize:11.5, color:MUT, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{m.text}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Chat → full Messages page */}
+          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dchat' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dchat' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:G, border:'1.5px solid #fff' }} />
+          </button>
 
           {/* Avatar */}
           <div style={{ position:'relative', zIndex:40 }}>
@@ -237,8 +200,8 @@ export default function DoctorApp() {
                 <div onClick={() => setPopAvatar(false)} style={{ position:'fixed', inset:0, zIndex:30 }} />
                 <div style={{ position:'absolute', top:46, right:0, width:228, background:'#fff', border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:'0 18px 44px rgba(21,49,74,.16)', overflow:'hidden', zIndex:40 }}>
                   <div style={{ padding:14, borderBottom:'1px solid #F0F3F2' }}>
-                    <div style={{ fontSize:13.5, fontWeight:800, color:DARK }}>Dr. Leila Marmioui</div>
-                    <div style={{ fontSize:11.5, color:MUT, direction:'ltr' }}>leila.marmioui@clinique.ma</div>
+                    <div style={{ fontSize:13.5, fontWeight:800, color:DARK }}>{docName}</div>
+                    <div style={{ fontSize:11.5, color:MUT, direction:'ltr', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docEmail || 'Médecin'}</div>
                   </div>
                   <button onClick={() => { go('dsettings'); setPopAvatar(false); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:DARK, textAlign:'start' }}>
                     <span style={{ color:MUT }}>👤</span> Mon profil
@@ -258,17 +221,17 @@ export default function DoctorApp() {
 
         {/* New appointment modal */}
         {newApptOpen && (
-          <div style={{ position:'fixed', inset:0, background:'rgba(21,49,74,.42)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'34px 24px', zIndex:80, overflowY:'auto' }}>
+          <div style={{ position:'fixed', inset:0, background:'rgba(21,49,74,.42)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding: isMobile ? '16px 10px' : '34px 24px', zIndex:80, overflowY:'auto' }}>
             <div style={{ background:'#fff', borderRadius:18, width:'100%', maxWidth:520, boxShadow:'0 24px 60px rgba(21,49,74,.3)', animation:'saPop .28s ease' }}>
-              <div style={{ padding:'20px 26px', borderBottom:'1px solid #F0F3F2', display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ padding: isMobile ? '16px 18px' : '20px 26px', borderBottom:'1px solid #F0F3F2', display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:38, height:38, borderRadius:11, background:'#E7F6EE', color:'#138257', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>+</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:17, fontWeight:800, color:DARK }}>Nouveau rendez-vous</div>
                   <div style={{ fontSize:12.5, color:MUT }}>Ajoutez un patient et planifiez sa consultation</div>
                 </div>
-                <button onClick={closeNewAppt} style={{ background:BG, border:`1px solid ${BORDER}`, cursor:'pointer', width:32, height:32, borderRadius:9, color:MUT, fontSize:15 }}>✕</button>
+                <button onClick={closeNewAppt} style={{ background:BG, border:`1px solid ${BORDER}`, cursor:'pointer', width:32, height:32, borderRadius:9, color:MUT, fontSize:15, flexShrink:0 }}>✕</button>
               </div>
-              <div style={{ padding:'22px 26px' }}>
+              <div style={{ padding: isMobile ? '18px 16px' : '22px 26px' }}>
                 <div style={{ fontSize:11.5, fontWeight:800, color:'#9AA8A2', textTransform:'uppercase', letterSpacing:.5, marginBottom:12 }}>Patient</div>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Nom complet</label>
                 <div style={{ position:'relative', marginBottom:14 }}>
@@ -302,30 +265,30 @@ export default function DoctorApp() {
                     <button onClick={() => setState({ naMatch:null })} style={{ background:'none', border:'none', cursor:'pointer', color:MUT, fontSize:12, fontWeight:700, flexShrink:0 }}>Modifier</button>
                   </div>
                 )}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18 }}>
-                  <div>
+                <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:14, marginBottom:18 }}>
+                  <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Téléphone</label>
                     <div style={{ display:'flex', alignItems:'center', border:'1px solid #DCE5E0', borderRadius:9, background:'#F8FBF9', overflow:'hidden' }}>
-                      <span style={{ padding:'11px 9px', fontSize:13.5, color:MUT, background:'#EEF3F1', borderRight:'1px solid #DCE5E0' }}>+212</span>
+                      <span style={{ padding:'11px 9px', fontSize:13.5, color:MUT, background:'#EEF3F1', borderRight:'1px solid #DCE5E0', flexShrink:0 }}>+212</span>
                       <input value={newAppt.phone || ''} onChange={e => setNA('phone', e.target.value)} placeholder="6 12 34 56 78" style={{ flex:1, minWidth:0, padding:11, border:'none', fontSize:13.5, outline:'none', background:'none', direction:'ltr' }} />
                     </div>
                   </div>
-                  <div>
+                  <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>CIN <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
-                    <input value={newAppt.cin || ''} onChange={e => setNA('cin', e.target.value)} placeholder="AB123456" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                    <input value={newAppt.cin || ''} onChange={e => setNA('cin', e.target.value)} placeholder="AB123456" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
                   </div>
                 </div>
                 <div style={{ fontSize:11.5, fontWeight:800, color:'#9AA8A2', textTransform:'uppercase', letterSpacing:.5, marginBottom:12 }}>Rendez-vous</div>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Motif de consultation</label>
-                <select value={newAppt.motif || 'Consultation générale'} onChange={e => setNA('motif', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', marginBottom:14 }}>
-                  {MOTIF_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+                <select value={newAppt.motif || motifOpts[0]} onChange={e => setNA('motif', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', marginBottom:14, boxSizing:'border-box' }}>
+                  {motifOpts.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-                  <div>
+                  <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Date</label>
-                    <input type="date" value={newAppt.date || '2024-05-16'} onChange={e => setNA('date', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                    <input type="date" min={todayISO} value={newAppt.date || todayISO} onChange={e => setNA('date', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                   </div>
-                  <div>
+                  <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Heure</label>
                     <input type="time" value={newAppt.time || '09:00'} onChange={e => setNA('time', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                   </div>
@@ -333,9 +296,9 @@ export default function DoctorApp() {
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Notes <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
                 <textarea value={newAppt.notes || ''} onChange={e => setNA('notes', e.target.value)} placeholder="Symptômes, remarques…" style={{ width:'100%', minHeight:62, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', resize:'vertical', boxSizing:'border-box' }} />
               </div>
-              <div style={{ padding:'0 26px 22px', display:'flex', gap:10 }}>
-                <button onClick={closeNewAppt} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Annuler</button>
-                <button onClick={submitNewAppt} style={{ flex:1.5, background:G, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Enregistrer le rendez-vous</button>
+              <div style={{ padding: isMobile ? '0 16px 18px' : '0 26px 22px', display:'flex', gap:10 }}>
+                <button onClick={closeNewAppt} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700, whiteSpace:'nowrap' }}>Annuler</button>
+                <button onClick={submitNewAppt} style={{ flex: isMobile ? 1.4 : 1.5, background:G, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize: isMobile ? 13.5 : 14, fontWeight:700, whiteSpace:'nowrap' }}>{isMobile ? 'Enregistrer' : 'Enregistrer le rendez-vous'}</button>
               </div>
             </div>
           </div>
