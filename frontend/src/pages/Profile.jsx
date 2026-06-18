@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor } from '../shared.jsx';
-import { moroccoNow, slotToMinutes, weekdayOf } from '../lib/time.js';
+import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots } from '../lib/api';
+import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const PRIMARY = '#16A06A';
@@ -34,35 +35,56 @@ export default function Profile() {
   const [viewY, setViewY] = useState(m.year);
   const [viewM, setViewM] = useState(m.month);
 
-  // Booked + doctor-disabled slots so we can grey them out.
-  const [bookedSlots, setBookedSlots] = useState([]);          // ['09:00', ...] for selected date
-  const [blockedSlots, setBlockedSlots] = useState([]);        // [{ day_of_week, slot }] for this doctor
+  // Per selected-date availability so we can grey out the right slots.
+  const [bookedSlots, setBookedSlots]   = useState([]);   // ['09:00', ...] booked on the selected date
+  const [blockedSlots, setBlockedSlots] = useState([]);   // ['09:00', ...] doctor-disabled on the selected date
+  const [prayerSlots, setPrayerSlots]   = useState([]);   // ['13:00', ...] slots overlapping an enabled prayer
 
   const selectedSlot = bookSlot || '';
   const selectedDate = bookDate || '';
 
-  // Load this doctor's recurring blocked slots once.
-  useEffect(() => {
-    if (!isSupabaseConfigured || typeof doc?.id !== 'string') { setBlockedSlots([]); return; }
-    let active = true;
-    fetchBlockedSlots(doc.id).then((r) => active && setBlockedSlots(r)).catch(() => {});
-    return () => { active = false; };
-  }, [doc?.id]);
+  const maxPerDay = doc?.maxPerDay || 0;
+  // "Complet" once the doctor's daily cap is reached.
+  const dayFull = maxPerDay > 0 && bookedSlots.length >= maxPerDay;
 
-  // Load the booked times whenever the chosen date changes.
+  // Load doctor-disabled + booked slots whenever the chosen date changes.
   useEffect(() => {
-    if (!isSupabaseConfigured || typeof doc?.id !== 'string' || !selectedDate) { setBookedSlots([]); return; }
+    if (!isSupabaseConfigured || typeof doc?.id !== 'string' || !selectedDate) {
+      setBlockedSlots([]); setBookedSlots([]); return;
+    }
     let active = true;
+    fetchBlockedSlots(doc.id, selectedDate).then((r) => active && setBlockedSlots(r)).catch(() => {});
     fetchBookedSlots(doc.id, selectedDate).then((r) => active && setBookedSlots(r)).catch(() => {});
     return () => { active = false; };
   }, [doc?.id, selectedDate]);
 
+  // Prayer blocking: map each enabled prayer time to the 30-min slot that contains it.
+  useEffect(() => {
+    if (!doc?.prayerBlock || !(doc?.prayerIds?.length) || !selectedDate) { setPrayerSlots([]); return; }
+    let active = true;
+    fetchPrayerTimes(doc.city, selectedDate).then((times) => {
+      if (!active) return;
+      const t = times || PRAYER_FALLBACK;
+      const out = [];
+      for (const id of doc.prayerIds) {
+        const hhmm = t[id];
+        if (!hhmm) continue;
+        const mins = slotToMinutes(hhmm);
+        const slot = BOOK_SLOTS.find((s) => mins >= slotToMinutes(s) && mins < slotToMinutes(s) + 30);
+        if (slot) out.push(slot);
+      }
+      setPrayerSlots(out);
+    }).catch(() => active && setPrayerSlots([]));
+    return () => { active = false; };
+  }, [doc?.id, doc?.prayerBlock, doc?.prayerIds, doc?.city, selectedDate]);
+
   // Reason a slot is unavailable, or null if it's bookable for the selected date.
   const slotState = (slot) => {
     if (!selectedDate) return null;
+    if (dayFull) return 'full';
     if (bookedSlots.includes(slot)) return 'booked';
-    const dow = weekdayOf(selectedDate);
-    if (blockedSlots.some((b) => b.day_of_week === dow && b.slot === slot)) return 'blocked';
+    if (blockedSlots.includes(slot)) return 'blocked';
+    if (prayerSlots.includes(slot)) return 'prayer';
     if (selectedDate === todayISO && slotToMinutes(slot) <= m.minutes) return 'past';
     return null;
   };
@@ -308,7 +330,7 @@ export default function Profile() {
                         key={slot}
                         onClick={() => !disabled && setState({ bookSlot: slot })}
                         disabled={disabled}
-                        title={blockState === 'booked' ? 'Déjà réservé' : blockState === 'blocked' ? 'Indisponible' : blockState === 'past' ? 'Heure passée' : ''}
+                        title={blockState === 'booked' ? 'Déjà réservé' : blockState === 'blocked' ? 'Indisponible' : blockState === 'prayer' ? 'Horaire de prière' : blockState === 'full' ? 'Journée complète' : blockState === 'past' ? 'Heure passée' : ''}
                         style={{
                           minHeight: 44, padding: '8px 4px', borderRadius: 10,
                           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -323,11 +345,16 @@ export default function Profile() {
                       >
                         {slot}
                         {blockState === 'booked' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>réservé</div>}
+                        {blockState === 'prayer' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>prière</div>}
                       </button>
                     );
                   })}
                 </div>
-                {BOOK_SLOTS.every((s) => slotState(s) !== null) && (
+                {dayFull ? (
+                  <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: '#B45309', fontSize: 12.5, background: '#FEF6E7', borderRadius: 10, border: '1px dashed #F0CE8E', fontWeight: 600 }}>
+                    Journée complète — ce médecin a atteint son maximum de consultations ce jour. Choisissez une autre date.
+                  </div>
+                ) : BOOK_SLOTS.every((s) => slotState(s) !== null) && (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: MUTED, fontSize: 12.5, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
                     Aucun créneau disponible ce jour — choisissez une autre date.
                   </div>

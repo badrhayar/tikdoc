@@ -25,6 +25,9 @@ function mapDoctor(row) {
     next: row.next_available || 'today',
     x: row.map_x ?? 45,
     y: row.map_y ?? 55,
+    maxPerDay: row.max_per_day || 0,
+    prayerBlock: !!row.prayer_block,
+    prayerIds: row.prayer_ids || [],
   };
 }
 
@@ -235,26 +238,45 @@ export async function fetchBookedSlots(doctorId, dateISO) {
   return (data || []).map((r) => (typeof r === 'string' ? r : r.slot));
 }
 
-/** A doctor's recurring blocked slots: [{ day_of_week, slot }]. Public. */
-export async function fetchBlockedSlots(doctorId) {
+/** Slots a doctor disabled on a specific date (HH:MM[]). Public. */
+export async function fetchBlockedSlots(doctorId, dateISO) {
   const { data, error } = await supabase
     .from('slot_blocks')
-    .select('day_of_week, slot')
-    .eq('doctor_id', doctorId);
+    .select('slot')
+    .eq('doctor_id', doctorId)
+    .eq('block_date', dateISO);
   if (error) throw error;
-  return data || [];
+  return (data || []).map((r) => r.slot);
 }
 
-/** Replace a doctor's whole set of blocked slots. */
-export async function saveBlockedSlots(doctorId, rows) {
-  const del = await supabase.from('slot_blocks').delete().eq('doctor_id', doctorId);
+/** Replace the blocked slots for one doctor on one date. */
+export async function saveBlockedSlotsForDate(doctorId, dateISO, slots) {
+  const del = await supabase
+    .from('slot_blocks')
+    .delete()
+    .eq('doctor_id', doctorId)
+    .eq('block_date', dateISO);
   if (del.error) throw del.error;
-  if (rows.length) {
+  if (slots.length) {
     const { error } = await supabase
       .from('slot_blocks')
-      .insert(rows.map((r) => ({ doctor_id: doctorId, day_of_week: r.day_of_week, slot: r.slot })));
+      .insert(slots.map((s) => ({ doctor_id: doctorId, block_date: dateISO, slot: s })));
     if (error) throw error;
   }
+  return true;
+}
+
+/** Update a doctor's planning preferences. */
+export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, prayerIds }) {
+  const { error } = await supabase
+    .from('doctors')
+    .update({
+      max_per_day: Number(maxPerDay) || 0,
+      prayer_block: !!prayerBlock,
+      prayer_ids: prayerIds || [],
+    })
+    .eq('id', doctorId);
+  if (error) throw error;
   return true;
 }
 
