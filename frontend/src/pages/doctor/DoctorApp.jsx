@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS } from '../../shared.jsx';
-import { moroccoNow } from '../../lib/time.js';
-import { inviteNewPatient } from '../../lib/api';
+import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
+import { inviteNewPatient, createWalkinAppointment } from '../../lib/api';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 // Whole years between a birth date (YYYY-MM-DD) and today; null if unset/invalid.
 function ageFromDob(dob) {
@@ -72,7 +73,7 @@ const NAV = [
 ];
 
 export default function DoctorApp() {
-  const { state, setState, go } = useApp();
+  const { state, setState, go, reloadAppointments } = useApp();
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
 
   const [popAvatar, setPopAvatar] = useState(false);
@@ -106,21 +107,14 @@ export default function DoctorApp() {
     });
   };
   const closeNewAppt = () => setState({ newApptOpen:false });
-  const submitNewAppt = () => {
+  const submitNewAppt = async () => {
     const na = state.newAppt || {};
     if (!na.name || !na.date || !na.time) {
       setState({ toast:'Renseignez le nom du patient, la date et l’heure.', toastShow:true });
       return;
     }
-    const dt = new Date(`${na.date}T${na.time}:00`);
-    const id = 'local_' + Date.now();
     const sexLetter = na.sex === 'Homme' ? 'M' : 'F';
     const age = ageFromDob(na.dob);
-    // Add to the appointment list (Rendez-vous) and the consultations list
-    // (Calendrier / Historique / Statistiques) so it shows up everywhere.
-    const appt = { id, datetime: dt.toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
-    const svc  = (state.services || []).find(s => s.name === na.motif);
-    const consult = { id, patient: na.name, age: age ?? '—', sex: sexLetter, service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
 
     // Auto-register the patient in the directory if they're new, and invite them.
     const list = state.patients || [];
@@ -128,10 +122,38 @@ export default function DoctorApp() {
     let patientsPatch = {};
     if (!exists) {
       patientsPatch = { patients: [buildPatient({ name: na.name, cin: na.cin, phone: na.phone, sex: na.sex, dob: na.dob, nextAppt: na.date }), ...list] };
-      // New (unregistered) patient → send an invitation to join TikDoc.
       inviteNewPatient({ name: na.name, phone: na.phone, email: na.email, appt: { date: na.date, time: na.time, motif: na.motif } }).catch(() => {});
     }
 
+    // ── Persist to the database when signed in as a real doctor, so the slot is
+    // shared with the patient booking calendar (doctor_booked_slots RPC). ──
+    const doctorId = state.myDoctor?.id;
+    if (isSupabaseConfigured && doctorId) {
+      try {
+        await createWalkinAppointment({
+          doctorId,
+          datetime: moroccoToUTCISO(na.date, na.time),
+          reason: na.motif,
+          notes: na.notes || null,
+          patientId: state.naMatch?.userId || null,
+          patientName: na.name,
+          patientPhone: na.phone || null,
+        });
+        setState({ newApptOpen:false, apptCreated:true, ...patientsPatch });
+        reloadAppointments();                       // refresh from DB (real id, real data)
+        setTimeout(() => setState({ apptCreated:false }), 3000);
+        return;
+      } catch (e) {
+        // Fall through to a local-only appointment if the insert fails.
+        setState({ toast:'Enregistré localement (base indisponible) : ' + (e?.message || 'erreur'), toastShow:true });
+      }
+    }
+
+    // ── Local-only fallback (demo mode / not signed in) ──
+    const id = 'local_' + Date.now();
+    const appt = { id, datetime: new Date(`${na.date}T${na.time}:00`).toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
+    const svc  = (state.services || []).find(s => s.name === na.motif);
+    const consult = { id, patient: na.name, age: age ?? '—', sex: sexLetter, service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
     setState({
       newApptOpen:false, apptCreated:true,
       manualAppts:    [appt, ...(state.manualAppts || [])],

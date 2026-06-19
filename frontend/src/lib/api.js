@@ -107,10 +107,28 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
 }
 
 /**
- * Appointments visible to the current user (RLS scopes the rows automatically).
- * Doctor names come from the public `doctor_directory` view because the `users`
- * table is private (RLS = your own row only), so it can't be embedded directly.
+ * Doctor-created appointment. The patient may be an existing account
+ * (`patientId`) or a walk-in identified by name/phone (no account yet). These
+ * persist in the DB so the booking calendar greys the slot out for patients.
  */
+export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null }) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .insert({
+      doctor_id: doctorId,
+      patient_id: patientId,
+      datetime,
+      reason: reason || null,
+      notes: notes || null,
+      patient_name: patientName || null,
+      patient_phone: patientPhone || null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
 export async function fetchMyAppointments() {
   const { data, error } = await supabase
     .from('appointments')
@@ -143,8 +161,8 @@ export function mapAppointment(row, nameById = {}) {
     doctorId: row.doctor_id,
     patientId: row.patient_id,
     doctorName: nameById[row.doctor_id] || 'Médecin',
-    patientName: row.patient?.full_name || 'Patient',
-    patientPhone: row.patient?.phone || '',
+    patientName: row.patient?.full_name || row.patient_name || 'Patient',
+    patientPhone: row.patient?.phone || row.patient_phone || '',
     spec: d.specialty || '',
     clinic: d.clinic_address || '',
     city: d.city || '',
