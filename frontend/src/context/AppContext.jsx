@@ -217,7 +217,12 @@ export function AppProvider({ children }) {
       // Doctor screens (Calendar / History / Statistics) read `consultations`.
       if (u.role === 'doctor') {
         patch.consultations = appts.map(apptToConsultation);
-        try { patch.myDoctor = await fetchMyDoctor(); } catch (e) { /* ignore */ }
+        try {
+          const md = await fetchMyDoctor();
+          patch.myDoctor = md;
+          // Use the doctor's saved services as the app-wide source of truth.
+          if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
+        } catch (e) { /* ignore */ }
       }
       dispatch(patch);
       return u;

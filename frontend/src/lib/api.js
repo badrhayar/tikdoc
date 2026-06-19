@@ -28,6 +28,7 @@ function mapDoctor(row) {
     maxPerDay: row.max_per_day || 0,
     prayerBlock: !!row.prayer_block,
     prayerIds: row.prayer_ids || [],
+    services: Array.isArray(row.services) ? row.services : [],
   };
 }
 
@@ -296,6 +297,19 @@ export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, pra
     .eq('id', doctorId);
   if (error) throw error;
   return true;
+}
+
+/** Persist a doctor's services list (shared with the patient booking page). */
+export async function saveDoctorServices(doctorId, services) {
+  const clean = (services || [])
+    .filter((s) => (s.name || '').trim())
+    .map((s) => ({ name: String(s.name).trim(), price: Number(s.price) || 0, duration: String(s.duration || '20') }));
+  const { error } = await supabase
+    .from('doctors')
+    .update({ services: clean })
+    .eq('id', doctorId);
+  if (error) throw error;
+  return clean;
 }
 
 /** The doctors row owned by the current user (or null). */

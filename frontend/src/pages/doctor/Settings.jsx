@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SPEC_INFO } from '../../shared.jsx';
+import { saveDoctorServices } from '../../lib/api';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -172,7 +174,18 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
 
   const initialsOf = (form.prenom?.[0] || '') + (form.nom?.[0] || '');
 
-  function saveAll() {
+  async function saveAll() {
+    // Persist the services so patients booking with this doctor see them.
+    if (isSupabaseConfigured && myDoctor?.id) {
+      try {
+        const saved = await saveDoctorServices(myDoctor.id, services);
+        setState({ services: saved, myDoctor: { ...myDoctor, services: saved }, toast: 'Modifications enregistrées ✓', toastShow: true });
+        return;
+      } catch (e) {
+        setState({ toast: 'Enregistrement des services échoué : ' + (e?.message || 'erreur'), toastShow: true });
+        return;
+      }
+    }
     setState({ toast: 'Modifications enregistrées ✓', toastShow: true });
   }
 

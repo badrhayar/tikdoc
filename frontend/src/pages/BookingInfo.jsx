@@ -24,7 +24,13 @@ export default function BookingInfo() {
 
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
-  const price = doc?.price || 300;
+
+  // Motif list = exactly the services this doctor offers (falls back to the
+  // generic list only if the doctor hasn't defined any).
+  const motifOpts = (doc?.services?.length ? doc.services.map((s) => s.name).filter(Boolean) : MOTIF_OPTS);
+  const selectedMotif = info.motif && motifOpts.includes(info.motif) ? info.motif : motifOpts[0];
+  const selSvc = (doc?.services || []).find((s) => s.name === selectedMotif);
+  const price = (selSvc && Number(selSvc.price)) || doc?.price || 300;
 
   const slot = bookSlot || '';
   const dateObj = bookDate ? new Date(`${bookDate}T00:00:00`) : null;
@@ -49,7 +55,7 @@ export default function BookingInfo() {
           patientId: appUser.id,
           doctorId:  doc.id,
           datetime:  iso,
-          reason:    info.motif || 'Consultation générale',
+          reason:    selectedMotif,
           notes:     info.notes || '',
         });
         setState({ lastAppointmentId: appt.id });
@@ -57,7 +63,13 @@ export default function BookingInfo() {
         go('confirm');
       } catch (e) {
         console.error(e);
-        setState({ toast: 'Échec de la réservation : ' + (e?.message || 'erreur'), toastShow: true });
+        // 23505 = the unique index rejected a slot that was taken meanwhile.
+        if (e?.code === '23505' || /duplicate key|uniq_active_doctor_slot/i.test(e?.message || '')) {
+          setState({ bookSlot: '', toast: 'Ce créneau vient d’être réservé. Choisissez-en un autre.', toastShow: true });
+          go('profile');
+        } else {
+          setState({ toast: 'Échec de la réservation : ' + (e?.message || 'erreur'), toastShow: true });
+        }
       }
       return;
     }
@@ -210,11 +222,11 @@ export default function BookingInfo() {
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Motif de consultation</label>
             <select
-              value={info.motif || 'Consultation générale'}
+              value={selectedMotif}
               onChange={(e) => setInfo('motif', e.target.value)}
               style={{ ...inputStyle, cursor: 'pointer' }}
             >
-              {MOTIF_OPTS.map((m) => (
+              {motifOpts.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>

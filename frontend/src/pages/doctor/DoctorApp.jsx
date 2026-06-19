@@ -144,7 +144,12 @@ export default function DoctorApp() {
         setTimeout(() => setState({ apptCreated:false }), 3000);
         return;
       } catch (e) {
-        // Fall through to a local-only appointment if the insert fails.
+        // Slot already taken → don't create a duplicate; tell the doctor.
+        if (e?.code === '23505' || /duplicate key|uniq_active_doctor_slot/i.test(e?.message || '')) {
+          setState({ toast:'Ce créneau est déjà réservé. Choisissez une autre heure.', toastShow:true });
+          return;
+        }
+        // Otherwise fall through to a local-only appointment.
         setState({ toast:'Enregistré localement (base indisponible) : ' + (e?.message || 'erreur'), toastShow:true });
       }
     }
