@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
@@ -62,6 +62,20 @@ export default function PatientAccount() {
     setTimeout(() => composeRef.current?.focus(), 350);
   };
 
+  // Doctors this patient has already consulted (distinct), to choose a recipient.
+  const visitedDocs = (() => {
+    const m = new Map();
+    for (const a of (state.myAppointments || [])) {
+      if (a.doctorId && !m.has(a.doctorId)) m.set(a.doctorId, a.doctorName || 'Médecin');
+    }
+    return [...m.entries()].map(([id, name]) => ({ id, name }));
+  })();
+  const [msgDoctorId, setMsgDoctorId] = useState('');
+  // Default to the first visited doctor once appointments are loaded.
+  useEffect(() => {
+    if (!msgDoctorId && visitedDocs[0]) setMsgDoctorId(visitedDocs[0].id);
+  }, [visitedDocs.length]);
+
   // Real appointments for the signed-in patient (loaded into global state).
   const appts = state.myAppointments || [];
   const nowMs = now || Date.now();
@@ -94,7 +108,9 @@ export default function PatientAccount() {
     if (!pNewDoc.name) return;
     const newEntry = {
       id: Date.now(), doctor: pNewDoc.doctor, type: pNewDoc.type,
-      name: pNewDoc.name, date: '15 Mai 2024', url: '#', dir: 'out',
+      name: pNewDoc.name,
+      date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' }),
+      url: '#', dir: 'out',
     };
     setState({ pdocs: [newEntry, ...(pdocs || [])], pNewDoc: { doctor: pNewDoc.doctor, type: 'Résultat', name: '' } });
   };
@@ -103,7 +119,7 @@ export default function PatientAccount() {
     const text = patientMsgInput.trim();
     if (!text) return;
     setPatientMsgInput('');
-    const docId = (state.myAppointments || [])[0]?.doctorId;
+    const docId = msgDoctorId || (state.myAppointments || [])[0]?.doctorId;
     if (!state.appUser || !docId) {
       setState({ toast: 'Réservez un rendez-vous pour discuter avec un médecin.', toastShow: true });
       return;
@@ -459,6 +475,20 @@ export default function PatientAccount() {
               );
             })}
           </div>
+
+          {/* Choose which already-visited doctor to message */}
+          {visitedDocs.length > 0 && (
+            <div style={{ marginBottom:10 }}>
+              <label style={{ display:'block', fontSize:12, fontWeight:600, color:MUT, marginBottom:6 }}>Discuter avec</label>
+              <select
+                value={msgDoctorId}
+                onChange={e => setMsgDoctorId(e.target.value)}
+                style={{ width:'100%', background:BG, border:`1px solid ${BORDER_STRONG}`, borderRadius:10, padding:'10px 12px', fontSize:13, color:DARK, outline:'none', cursor:'pointer', boxSizing:'border-box' }}
+              >
+                {visitedDocs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Compose mini-bar */}
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>

@@ -52,8 +52,8 @@ export default function DoctorApp() {
   const docName  = state.appUser?.full_name || 'Mon cabinet';
   const docEmail = state.appUser?.email || '';
   const todayISO = moroccoNow().dateISO;
-  // The motif list must mirror exactly the services the doctor defined.
-  const motifOpts = (state.services?.length ? state.services.map(s => s.motif) : MOTIF_OPTS);
+  // The motif list must mirror exactly the services the doctor defined (Settings).
+  const motifOpts = (state.services?.length ? state.services.map(s => s.name).filter(Boolean) : MOTIF_OPTS);
 
   const SUB = {
     doctor: Dashboard, dcal: Calendar, dappts: Appointments, dhist: History,
@@ -83,12 +83,26 @@ export default function DoctorApp() {
     // Add to the appointment list (Rendez-vous) and the consultations list
     // (Calendrier / Historique / Statistiques) so it shows up everywhere.
     const appt = { id, datetime: dt.toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
-    const svc  = (state.services || []).find(s => s.motif === na.motif);
+    const svc  = (state.services || []).find(s => s.name === na.motif);
     const consult = { id, patient: na.name, age:'—', sex:'F', service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
+
+    // Auto-register the patient in the directory if they're new.
+    const list = state.patients || [];
+    const exists = list.some(p => (p.name || '').trim().toLowerCase() === na.name.trim().toLowerCase());
+    const patientsPatch = exists ? {} : {
+      patients: [{
+        id: Date.now(), name: na.name, initials: initials(na.name),
+        color: '#16A06A', age: '—', sex: 'F', cin: na.cin || '—',
+        phone: na.phone ? `+212 ${na.phone}` : '—',
+        lastVisit: '—', nextAppt: na.date, statut: 'Actif',
+      }, ...list],
+    };
+
     setState({
       newApptOpen:false, apptCreated:true,
-      myAppointments: [appt, ...(state.myAppointments || [])],
-      consultations:  [consult, ...(state.consultations || [])],
+      manualAppts:    [appt, ...(state.manualAppts || [])],
+      manualConsults: [consult, ...(state.manualConsults || [])],
+      ...patientsPatch,
     });
     setTimeout(() => setState({ apptCreated:false }), 3000);
   };
@@ -106,9 +120,13 @@ export default function DoctorApp() {
   const setNP = (k, v) => setState({ newPatient: { ...state.newPatient, [k]: v } });
   const setNA = (k, v) => setState({ newAppt: { ...state.newAppt, [k]: v } });
 
-  // Autocomplete for new appointment name
-  const naSuggests = (newAppt.name?.length >= 2)
-    ? (patients || []).filter(p => p.name.toLowerCase().includes(newAppt.name.toLowerCase())).slice(0,4)
+  // Autocomplete: suggest registered patients whose name (or any word) starts
+  // with what the doctor is typing.
+  const naSuggests = (newAppt.name?.length >= 1)
+    ? (patients || []).filter(p => {
+        const q = newAppt.name.toLowerCase();
+        return (p.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(q));
+      }).slice(0, 5)
     : [];
   const naMatched = state.naMatch != null;
 

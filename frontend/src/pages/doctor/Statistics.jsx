@@ -113,7 +113,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const { isMobile } = useViewport();
   const [period, setPeriod] = useState('30 jours');
 
-  const consultations = state?.consultations || [];
+  const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const paid = consultations.filter(c => c.status === 'Payé');
   const totalRevenue = paid.reduce((s, c) => s + c.amount, 0);
 
@@ -485,13 +485,13 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         backgroundColor: '#fff',
         border: `1px solid ${BORDER_STRONG}`,
         borderRadius: 16,
-        padding: '28px 28px 24px',
+        padding: isMobile ? '18px 14px' : '28px 28px 24px',
       }}>
         <SectionTitle emoji="📊" title="Indicateurs détaillés" borderColor={DARK} />
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-          gap: 16,
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: isMobile ? 10 : 16,
         }}>
           {MINI_STATS.map((s) => (
             <div key={s.label} style={{
@@ -502,23 +502,24 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
               display: 'flex',
               alignItems: 'center',
               gap: 14,
+              minWidth: 0,
             }}>
               <div style={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 borderRadius: 12,
                 backgroundColor: PRIMARY + '22',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 22,
+                fontSize: 20,
                 flexShrink: 0,
               }}>
                 {s.icon}
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: PRIMARY, lineHeight: 1.2 }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{s.label}</div>
+                <div style={{ fontSize: 12, color: MUTED, marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
               </div>
             </div>
           ))}

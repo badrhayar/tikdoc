@@ -26,7 +26,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const { isMobile } = useViewport();
   const [activeFilter, setActiveFilter] = useState('Tous');
   const [patientSearch, setPatientSearch] = useState('');
-  const [patientList, setPatientList] = useState(DEMO_PATIENTS);
+  const patientList = state.patients?.length ? state.patients : DEMO_PATIENTS;
   const [viewPatient, setViewPatient] = useState(null);   // detail modal
   const [menuId, setMenuId] = useState(null);             // open "…" menu row
 
@@ -41,7 +41,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   ];
 
   const toggleArchive = (id) => {
-    setPatientList(list => list.map(p => p.id === id ? { ...p, statut: p.statut === 'Archivé' ? 'Actif' : 'Archivé' } : p));
+    setState({ patients: patientList.map(p => p.id === id ? { ...p, statut: p.statut === 'Archivé' ? 'Actif' : 'Archivé' } : p) });
     setMenuId(null);
   };
 

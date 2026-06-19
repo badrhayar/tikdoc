@@ -1,8 +1,8 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
-import { DOCTORS as MOCK_DOCTORS } from '../shared.jsx';
+import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
 
 const DEFAULT_AVAIL = [
   { on: true,  ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '18:00' }] },
@@ -61,14 +61,17 @@ const initialState = {
   aboCycle: 'monthly', aboInvoiceOpen: false, aboInvoiceData: null,
   invoiceOpen: false, invoiceRow: null,
   appUser: null, myAppointments: [], authBusy: false, authError: '',
+  myDoctor: null,
+  // Appointments the doctor adds manually (kept separate so a Supabase refresh
+  // of `myAppointments`/`consultations` never wipes them).
+  manualAppts: [], manualConsults: [],
   lastAppointmentId: null,
   toast: '', toastShow: false,
   services: [
-    { motif: 'Consultation générale', price: 300 },
-    { motif: 'Échographie',           price: 500 },
-    { motif: 'Suivi de grossesse',    price: 400 },
-    { motif: 'Contraception',         price: 250 },
-    { motif: 'Téléconsultation',      price: 250 },
+    { id: 1, name: 'Consultation générale', price: 300, duration: '20' },
+    { id: 2, name: 'Bilan complet',         price: 500, duration: '30' },
+    { id: 3, name: 'Téléconsultation',      price: 250, duration: '20' },
+    { id: 4, name: 'Suivi',                 price: 200, duration: '15' },
   ],
   newSvcMotif: 'Consultation générale', newSvcPrice: '',
   chats: [
@@ -126,7 +129,7 @@ const initialState = {
     { id:15, patient:'Zineb El Amrani',     age:22, sex:'F', service:'Consultation générale', date:'2024-05-04', time:'15:00', amount:300, pay:'Espèces',  status:'En attente',notes:'' },
   ],
   now: Date.now(),
-  patients: null,
+  patients: DEMO_PATIENTS,
   doctors: [],
 };
 
@@ -186,11 +189,11 @@ export function AppProvider({ children }) {
     return () => { active = false; };
   }, []);
 
-  // Fetch patients on mount
+  // Fetch patients on mount (keep the seeded demo roster if the endpoint is absent).
   useEffect(() => {
     fetch('/api/patients')
       .then((r) => r.json())
-      .then((data) => dispatch({ patients: data }))
+      .then((data) => { if (Array.isArray(data) && data.length) dispatch({ patients: data }); })
       .catch(() => {});
   }, []);
 
@@ -212,7 +215,10 @@ export function AppProvider({ children }) {
       const appts = await fetchMyAppointments();
       const patch = { myAppointments: appts };
       // Doctor screens (Calendar / History / Statistics) read `consultations`.
-      if (u.role === 'doctor') patch.consultations = appts.map(apptToConsultation);
+      if (u.role === 'doctor') {
+        patch.consultations = appts.map(apptToConsultation);
+        try { patch.myDoctor = await fetchMyDoctor(); } catch (e) { /* ignore */ }
+      }
       dispatch(patch);
       return u;
     } catch (e) {

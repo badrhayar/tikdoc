@@ -74,8 +74,23 @@ function dateToNav(d) {
 }
 
 export default function Calendar({ state, setState, go, openNewAppt }) {
-  const consultations = state?.consultations || [];
+  // Real (DB) + manually-added appointments.
+  const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const { isMobile } = useViewport();
+
+  // Service colours + legend are driven by the doctor's actual services.
+  const svcNames = (state?.services?.length ? state.services.map(s => s.name).filter(Boolean) : Object.keys(SVC_COLORS));
+  const PALETTE = [
+    { color: '#16A06A', bg: '#D1FAE5', border: '#6EE7B7' },
+    { color: '#0EA5E9', bg: '#E0F2FE', border: '#7DD3FC' },
+    { color: '#F59E0B', bg: '#FEF3C7', border: '#FDE68A' },
+    { color: '#7C3AED', bg: '#EDE9FE', border: '#C4B5FD' },
+    { color: '#EC4899', bg: '#FCE7F3', border: '#F9A8D4' },
+    { color: '#14B8A6', bg: '#CCFBF1', border: '#99F6E4' },
+  ];
+  const svcColorMap = {};
+  svcNames.forEach((n, i) => { svcColorMap[n] = SVC_COLORS[n] || PALETTE[i % PALETTE.length]; });
+  const svcColor = (s) => svcColorMap[s] || SVC_COLORS[s] || DEFAULT_COLOR;
 
   const [view, setView]               = useState('Semaine');
   const [weekOffset, setWeekOffset]   = useState(0);
@@ -140,7 +155,13 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const closeEdit = ()   => setEditData(null);
   const setField  = (k, v) => setEditData(d => ({ ...d, [k]: v }));
   const saveEdit  = () => {
-    setState({ consultations: consultations.map(c => c.id === editData.id ? editData : c) });
+    // Route the update to the correct source list (manual vs. DB-backed).
+    const isManual = String(editData.id).startsWith('local_');
+    if (isManual) {
+      setState({ manualConsults: (state.manualConsults || []).map(c => c.id === editData.id ? editData : c) });
+    } else {
+      setState({ consultations: (state.consultations || []).map(c => c.id === editData.id ? editData : c) });
+    }
     closeEdit();
   };
 
@@ -348,14 +369,17 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
       {/* ── Month view ── */}
       {view === 'Mois' && renderMonthView()}
 
-      {/* ── Legend ── */}
+      {/* ── Legend — driven by the doctor's own services ── */}
       <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
-        {Object.entries(SVC_COLORS).slice(0, 5).map(([svc, c]) => (
-          <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: c.bg, border: `2px solid ${c.color}` }} />
-            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{svc}</span>
-          </div>
-        ))}
+        {svcNames.map((svc) => {
+          const c = svcColor(svc);
+          return (
+            <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: c.bg, border: `2px solid ${c.color}` }} />
+              <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{svc}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Edit Modal ── */}
@@ -395,7 +419,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
               <div>
                 <label style={lbl}>Service</label>
                 <select value={editData.service} onChange={e => setField('service', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
-                  {SERVICE_OPTS.map(s => <option key={s}>{s}</option>)}
+                  {svcNames.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
 

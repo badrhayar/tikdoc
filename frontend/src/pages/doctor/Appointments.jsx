@@ -38,8 +38,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
 
   const tabs = ['Tous', 'Confirmé', 'En attente', 'Annulé', 'Terminé'];
 
-  // Build display rows from the doctor's real appointments.
-  const rows = (state?.myAppointments || []).map((a, i) => {
+  // Build display rows from the doctor's real + manually-added appointments.
+  const rows = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].map((a, i) => {
     const d = new Date(a.datetime);
     return {
       id: a.id,

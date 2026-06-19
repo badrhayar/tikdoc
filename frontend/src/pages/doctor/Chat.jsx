@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchConversations, fetchMessages, sendMessage } from '../../lib/api';
+import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -38,21 +38,50 @@ export default function Chat({ state, setState }) {
   const [inputVal, setInputVal] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [showNew, setShowNew] = useState(false);   // "Nouvelle conversation" picker
+  const [creating, setCreating] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Load conversations for the signed-in user.
-  useEffect(() => {
-    (async () => {
-      try {
-        const list = await fetchConversations();
-        const mapped = list.map((c, i) => ({ id: c.id, ci: i, peer: isDoctor ? c.patientName : c.doctorName }));
-        setConvs(mapped);
-        // On mobile, show the list first (no auto-open); on desktop open the first.
-        setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
-      } catch (e) { console.warn('[TikDoc] fetchConversations failed', e); }
-    })();
-  }, [isDoctor]);
+  // Load conversations for the signed-in user; returns the mapped list.
+  const loadConvs = async (autoOpen = true) => {
+    try {
+      const list = await fetchConversations();
+      const mapped = list.map((c, i) => ({ id: c.id, ci: i, peer: isDoctor ? c.patientName : c.doctorName, peerId: isDoctor ? c.patientId : c.doctorId }));
+      setConvs(mapped);
+      if (autoOpen) setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
+      return mapped;
+    } catch (e) { console.warn('[TikDoc] fetchConversations failed', e); return []; }
+  };
+  useEffect(() => { loadConvs(); }, [isDoctor]);
+
+  // Candidate peers to start a new chat with = people you share appointments
+  // with, minus anyone you already have a conversation with.
+  const existingPeerIds = new Set(convs.map((c) => c.peerId).filter(Boolean));
+  const appts = state?.myAppointments || [];
+  const candidatesMap = new Map();
+  for (const a of appts) {
+    const id = isDoctor ? a.patientId : a.doctorId;
+    const name = isDoctor ? a.patientName : a.doctorName;
+    if (id && !existingPeerIds.has(id) && !candidatesMap.has(id)) candidatesMap.set(id, name);
+  }
+  const candidates = [...candidatesMap.entries()].map(([id, name]) => ({ id, name }));
+
+  const startConversation = async (peer) => {
+    if (!appUser) return;
+    setCreating(true);
+    try {
+      const patientId = isDoctor ? peer.id : appUser.id;
+      const doctorId  = isDoctor ? state?.myDoctor?.id : peer.id;
+      if (!doctorId || !patientId) throw new Error('profil incomplet');
+      const conv = await getOrCreateConversation(patientId, doctorId);
+      const mapped = await loadConvs(false);
+      setShowNew(false);
+      setActiveId(conv.id || mapped.find((c) => c.peerId === peer.id)?.id || null);
+    } catch (e) {
+      setState({ toast: 'Impossible de démarrer la conversation : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setCreating(false); }
+  };
 
   // Load messages for the active conversation.
   useEffect(() => {
@@ -107,6 +136,10 @@ export default function Chat({ state, setState }) {
       <div style={{ width: isMobile ? '100%' : 300, flexShrink: 0, borderRight: `1px solid ${BORDER_STRONG}`, background: '#fff', display: (isMobile && activeId) ? 'none' : 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER_STRONG}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: HEADER_BG }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Messages</span>
+          <button onClick={() => setShowNew(true)} title="Nouvelle conversation" style={{ display: 'flex', alignItems: 'center', gap: 6, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Nouveau
+          </button>
         </div>
 
         <div style={{ margin: 12 }}>
@@ -220,11 +253,44 @@ export default function Chat({ state, setState }) {
             <div style={{ fontSize: 40 }}>💬</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: DARK }}>Aucune conversation</div>
             <div style={{ fontSize: 14, color: MUTED, maxWidth: 280, textAlign: 'center' }}>
-              Les conversations apparaissent ici dès qu’un patient vous contacte.
+              {isDoctor ? 'Démarrez une conversation avec un de vos patients.' : 'Démarrez une conversation avec un médecin déjà consulté.'}
             </div>
+            <button onClick={() => setShowNew(true)} style={{ marginTop: 4, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+              + Nouvelle conversation
+            </button>
           </div>
         )}
       </div>
+
+      {/* New-conversation picker */}
+      {showNew && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setShowNew(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.45)', zIndex: 300, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', padding: isMobile ? '20px 12px' : 24, overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 24px 60px rgba(21,49,74,0.3)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: DARK }}>Nouvelle conversation</span>
+              <button onClick={() => setShowNew(false)} style={{ background: BG, border: `1px solid ${BORDER}`, cursor: 'pointer', width: 30, height: 30, borderRadius: 8, color: MUTED, fontSize: 14 }}>✕</button>
+            </div>
+            <div style={{ padding: 12, maxHeight: '60vh', overflowY: 'auto' }}>
+              <div style={{ fontSize: 12, color: MUTED, padding: '4px 10px 10px' }}>
+                {isDoctor ? 'Choisissez un patient' : 'Choisissez un médecin déjà consulté'}
+              </div>
+              {candidates.length === 0 && (
+                <div style={{ padding: '22px 14px', textAlign: 'center', color: MUTED, fontSize: 13 }}>
+                  {isDoctor ? 'Aucun patient disponible — les patients apparaissent après un rendez-vous.' : 'Aucun médecin consulté pour le moment.'}
+                </div>
+              )}
+              {candidates.map((p) => (
+                <button key={p.id} disabled={creating} onClick={() => startConversation(p)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'start', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', marginBottom: 8, cursor: creating ? 'default' : 'pointer' }}>
+                  <span style={{ width: 36, height: 36, borderRadius: '50%', background: '#E7F6EE', color: '#138257', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{initials(p.name)}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: DARK }}>{p.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>Démarrer</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

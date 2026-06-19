@@ -13,8 +13,6 @@ const fileIcon = (path = '') => /\.(png|jpe?g|gif|webp)$/i.test(path) ? '🖼' :
 const fileName = (path = '') => (path.split('/').pop() || path).replace(/^\d+_/, '');
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-// Full patient roster — same list shown in the Patients directory.
-const PATIENT_OPTS = DEMO_PATIENTS.map(p => ({ id: p.id, name: p.name }));
 
 const MOCK_DOCUMENTS = [
   { id: 1, icon: '📄', name: 'ordonnance_benali_14juin.pdf', patient: 'Amina Benali', date: '14/06/2026', size: '128 Ko', status: 'Envoyé', statusColor: PRIMARY },
@@ -44,6 +42,8 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const fileRef = useRef(null);
 
   const appUser = state?.appUser;
+  // Same patient roster as the Patients directory (includes any just added).
+  const patientOpts = (state?.patients?.length ? state.patients : DEMO_PATIENTS).map(p => ({ id: p.id, name: p.name }));
 
   const refresh = async () => {
     try { setDocs(await listDocuments()); } catch (e) { console.warn('[TikDoc] listDocuments failed', e); }
@@ -128,7 +128,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                       overflowY: 'auto',
                       maxHeight: 260,
                     }}>
-                      {PATIENT_OPTS.map(p => (
+                      {patientOpts.map(p => (
                         <div
                           key={p.id}
                           onClick={() => { setDocPatient(p); setShowPatientDrop(false); }}

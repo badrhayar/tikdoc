@@ -38,7 +38,7 @@ function fmtDate(iso) {
 
 export default function History({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
-  const consultations = state.consultations || [];
+  const consultations = [...(state.manualConsults || []), ...(state.consultations || [])];
 
   const [editOpen, setEditOpen] = useState(false);
   const [editData, setEditData] = useState({});

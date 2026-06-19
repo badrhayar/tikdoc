@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { SPEC_INFO } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -126,27 +127,35 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
-const defaultServices = [
-  { id: 1, name: 'Consultation générale', price: 300, duration: '20' },
-  { id: 2, name: 'Bilan complet', price: 500, duration: '30' },
-  { id: 3, name: 'Téléconsultation', price: 250, duration: '20' },
-  { id: 4, name: 'Suivi', price: 200, duration: '15' },
-];
-
 import { useViewport } from '../../hooks/useViewport';
+
+// Build the editable personal-info form from the signed-in doctor's real profile.
+function formFromProfile(appUser, myDoctor) {
+  const full = (appUser?.full_name || '').replace(/^Dr\.?\s*/i, '').trim();
+  const parts = full.split(/\s+/);
+  const prenom = parts.shift() || '';
+  const nom = parts.join(' ');
+  const specLabel = myDoctor?.specialty ? (SPEC_INFO[myDoctor.specialty]?.label || myDoctor.specialty) : '';
+  return {
+    prenom,
+    nom,
+    inpe: appUser?.cin_or_inpe || '',
+    cnom: myDoctor?.cnom || '',
+    specialite: specLabel,
+    ville: myDoctor?.city || '',
+    telephone: appUser?.phone || '',
+    email: appUser?.email || '',
+  };
+}
 
 export default function Settings({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
-  const [form, setForm] = useState({
-    prenom: 'Khalid',
-    nom: 'Benali',
-    inpe: '1234567',
-    cnom: 'MA-12345',
-    specialite: 'Cardiologue',
-    ville: 'Casablanca',
-    telephone: '+212 5 22 00 00 00',
-    email: 'k.benali@tikdoc.ma',
-  });
+  const appUser = state?.appUser;
+  const myDoctor = state?.myDoctor;
+
+  const [form, setForm] = useState(() => formFromProfile(appUser, myDoctor));
+  // Re-sync once the real profile finishes loading.
+  useEffect(() => { setForm(formFromProfile(appUser, myDoctor)); }, [appUser?.id, myDoctor?.id]);
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -154,7 +163,18 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     confirm: '',
   });
 
-  const [services, setServices] = useState(defaultServices);
+  // Services are the single source of truth shared across the app.
+  const services = state.services || [];
+  const setServices = (updater) => {
+    const next = typeof updater === 'function' ? updater(state.services || []) : updater;
+    setState({ services: next });
+  };
+
+  const initialsOf = (form.prenom?.[0] || '') + (form.nom?.[0] || '');
+
+  function saveAll() {
+    setState({ toast: 'Modifications enregistrées ✓', toastShow: true });
+  }
 
   const [insurances, setInsurances] = useState({
     cnss: true,
@@ -191,19 +211,21 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     <div style={{ padding: isMobile ? '10px' : '32px', background: BG, minHeight: '100vh' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>
           Paramètres
         </h1>
-        <button style={{
+        <button onClick={saveAll} style={{
           background: PRIMARY,
           color: '#fff',
           border: 'none',
-          borderRadius: 8,
-          padding: '10px 20px',
-          fontWeight: 600,
+          borderRadius: 10,
+          padding: '12px 20px',
+          fontWeight: 700,
           fontSize: 14,
           cursor: 'pointer',
+          width: isMobile ? '100%' : 'auto',
+          boxShadow: '0 8px 18px -6px rgba(22,160,106,0.5)',
         }}>
           Sauvegarder les modifications
         </button>
@@ -232,7 +254,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 fontSize: 22,
                 flexShrink: 0,
               }}>
-                KB
+                {(initialsOf || 'DR').toUpperCase()}
               </div>
               <button style={{
                 background: 'transparent',

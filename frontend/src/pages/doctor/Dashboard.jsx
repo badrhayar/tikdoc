@@ -54,8 +54,14 @@ const TrendPill = ({ badge, up }) => (
 
 export default function Dashboard({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
-  // Real appointments for the signed-in doctor (soonest first).
-  const agenda = (state?.myAppointments || [])
+  // Real + manually-added appointments for the signed-in doctor (soonest first).
+  const allAppts = [...(state?.manualAppts || []), ...(state?.myAppointments || [])];
+  // Greeting: real doctor name + today's actual date (Morocco time).
+  const fullName = state?.appUser?.full_name || '';
+  const docLabel = fullName ? (/^dr/i.test(fullName) ? fullName : `Dr. ${fullName}`) : 'Docteur';
+  const dateRaw = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' });
+  const dateLabel = dateRaw.charAt(0).toUpperCase() + dateRaw.slice(1);
+  const agenda = allAppts
     .slice()
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
     .slice(0, 6)
@@ -68,7 +74,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
         status: STATUS_FR[a.status] || a.status,
       };
     });
-  const apptCount = (state?.myAppointments || []).length;
+  const apptCount = allAppts.length;
 
   return (
     <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -77,7 +83,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: DARK, letterSpacing: '-0.7px' }}>Tableau de bord</h1>
-          <p style={{ margin: '5px 0 0', color: MUTED, fontSize: 14 }}>Vendredi 17 Mai 2024 — Bonjour, Dr. Marmioui 👋</p>
+          <p style={{ margin: '5px 0 0', color: MUTED, fontSize: 14 }}>{dateLabel} — Bonjour, {docLabel} 👋</p>
         </div>
         <button onClick={openNewAppt} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 11, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 18px -6px rgba(22,160,106,0.55)' }}>
           <span style={{ fontSize: 17, lineHeight: 1 }}>+</span> Nouveau rendez-vous
