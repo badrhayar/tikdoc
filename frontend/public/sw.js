@@ -2,7 +2,7 @@
    TikDoc service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tikdoc-v1";
+const CACHE_VERSION = "tikdoc-v2";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -144,6 +144,11 @@ self.addEventListener("fetch", (event) => {
   let url;
   try { url = new URL(request.url); } catch { return; }
 
+  // NEVER intercept Vercel internals / deployment-protection auth, or any other
+  // origin we don't explicitly handle — let the browser fetch them normally.
+  // (Intercepting /.well-known/vercel/* broke the preview auth handshake.)
+  if (url.pathname.startsWith("/.well-known/")) return;
+
   // Supabase API → network-first
   if (isSupabase(url)) {
     event.respondWith(networkFirst(request));
@@ -160,14 +165,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets (icons, fonts, JS/CSS bundles) → cache-first
+  // Same-origin static assets (icons, fonts, JS/CSS bundles) → cache-first.
+  // IMPORTANT: never substitute the HTML offline page for a JS/CSS request —
+  // doing so triggers "Expected a JavaScript module but got text/html" and a
+  // blank screen. On failure we let the request error naturally.
   if (isStaticAsset(url)) {
-    event.respondWith(cacheFirst(request).catch(() => offlineResponse()));
+    event.respondWith(cacheFirst(request));
     return;
   }
 
-  // Everything else → try network, fall back to cache if available
-  event.respondWith(fetch(request).catch(() => caches.match(request)));
+  // Everything else (e.g. third-party requests): don't intercept at all.
 });
 
 // Allow the page to trigger an immediate activation after an update.
