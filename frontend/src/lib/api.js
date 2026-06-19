@@ -305,6 +305,30 @@ export async function updateAppointment(id, fields) {
   return data;
 }
 
+/** Delete an appointment (DB-backed; manual/local ones are handled in state). */
+export async function deleteAppointment(id) {
+  const { error } = await supabase.from('appointments').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+// Invite a walk-in patient to register via SMS + email with the appointment
+// details. Real delivery happens in a Supabase Edge Function named
+// `invite-patient` (Twilio for SMS, an email provider) — set it up and deploy it.
+// Until then this resolves quietly so the UI flow never breaks.
+export async function inviteNewPatient({ name, phone, email, appt = null }) {
+  try {
+    const { data, error } = await supabase.functions.invoke('invite-patient', {
+      body: { name, phone, email, appt, link: (typeof window !== 'undefined' ? window.location.origin : '') },
+    });
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.warn('[TikDoc] invite-patient not available yet — patient added locally only.', e);
+    return { ok: false, pending: true };
+  }
+}
+
 // ── Availability ──────────────────────────────────────────────────────────────
 /** Replace a doctor's whole weekly availability with `rows`. */
 export async function saveAvailability(doctorId, rows) {

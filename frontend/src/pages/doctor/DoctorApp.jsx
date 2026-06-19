@@ -3,6 +3,40 @@ import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
+import { inviteNewPatient } from '../../lib/api';
+
+// Whole years between a birth date (YYYY-MM-DD) and today; null if unset/invalid.
+function ageFromDob(dob) {
+  if (!dob) return null;
+  const b = new Date(dob);
+  if (isNaN(b)) return null;
+  const t = new Date();
+  let a = t.getFullYear() - b.getFullYear();
+  const m = t.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < b.getDate())) a--;
+  return a >= 0 && a < 130 ? a : null;
+}
+
+const PT_COLORS = ['#16A06A', '#2563EB', '#9333EA', '#EA580C', '#DB2777', '#0891B2', '#854D0E'];
+
+// Build a directory-shaped patient record from raw form fields.
+function buildPatient({ name, cin, phone, sex, dob, nextAppt = '—' }) {
+  const age = ageFromDob(dob);
+  return {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    name,
+    initials: initials(name),
+    color: PT_COLORS[Math.floor(Math.random() * PT_COLORS.length)],
+    age: age ?? '—',
+    sex: sex === 'Homme' ? 'M' : 'F',
+    dob: dob || '',
+    cin: cin || '—',
+    phone: phone ? (String(phone).startsWith('+') ? phone : `+212 ${phone}`) : '—',
+    lastVisit: '—',
+    nextAppt: nextAppt || '—',
+    statut: 'Actif',
+  };
+}
 import Dashboard from './Dashboard';
 import Calendar from './Calendar';
 import Appointments from './Appointments';
@@ -68,7 +102,7 @@ export default function DoctorApp() {
     // Always open on a clean form anchored to today's real (Morocco) date.
     setState({
       newApptOpen:true, apptCreated:false, naMatch:null, naSuggestOpen:false,
-      newAppt:{ name:'', phone:'', cin:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', notes:'' },
+      newAppt:{ name:'', phone:'', cin:'', sex:'Femme', dob:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', notes:'' },
     });
   };
   const closeNewAppt = () => setState({ newApptOpen:false });
@@ -80,23 +114,23 @@ export default function DoctorApp() {
     }
     const dt = new Date(`${na.date}T${na.time}:00`);
     const id = 'local_' + Date.now();
+    const sexLetter = na.sex === 'Homme' ? 'M' : 'F';
+    const age = ageFromDob(na.dob);
     // Add to the appointment list (Rendez-vous) and the consultations list
     // (Calendrier / Historique / Statistiques) so it shows up everywhere.
     const appt = { id, datetime: dt.toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
     const svc  = (state.services || []).find(s => s.name === na.motif);
-    const consult = { id, patient: na.name, age:'—', sex:'F', service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
+    const consult = { id, patient: na.name, age: age ?? '—', sex: sexLetter, service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
 
-    // Auto-register the patient in the directory if they're new.
+    // Auto-register the patient in the directory if they're new, and invite them.
     const list = state.patients || [];
     const exists = list.some(p => (p.name || '').trim().toLowerCase() === na.name.trim().toLowerCase());
-    const patientsPatch = exists ? {} : {
-      patients: [{
-        id: Date.now(), name: na.name, initials: initials(na.name),
-        color: '#16A06A', age: '—', sex: 'F', cin: na.cin || '—',
-        phone: na.phone ? `+212 ${na.phone}` : '—',
-        lastVisit: '—', nextAppt: na.date, statut: 'Actif',
-      }, ...list],
-    };
+    let patientsPatch = {};
+    if (!exists) {
+      patientsPatch = { patients: [buildPatient({ name: na.name, cin: na.cin, phone: na.phone, sex: na.sex, dob: na.dob, nextAppt: na.date }), ...list] };
+      // New (unregistered) patient → send an invitation to join TikDoc.
+      inviteNewPatient({ name: na.name, phone: na.phone, email: na.email, appt: { date: na.date, time: na.time, motif: na.motif } }).catch(() => {});
+    }
 
     setState({
       newApptOpen:false, apptCreated:true,
@@ -112,7 +146,9 @@ export default function DoctorApp() {
   const submitAddPatient = () => {
     const np = state.newPatient;
     if (!np.name) return;
-    const newP = { ...np, last: '—', id: Date.now() };
+    // Normalise into the directory shape (age computed from the birth date).
+    const newP = buildPatient({ name: np.name, cin: np.cin, phone: np.phone, sex: np.sex, dob: np.dob });
+    inviteNewPatient({ name: np.name, phone: np.phone, email: np.email }).catch(() => {});
     setState({ patients: [newP, ...(patients || [])], addPatientOpen:false, patientAdded:true, newPatient:{ name:'',cin:'',phone:'',email:'',dob:'',sex:'Femme',address:'',city:'Casablanca',blood:'',allergies:'',chronic:'',insurance:'CNSS',notes:'' } });
     setTimeout(() => setState({ patientAdded:false }), 3000);
   };
@@ -260,7 +296,7 @@ export default function DoctorApp() {
                       {naSuggests.map((sg, i) => {
                         const [bg, fg] = tint(i);
                         return (
-                          <button key={i} onClick={() => { setNA('name', sg.name); setNA('phone', sg.phone || ''); setNA('cin', sg.cin || ''); setState({ naMatch:sg, naSuggestOpen:false }); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
+                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: String(sg.phone || '').replace(/^\+?212\s*/, '').trim(), cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sg.sex || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
                             <span style={{ width:30, height:30, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0 }}>{initials(sg.name)}</span>
                             <span style={{ flex:1, minWidth:0 }}>
                               <span style={{ display:'block', fontSize:13, fontWeight:700, color:DARK }}>{sg.name}</span>
@@ -294,6 +330,18 @@ export default function DoctorApp() {
                   <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>CIN <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
                     <input value={newAppt.cin || ''} onChange={e => setNA('cin', e.target.value)} placeholder="AB123456" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+                  </div>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:14, marginBottom:18 }}>
+                  <div style={{ minWidth:0 }}>
+                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Sexe</label>
+                    <select value={newAppt.sex || 'Femme'} onChange={e => setNA('sex', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
+                      <option>Femme</option><option>Homme</option>
+                    </select>
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Date de naissance <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
+                    <input type="date" max={todayISO} value={newAppt.dob || ''} onChange={e => setNA('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                   </div>
                 </div>
                 <div style={{ fontSize:11.5, fontWeight:800, color:'#9AA8A2', textTransform:'uppercase', letterSpacing:.5, marginBottom:12 }}>Rendez-vous</div>

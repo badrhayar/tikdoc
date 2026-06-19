@@ -56,22 +56,24 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     };
   });
 
-  const cancelAppt = async (id) => {
-    try {
-      await updateAppointmentStatus(id, 'cancelled');
-      setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status: 'cancelled' } : a) });
-    } catch (e) {
-      setState({ toast: 'Annulation impossible : ' + (e?.message || 'erreur'), toastShow: true });
+  const isLocal = (id) => String(id).startsWith('local_');
+  // Update a manual (local) appointment in state, or a DB-backed one via the API.
+  const setStatus = async (id, status, frConsultStatus) => {
+    if (isLocal(id)) {
+      const patch = { manualAppts: (state.manualAppts || []).map(a => a.id === id ? { ...a, status } : a) };
+      if (frConsultStatus) patch.manualConsults = (state.manualConsults || []).map(c => c.id === id ? { ...c, status: frConsultStatus } : c);
+      setState(patch);
+      return;
     }
-  };
-  const confirmAppt = async (id) => {
     try {
-      await updateAppointmentStatus(id, 'confirmed');
-      setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status: 'confirmed' } : a) });
+      await updateAppointmentStatus(id, status);
+      setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status } : a) });
     } catch (e) {
       setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
     }
   };
+  const cancelAppt  = (id) => setStatus(id, 'cancelled', 'Annulé');
+  const confirmAppt = (id) => setStatus(id, 'confirmed');
 
   const filtered = rows.filter(appt => {
     const matchTab = activeTab === 'Tous' || appt.statut === activeTab;

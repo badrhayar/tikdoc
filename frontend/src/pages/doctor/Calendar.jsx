@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
+import { deleteAppointment } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -161,6 +162,25 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
       setState({ manualConsults: (state.manualConsults || []).map(c => c.id === editData.id ? editData : c) });
     } else {
       setState({ consultations: (state.consultations || []).map(c => c.id === editData.id ? editData : c) });
+    }
+    closeEdit();
+  };
+  const deleteAppt = async () => {
+    const id = editData.id;
+    const isManual = String(id).startsWith('local_');
+    if (isManual) {
+      setState({
+        manualConsults: (state.manualConsults || []).filter(c => c.id !== id),
+        manualAppts:    (state.manualAppts || []).filter(a => a.id !== id),
+      });
+    } else {
+      // Remove from the UI immediately, then delete in the database.
+      setState({
+        consultations:  (state.consultations || []).filter(c => c.id !== id),
+        myAppointments: (state.myAppointments || []).filter(a => a.id !== id),
+      });
+      try { await deleteAppointment(id); }
+      catch (e) { setState({ toast: 'Suppression impossible : ' + (e?.message || 'erreur'), toastShow: true }); }
     }
     closeEdit();
   };
@@ -459,6 +479,10 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+              <button onClick={deleteAppt} title="Supprimer le rendez-vous" style={{ flex: '0 0 auto', padding: '11px 14px', borderRadius: 10, border: '1px solid #F2C2CD', background: '#FCE8EC', color: '#C2415C', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
+                Supprimer
+              </button>
               <button onClick={closeEdit} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
               <button onClick={saveEdit} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Enregistrer</button>
             </div>
