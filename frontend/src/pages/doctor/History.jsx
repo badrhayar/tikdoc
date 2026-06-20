@@ -28,7 +28,12 @@ function initials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-const PAY_ICONS = { 'Espèces': '💵', 'CMI': '💳', 'M-Wallet': '📱' };
+const PI = { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const PAY_ICONS = {
+  'Espèces':  <svg {...PI}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>,
+  'CMI':      <svg {...PI}><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>,
+  'M-Wallet': <svg {...PI}><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>,
+};
 
 function fmtDate(iso) {
   if (!iso) return '';
@@ -306,12 +311,12 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
       {/* Summary cards — computed from live data */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total consultations', value: totalCount.toString(), icon: '🗓️' },
-          { label: 'Total encaissé',      value: totalEncaisse.toLocaleString('fr-FR') + ' MAD', icon: '💰' },
-          { label: 'Panier moyen',        value: panierMoyen + ' MAD', icon: '📊' },
+          { label: 'Total consultations', value: totalCount.toString(), icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> },
+          { label: 'Total encaissé',      value: totalEncaisse.toLocaleString('fr-FR') + ' MAD', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+          { label: 'Panier moyen',        value: panierMoyen + ' MAD', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg> },
         ].map((card, i) => (
           <div key={i} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 11, background: HEADER_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 11, background: HEADER_BG, color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {card.icon}
             </div>
             <div>
@@ -422,7 +427,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
                       onMouseEnter={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.color = PRIMARY; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER_STRONG; e.currentTarget.style.color = MUTED; }}
                     >
-                      ✏️
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
                     </button>
                   </td>
                 </tr>

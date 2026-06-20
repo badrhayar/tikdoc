@@ -250,7 +250,7 @@ export default function DoctorApp() {
           )}
           {!isMobile && (
             <div style={{ flex:1, maxWidth:440, display:'flex', alignItems:'center', gap:9, background:'#F4F8F5', border:`1px solid #E4EEE9`, borderRadius:11, padding:'10px 14px' }}>
-              <span style={{ color:'#9AA8A2', fontSize:15 }}>⌕</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
               <input placeholder="Rechercher un patient, un rendez-vous…" style={{ border:'none', outline:'none', background:'none', width:'100%', fontSize:13.5 }} />
             </div>
           )}
@@ -285,10 +285,10 @@ export default function DoctorApp() {
                     <div style={{ fontSize:11.5, color:MUT, direction:'ltr', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docEmail || 'Médecin'}</div>
                   </div>
                   <button onClick={() => { go('dsettings'); setPopAvatar(false); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:DARK, textAlign:'start' }}>
-                    <span style={{ color:MUT }}>👤</span> Mon profil
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7B76" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Mon profil
                   </button>
                   <button onClick={() => { go('home'); setPopAvatar(false); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', borderTop:'1px solid #F0F3F2', cursor:'pointer', fontSize:13, fontWeight:700, color:'#D9536B', textAlign:'start' }}>
-                    <span>⎋</span> Déconnexion
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Déconnexion
                   </button>
                 </div>
               </>

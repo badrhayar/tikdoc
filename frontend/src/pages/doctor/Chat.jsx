@@ -155,7 +155,7 @@ export default function Chat({ state, setState }) {
 
         <div style={{ margin: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG, border: `1px solid ${BORDER_STRONG}`, borderRadius: 10, padding: '9px 12px' }}>
-            <span style={{ color: MUTED, fontSize: 14 }}>🔍</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7B76" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
             <input value={searchVal} onChange={(e) => setSearchVal(e.target.value)} placeholder="Rechercher une conversation…" style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13, color: DARK }} />
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function Chat({ state, setState }) {
                       </div>
                     ) : msg.type === 'audio' ? (
                       <div style={{ background: isMe ? PRIMARY : '#fff', color: isMe ? '#fff' : DARK, borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', border: isMe ? 'none' : `1px solid ${BORDER}`, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, maxWidth: '68%' }}>
-                        <span style={{ fontSize: 16 }}>🎵</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                         <span style={{ fontSize: 13 }}>Message vocal · {msg.duration || '0:12'}</span>
                       </div>
                     ) : (
@@ -249,22 +249,28 @@ export default function Chat({ state, setState }) {
             {/* Input area */}
             <div style={{ background: '#fff', borderTop: `2px solid ${BORDER_STRONG}`, padding: '12px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button onClick={() => fileInputRef.current?.click()} title="Joindre une image" style={{ background: BG, border: `1px solid ${BORDER_STRONG}`, borderRadius: 10, cursor: 'pointer', width: 38, height: 38, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: MUTED }}>📎</button>
+                <button onClick={() => fileInputRef.current?.click()} title="Joindre une image" style={{ background: BG, border: `1px solid ${BORDER_STRONG}`, borderRadius: 10, cursor: 'pointer', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: MUTED }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
                 <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
 
-                <button onClick={toggleRecording} title={isRecording ? 'Arrêter' : 'Message vocal'} style={{ background: isRecording ? '#FCE7EE' : BG, border: `1px solid ${isRecording ? '#C2466A' : BORDER_STRONG}`, borderRadius: 10, cursor: 'pointer', width: 38, height: 38, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: isRecording ? '#C2466A' : MUTED }}>
-                  {isRecording ? '⏹' : '🎤'}
+                <button onClick={toggleRecording} title={isRecording ? 'Arrêter' : 'Message vocal'} style={{ background: isRecording ? '#FCE7EE' : BG, border: `1px solid ${isRecording ? '#C2466A' : BORDER_STRONG}`, borderRadius: 10, cursor: 'pointer', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: isRecording ? '#C2466A' : MUTED }}>
+                  {isRecording
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>}
                 </button>
 
                 <input value={inputVal} onChange={(e) => setInputVal(e.target.value)} onKeyDown={handleKeyDown} placeholder="Écrire un message…" style={{ flex: 1, background: BG, border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '10px 16px', fontSize: 14, outline: 'none', color: DARK }} />
 
-                <button onClick={doSend} disabled={!inputVal.trim()} style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: inputVal.trim() ? PRIMARY : BORDER_STRONG, border: 'none', cursor: inputVal.trim() ? 'pointer' : 'default', color: '#fff', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}>➤</button>
+                <button onClick={doSend} disabled={!inputVal.trim()} style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: inputVal.trim() ? PRIMARY : BORDER_STRONG, border: 'none', cursor: inputVal.trim() ? 'pointer' : 'default', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                </button>
               </div>
             </div>
           </>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontSize: 40 }}>💬</div>
+            <div style={{ color: "#CBD5D0", display: "flex" }}><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: DARK }}>Aucune conversation</div>
             <div style={{ fontSize: 14, color: MUTED, maxWidth: 280, textAlign: 'center' }}>
               {isDoctor ? 'Démarrez une conversation avec un de vos patients.' : 'Démarrez une conversation avec un médecin déjà consulté.'}

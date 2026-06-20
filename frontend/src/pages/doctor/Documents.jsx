@@ -9,7 +9,10 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
-const fileIcon = (path = '') => /\.(png|jpe?g|gif|webp)$/i.test(path) ? '🖼' : '📄';
+const DI = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ImgIcon = () => <svg {...DI}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>;
+const DocIcon = () => <svg {...DI}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>;
+const fileIcon = (path = '') => /\.(png|jpe?g|gif|webp)$/i.test(path) ? <ImgIcon /> : <DocIcon />;
 const fileName = (path = '') => (path.split('/').pop() || path).replace(/^\d+_/, '');
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -207,9 +210,15 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                   cursor: 'pointer',
                 }}
               >
-                <div style={{ fontSize: 28, marginBottom: 8 }}>{file ? '✅' : '📎'}</div>
+                <div style={{ marginBottom: 8, color: file ? PRIMARY : MUTED, display: 'flex', justifyContent: 'center' }}>
+                  {file ? (
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+                  ) : (
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  )}
+                </div>
                 <p style={{ margin: '0 0 12px', color: file ? DARK : MUTED, fontSize: 14, fontWeight: file ? 600 : 400, wordBreak: 'break-all' }}>
-                  {file ? file.name : '📎 Glissez-déposez ou cliquez'}
+                  {file ? file.name : 'Glissez-déposez ou cliquez'}
                 </p>
                 <button
                   type="button"

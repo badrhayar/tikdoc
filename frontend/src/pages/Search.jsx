@@ -97,7 +97,7 @@ export default function Search() {
         {/* Search input (always visible) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '0 13px', flex: '1 1 180px', minWidth: 140 }}>
-            <span style={{ color: PRIMARY, fontSize: 15 }}>🔍</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A06A" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
             <input placeholder="Médecin, spécialité…" value={scQ} onChange={(e) => setState({ scQ: e.target.value })} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: DARK, padding: '11px 0', width: '100%' }} />
           </div>
 
@@ -198,7 +198,7 @@ export default function Search() {
 
           {list.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: MUTED }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+              <div style={{ marginBottom: 16, color: "#CBD5D0", display:"flex", justifyContent:"center" }}><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></div>
               <div style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 8 }}>Aucun médecin trouvé</div>
               <div style={{ fontSize: 14 }}>Modifiez vos critères de recherche</div>
             </div>
@@ -267,7 +267,7 @@ export default function Search() {
             <div style={{ position: 'absolute', left: '65%', top: 0, bottom: 0, width: 2, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
 
             <div style={{ position: 'absolute', top: 14, left: 16, fontSize: 12, fontWeight: 600, color: DARK, background: 'rgba(255,255,255,0.85)', padding: '5px 11px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>
-              📍 Votre position
+              Votre position
             </div>
 
             <div style={{ position: 'absolute', left: '45%', top: '55%', transform: 'translate(-50%, -50%)' }}>

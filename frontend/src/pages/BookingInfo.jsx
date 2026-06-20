@@ -10,10 +10,11 @@ const BG      = '#F4F8F5';
 const BORDER  = '#EAEFEC';
 const MUTED   = '#6B7B76';
 
+const PI = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
 const PAY_OPTIONS = [
-  { key: 'cash',    icon: '💵', label: 'Espèces au cabinet',  sub: 'Payez directement au cabinet' },
-  { key: 'cmi',     icon: '💳', label: 'Carte CMI',           sub: 'Réseau monétique marocain' },
-  { key: 'mwallet', icon: '📱', label: 'M-Wallet',            sub: 'Paiement mobile (CIH Money, Orange Money...)' },
+  { key: 'cash',    icon: <svg {...PI}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>, label: 'Espèces au cabinet',  sub: 'Payez directement au cabinet' },
+  { key: 'cmi',     icon: <svg {...PI}><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>, label: 'Carte CMI',           sub: 'Réseau monétique marocain' },
+  { key: 'mwallet', icon: <svg {...PI}><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>, label: 'M-Wallet',            sub: 'Paiement mobile (CIH Money, Orange Money...)' },
 ];
 
 export default function BookingInfo() {

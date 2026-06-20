@@ -76,6 +76,37 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
     });
   const apptCount = allAppts.length;
 
+  // ── Real KPI values (computed from live data) ──
+  const today = new Date();
+  const sameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const sameMonth = (d) => d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])];
+  const parse = (iso) => new Date(`${iso}T00:00:00`);
+  const todayCount = allAppts.filter((a) => sameDay(new Date(a.datetime))).length;
+  const monthConsults = consults.filter((c) => c.date && sameMonth(parse(c.date)));
+  const monthRevenue = monthConsults.filter((c) => c.status === 'Payé').reduce((s, c) => s + (c.amount || 0), 0);
+  const monthPatients = new Set(monthConsults.map((c) => (c.patient || '').toLowerCase()).filter(Boolean)).size;
+  const rating = state?.myDoctor?.rating ? `${state.myDoctor.rating}` : '—';
+  const cancelled = consults.filter((c) => c.status === 'Annulé').length;
+  const acceptRate = consults.length ? Math.round((consults.length - cancelled) / consults.length * 100) : 0;
+  const svcDur = (state?.services || []).map((s) => Number(s.duration) || 0).filter(Boolean);
+  const avgDur = svcDur.length ? Math.round(svcDur.reduce((a, b) => a + b, 0) / svcDur.length) : 20;
+
+  const kpis = [
+    { ...KPIS[0], value: String(todayCount) },
+    { ...KPIS[1], value: String(monthPatients) },
+    { ...KPIS[2], value: monthRevenue.toLocaleString('fr-FR'), unit: 'MAD' },
+    { ...KPIS[3], value: rating, unit: '★' },
+  ];
+  const secondary = [
+    { label: "Taux d'acceptation", value: acceptRate + '%', sub: 'Des rendez-vous', iconBg: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)', iconColor: '#0E7C52',
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg> },
+    { label: 'Durée moy. consultation', value: avgDur + ' min', sub: "D'après vos services", iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0',
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
+    { label: 'Patients ce mois', value: String(monthPatients), sub: 'Distincts', iconBg: 'linear-gradient(140deg,#EFEAFB,#E3DAF6)', iconColor: '#6B57A6',
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg> },
+  ];
+
   return (
     <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
 
@@ -83,7 +114,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: DARK, letterSpacing: '-0.7px' }}>Tableau de bord</h1>
-          <p style={{ margin: '5px 0 0', color: MUTED, fontSize: 14 }}>{dateLabel} — Bonjour, {docLabel} 👋</p>
+          <p style={{ margin: '5px 0 0', color: MUTED, fontSize: 14 }}>{dateLabel} — Bonjour, {docLabel}</p>
         </div>
         <button onClick={openNewAppt} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 11, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 18px -6px rgba(22,160,106,0.55)' }}>
           <span style={{ fontSize: 17, lineHeight: 1 }}>+</span> Nouveau rendez-vous
@@ -92,11 +123,10 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
 
       {/* Row 1: KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 18, marginBottom: isMobile ? 16 : 26 }}>
-        {KPIS.map((card, i) => (
+        {kpis.map((card, i) => (
           <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: 20, boxShadow: CARD_SHADOW }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, background: card.ib, color: card.ic, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6)' }}>{card.icon}</div>
-              <TrendPill badge={card.badge} up={card.up} />
             </div>
             <div style={{ fontSize: 13, color: MUTED, marginBottom: 6, fontWeight: 500 }}>{card.label}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
@@ -179,13 +209,9 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
 
       {/* Row 3: Secondary stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 12 : 18 }}>
-        {[
-          { icon: '✓', iconBg: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)', iconColor: '#0E7C52', label: "Taux d'acceptation", value: '94%', sub: 'Des demandes acceptées' },
-          { icon: '⏱', iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0', label: 'Durée moy. consultation', value: '22 min', sub: 'Par patient en moyenne' },
-          { icon: '👤', iconBg: 'linear-gradient(140deg,#EFEAFB,#E3DAF6)', iconColor: '#6B57A6', label: 'Nouveaux patients', value: '12', sub: 'Ce mois-ci' },
-        ].map((card, i) => (
+        {secondary.map((card, i) => (
           <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: 20, display: 'flex', alignItems: 'center', gap: 16, boxShadow: CARD_SHADOW }}>
-            <div style={{ width: 50, height: 50, borderRadius: 14, background: card.iconBg, color: card.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6)' }}>{card.icon}</div>
+            <div style={{ width: 50, height: 50, borderRadius: 14, background: card.iconBg, color: card.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6)' }}>{card.icon}</div>
             <div>
               <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 4, fontWeight: 500 }}>{card.label}</div>
               <div className="sa-num" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 25, fontWeight: 800, color: DARK, lineHeight: 1, letterSpacing: '-0.7px' }}>{card.value}</div>

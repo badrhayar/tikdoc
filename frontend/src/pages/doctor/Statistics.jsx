@@ -28,20 +28,18 @@ const MINI_STATS = [
 
 const SVC_COLORS = [PRIMARY, '#3B82F6', '#8B5CF6', '#F59E0B', MUTED, '#E11D48'];
 
-function SectionTitle({ emoji, title, borderColor }) {
+const SI = { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ICON = {
+  revenus: <svg {...SI}><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  consults: <svg {...SI}><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>,
+  demo: <svg {...SI}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>,
+  indic: <svg {...SI}><path d="M5 21V10M12 21V4M19 21v-7"/></svg>,
+};
+
+function SectionTitle({ icon, title, borderColor }) {
   return (
-    <h2 style={{
-      fontSize: 18,
-      fontWeight: 700,
-      color: DARK,
-      margin: '0 0 20px',
-      borderLeft: `4px solid ${borderColor}`,
-      paddingLeft: 14,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-    }}>
-      {emoji} {title}
+    <h2 style={{ fontSize: 18, fontWeight: 700, color: DARK, margin: '0 0 20px', borderLeft: `4px solid ${borderColor}`, paddingLeft: 14, display: 'flex', alignItems: 'center', gap: 9 }}>
+      <span style={{ color: borderColor, display: 'flex' }}>{icon}</span> {title}
     </h2>
   );
 }
@@ -57,20 +55,7 @@ function RevenueCard({ label, value, trend }) {
       flex: 1,
     }}>
       <div style={{ fontSize: 13, color: MUTED, marginBottom: 10, fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: DARK, marginBottom: 10 }}>{value}</div>
-      <div style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 12,
-        fontWeight: 600,
-        color: PRIMARY,
-        backgroundColor: '#E8F8F1',
-        padding: '3px 10px',
-        borderRadius: 20,
-      }}>
-        ↑ {trend}
-      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: DARK }}>{value}</div>
     </div>
   );
 }
@@ -90,22 +75,8 @@ function ConsultCard({ label, value, trend, trendDir, sub }) {
       flex: 1,
     }}>
       <div style={{ fontSize: 13, color: MUTED, marginBottom: 10, fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: DARK, marginBottom: 10 }}>{value}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          fontSize: 12,
-          fontWeight: 600,
-          color: trendColor,
-          backgroundColor: trendBg,
-          padding: '3px 10px',
-          borderRadius: 20,
-        }}>
-          {trend}
-        </div>
-        <span style={{ fontSize: 11, color: MUTED }}>{sub}</span>
-      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: DARK, marginBottom: 6 }}>{value}</div>
+      <span style={{ fontSize: 11.5, color: MUTED }}>{sub}</span>
     </div>
   );
 }
@@ -150,23 +121,61 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const svcRanking = Object.entries(bySvcCount).sort((a, b) => b[1] - a[1]);
   const maxSvcCount = svcRanking[0]?.[1] || 1;
 
-  // Revenue KPI cards
-  const weekly = Math.round(totalRevenue / 4);
-  const daily = Math.round(totalRevenue / 30);
-  const yearly = totalRevenue * 12;
+  // Revenue KPI cards (all derived from real paid consultations).
+  const today = new Date();
+  const isSameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const parse = (iso) => new Date(`${iso}T00:00:00`);
+  const revToday = paid.filter(c => c.date && isSameDay(parse(c.date))).reduce((s, c) => s + c.amount, 0);
+  const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const revWeek = paid.filter(c => c.date && parse(c.date) >= startOfWeek).reduce((s, c) => s + c.amount, 0);
+  const revMonth = paid.filter(c => c.date && parse(c.date).getMonth() === today.getMonth() && parse(c.date).getFullYear() === today.getFullYear()).reduce((s, c) => s + c.amount, 0);
 
   const REVENUE_CARDS = [
-    { label: "Revenus aujourd'hui", value: daily.toLocaleString('fr-FR') + ' MAD', trend: '+12%' },
-    { label: 'Revenus cette semaine', value: weekly.toLocaleString('fr-FR') + ' MAD', trend: '+8%' },
-    { label: 'Revenus ce mois', value: totalRevenue.toLocaleString('fr-FR') + ' MAD', trend: '+15%' },
-    { label: 'Revenus cette année', value: yearly.toLocaleString('fr-FR') + ' MAD', trend: '+22%' },
+    { label: "Revenus aujourd'hui", value: revToday.toLocaleString('fr-FR') + ' MAD' },
+    { label: 'Revenus cette semaine', value: revWeek.toLocaleString('fr-FR') + ' MAD' },
+    { label: 'Revenus ce mois', value: revMonth.toLocaleString('fr-FR') + ' MAD' },
+    { label: 'Revenus encaissés (total)', value: totalRevenue.toLocaleString('fr-FR') + ' MAD' },
   ];
 
+  // Consultation KPIs from real statuses.
+  const total = consultations.length;
+  const cancelled = consultations.filter(c => c.status === 'Annulé').length;
+  const acceptRate = total ? Math.round((total - cancelled) / total * 100) : 0;
+  const cancelRate = total ? Math.round(cancelled / total * 100) : 0;
+  const svcDur = (state?.services || []).map(s => Number(s.duration) || 0).filter(Boolean);
+  const avgDur = svcDur.length ? Math.round(svcDur.reduce((a, b) => a + b, 0) / svcDur.length) : 20;
+
   const CONSULT_CARDS = [
-    { label: 'Total ce mois', value: consultations.length.toString(), trend: '+12%', trendDir: 'up', sub: 'vs mois préc.' },
-    { label: "Taux d'acceptation", value: '94%', trend: '↑2%', trendDir: 'up', sub: 'vs mois préc.' },
-    { label: 'Durée moyenne', value: '22 min', trend: 'stable', trendDir: 'neutral', sub: 'sans changement' },
-    { label: "Taux d'annulation", value: '6%', trend: '↓1%', trendDir: 'down', sub: 'vs mois préc.' },
+    { label: 'Total consultations', value: total.toString(), sub: 'enregistrées' },
+    { label: "Taux d'acceptation", value: acceptRate + '%', sub: 'non annulées' },
+    { label: 'Durée moyenne', value: avgDur + ' min', sub: "d'après vos services" },
+    { label: "Taux d'annulation", value: cancelRate + '%', sub: 'des rendez-vous' },
+  ];
+
+  // Daily revenue for the current week (Mon→Sun), from real paid consultations.
+  const dailyValues = DAILY_LABELS.map((_, i) => {
+    const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i);
+    const key = d.toDateString();
+    return paid.filter(c => c.date && parse(c.date).toDateString() === key).reduce((s, c) => s + c.amount, 0);
+  });
+  const dailyMax = Math.max(...dailyValues, 1);
+
+  // Detailed indicators — derived from real data.
+  const patientCounts = {};
+  consultations.forEach(c => { const k = (c.patient || '').toLowerCase(); if (k) patientCounts[k] = (patientCounts[k] || 0) + 1; });
+  const distinctPatients = Object.keys(patientCounts).length;
+  const returning = Object.values(patientCounts).filter(n => n > 1).length;
+  const retourRate = distinctPatients ? Math.round(returning / distinctPatients * 100) : 0;
+  const teleCount = consultations.filter(c => /t[ée]l[ée]/i.test(c.service || '')).length;
+  const telePct = total ? Math.round(teleCount / total * 100) : 0;
+  const upcoming = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].filter(a => new Date(a.datetime) >= new Date()).length;
+  const miniStats = [
+    { icon: MINI_STATS[0].icon, label: 'Patients distincts', value: String(distinctPatients) },
+    { icon: MINI_STATS[1].icon, label: 'Note moyenne', value: state?.myDoctor?.rating ? `${state.myDoctor.rating}/5` : '—' },
+    { icon: MINI_STATS[2].icon, label: 'Avis reçus', value: String(state?.myDoctor?.reviews_count ?? 0) },
+    { icon: MINI_STATS[3].icon, label: 'Taux de retour', value: retourRate + '%' },
+    { icon: MINI_STATS[4].icon, label: 'RDV à venir', value: String(upcoming) },
+    { icon: MINI_STATS[5].icon, label: 'Téléconsultations', value: telePct + '%' },
   ];
 
   const RANK_COLORS = [PRIMARY, '#3B82F6', '#8B5CF6', '#F59E0B', MUTED];
@@ -211,7 +220,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         padding: '28px 28px 24px',
         marginBottom: 24,
       }}>
-        <SectionTitle emoji="💰" title="Revenus" borderColor={PRIMARY} />
+        <SectionTitle icon={ICON.revenus} title="Revenus" borderColor={PRIMARY} />
 
         {/* Revenue KPI cards */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
@@ -266,8 +275,8 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
             height: 150,
             padding: '0 4px',
           }}>
-            {DAILY_VALUES.map((val, i) => {
-              const barH = Math.round((val / DAILY_MAX) * 120);
+            {dailyValues.map((val, i) => {
+              const barH = Math.round((val / dailyMax) * 120);
               return (
                 <div key={i} style={{
                   flex: 1,
@@ -302,7 +311,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         padding: '28px 28px 24px',
         marginBottom: 24,
       }}>
-        <SectionTitle emoji="📅" title="Consultations" borderColor="#3B82F6" />
+        <SectionTitle icon={ICON.consults} title="Consultations" borderColor="#3B82F6" />
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {CONSULT_CARDS.map((card) => (
             <ConsultCard key={card.label} {...card} />
@@ -318,7 +327,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         padding: '28px 28px 24px',
         marginBottom: 24,
       }}>
-        <SectionTitle emoji="👥" title="Démographie patients" borderColor="#8B5CF6" />
+        <SectionTitle icon={ICON.demo} title="Démographie patients" borderColor="#8B5CF6" />
 
         {/* 2-column: Genre + Age */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 14 : 24, marginBottom: isMobile ? 16 : 32 }}>
@@ -488,13 +497,13 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         borderRadius: 16,
         padding: isMobile ? '18px 14px' : '28px 28px 24px',
       }}>
-        <SectionTitle emoji="📊" title="Indicateurs détaillés" borderColor={DARK} />
+        <SectionTitle icon={ICON.indic} title="Indicateurs détaillés" borderColor={DARK} />
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: isMobile ? 10 : 16,
         }}>
-          {MINI_STATS.map((s) => (
+          {miniStats.map((s) => (
             <div key={s.label} style={{
               backgroundColor: '#fff',
               border: `1px solid ${BORDER_STRONG}`,

@@ -196,7 +196,7 @@ export default function PatientAccount() {
             </button>
           </div>
           <div>
-            <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName} 👋</h1>
+            <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName}</h1>
             <p style={{ margin:0, fontSize:14, color:MUT }}>Gérez vos informations et vos rendez-vous.</p>
           </div>
         </div>
@@ -475,7 +475,7 @@ export default function PatientAccount() {
         {/* Messagerie */}
         <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW, marginTop:22 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14 }}>
-            <h2 style={{ margin:0, fontSize:16, fontWeight:700, color:DARK }}>💬 Messagerie</h2>
+            <h2 style={{ margin:0, fontSize:16, fontWeight:700, color:DARK, display:"flex", alignItems:"center", gap:8 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A06A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messagerie</h2>
             <button onClick={openMessagerie} style={{ background:'none', border:'none', fontSize:13, color:G, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, padding:'6px 0' }}>Ouvrir la messagerie</button>
           </div>
 
