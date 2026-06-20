@@ -17,6 +17,7 @@ const ForPatients    = lazy(() => import('./pages/ForPatients'));
 const DoctorLogin    = lazy(() => import('./pages/DoctorLogin'));
 const DoctorRegister = lazy(() => import('./pages/DoctorRegister'));
 const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
+const Admin          = lazy(() => import('./pages/Admin'));
 
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
@@ -38,6 +39,7 @@ const SCREEN_MAP = {
   forpatients: ForPatients,
   login:       DoctorLogin,
   docregister: DoctorRegister,
+  admin:       Admin,
 };
 
 function AppShell() {

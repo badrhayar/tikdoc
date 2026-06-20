@@ -29,6 +29,7 @@ function mapDoctor(row) {
     prayerBlock: !!row.prayer_block,
     prayerIds: row.prayer_ids || [],
     services: Array.isArray(row.services) ? row.services : [],
+    avatar: row.avatar_url || '',
   };
 }
 
@@ -302,6 +303,63 @@ export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, pra
 /** Update arbitrary columns on the current doctor's row (bio, city, …). */
 export async function updateDoctorFields(doctorId, fields) {
   const { error } = await supabase.from('doctors').update(fields).eq('id', doctorId);
+  if (error) throw error;
+  return true;
+}
+
+// ── Platform settings (RIB) ───────────────────────────────────────────────────
+export async function fetchAppSettings() {
+  const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  return data || { rib: '', bank: '' };
+}
+
+/** Admin only — update the platform RIB / bank shown on invoices. */
+export async function saveAppSettings({ rib, bank }) {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .update({ rib, bank, updated_at: new Date().toISOString() })
+    .eq('id', 1)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ── Admin: account management ─────────────────────────────────────────────────
+export async function fetchAllAccounts() {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, full_name, email, phone, role, cin_or_inpe, created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adminDeleteUser(id) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+// ── Avatars (profile photos) ──────────────────────────────────────────────────
+/** Upload a profile photo and store its public URL on the user row. */
+export async function uploadAvatar(file, userId) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${userId}/avatar_${Date.now()}.${ext}`;
+  const up = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+  if (up.error) throw up.error;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  const url = data.publicUrl;
+  const { error } = await supabase.from('users').update({ avatar_url: url }).eq('id', userId);
+  if (error) throw error;
+  return url;
+}
+
+// ── Conversations ─────────────────────────────────────────────────────────────
+/** Delete a conversation (its messages cascade). */
+export async function deleteConversation(id) {
+  const { error } = await supabase.from('conversations').delete().eq('id', id);
   if (error) throw error;
   return true;
 }

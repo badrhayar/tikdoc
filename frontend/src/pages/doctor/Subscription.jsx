@@ -9,10 +9,9 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
-// TikDoc's collection account — shown on every invoice so the doctor knows
-// where to pay. (Managed from the Admin platform.)
-const TIKDOC_RIB = '230 810 0000000000000000 12';
-const TIKDOC_BANK = 'Attijariwafa Bank — TikDoc SAS';
+// Fallback collection account if the admin hasn't set one yet.
+const DEFAULT_RIB = '230 810 0000000000000000 12';
+const DEFAULT_BANK = 'Attijariwafa Bank — TikDoc SAS';
 
 const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const FR_MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
@@ -99,6 +98,8 @@ export default function Subscription({ state, setState, go }) {
   const closeInvoice = () => setState({ invoiceOpen: false });
 
   const ttc = (selectedInvoice.amount * 1.2);
+  const RIB = state?.appSettings?.rib || DEFAULT_RIB;
+  const BANK = state?.appSettings?.bank || DEFAULT_BANK;
 
   const card = (p) => {
     const isCurrent = currentKey === p.key;
@@ -227,8 +228,8 @@ export default function Subscription({ state, setState, go }) {
                 <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>TikDoc SAS</div>
                 <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>Casablanca, Maroc</div>
                 <div style={{ color: MUTED, fontSize: 13 }}>contact@tikdoc.ma</div>
-                <div style={{ color: MUTED, fontSize: 13, marginTop: 8 }}><strong style={{ color: DARK }}>RIB :</strong> {TIKDOC_RIB}</div>
-                <div style={{ color: MUTED, fontSize: 12 }}>{TIKDOC_BANK}</div>
+                <div style={{ color: MUTED, fontSize: 13, marginTop: 8 }}><strong style={{ color: DARK }}>RIB :</strong> {RIB}</div>
+                <div style={{ color: MUTED, fontSize: 12 }}>{BANK}</div>
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Facturé à</div>

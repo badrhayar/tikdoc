@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
@@ -189,6 +189,12 @@ export function AppProvider({ children }) {
     return () => { active = false; };
   }, []);
 
+  // Platform settings (RIB shown on invoices).
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    fetchAppSettings().then((s) => dispatch({ appSettings: s })).catch(() => {});
+  }, []);
+
   // Fetch patients on mount (keep the seeded demo roster if the endpoint is absent).
   useEffect(() => {
     fetch('/api/patients')
@@ -208,10 +214,12 @@ export function AppProvider({ children }) {
       if (!u) { dispatch({ appUser: null }); return null; }
       dispatch({
         appUser: u,
-        patient: u.role !== 'doctor'
+        patient: u.role === 'patient'
           ? { name: u.full_name, email: u.email || '', phone: u.phone || '', cin: u.cin_or_inpe || '' }
           : null,
       });
+      // Admins land on the hidden admin console.
+      if (u.role === 'admin') dispatch({ screen: 'admin' });
       const appts = await fetchMyAppointments();
       const patch = { myAppointments: appts };
       // Doctor screens (Calendar / History / Statistics) read `consultations`.

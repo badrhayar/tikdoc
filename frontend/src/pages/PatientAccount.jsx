@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
-import { createReview, getOrCreateConversation, sendMessage } from '../lib/api';
+import { createReview, getOrCreateConversation, sendMessage, uploadAvatar } from '../lib/api';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -102,6 +102,23 @@ export default function PatientAccount() {
 
   const firstName = patient?.name?.split(' ')[0] || 'Patient';
 
+  // Profile photo
+  const photoRef = useRef(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const avatarUrl = state.appUser?.avatar_url || '';
+  const onPickPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !state.appUser?.id) return;
+    setPhotoBusy(true);
+    try {
+      const url = await uploadAvatar(file, state.appUser.id);
+      setState({ appUser: { ...state.appUser, avatar_url: url }, toast: 'Photo mise à jour ✓', toastShow: true });
+    } catch (err) {
+      setState({ toast: 'Échec du téléversement : ' + (err?.message || 'erreur'), toastShow: true });
+    } finally { setPhotoBusy(false); }
+  };
+
   const docDoctorOpts = ['Dr. Leila Marmioui','Dr. Karim Benali','Dr. Sara Idrissi'];
 
   const sendDoc = () => {
@@ -168,8 +185,21 @@ export default function PatientAccount() {
       </header>
 
       <main style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'20px 16px 44px':'28px 24px 50px' }}>
-        <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName} 👋</h1>
-        <p style={{ margin:'0 0 24px', fontSize:14, color:MUT }}>Gérez vos informations et vos rendez-vous.</p>
+        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:24 }}>
+          <div style={{ position:'relative', flexShrink:0 }}>
+            <div style={{ width:62, height:62, borderRadius:'50%', background:'linear-gradient(135deg,#1AAE74,#0E7E52)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:800, overflow:'hidden' }}>
+              {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : initials(patient?.name)}
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" style={{ display:'none' }} onChange={onPickPhoto} />
+            <button onClick={() => photoRef.current?.click()} disabled={photoBusy} title="Changer la photo" style={{ position:'absolute', right:-2, bottom:-2, width:24, height:24, borderRadius:'50%', background:'#fff', border:`1px solid ${BORDER}`, cursor:photoBusy?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:G, padding:0 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+          </div>
+          <div>
+            <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName} 👋</h1>
+            <p style={{ margin:0, fontSize:14, color:MUT }}>Gérez vos informations et vos rendez-vous.</p>
+          </div>
+        </div>
 
         {/* Countdown card */}
         <div style={{ background:'linear-gradient(135deg,#16A06A,#0E7E52)', borderRadius:18, padding:'22px 24px', marginBottom:22, display:'flex', alignItems:'center', gap:22, flexWrap:'wrap', position:'relative', overflow:'hidden' }}>
@@ -476,8 +506,8 @@ export default function PatientAccount() {
             })}
           </div>
 
-          {/* Choose which already-visited doctor to message */}
-          {visitedDocs.length > 0 && (
+          {/* Choose which already-visited doctor to message — or an info notice */}
+          {visitedDocs.length > 0 ? (
             <div style={{ marginBottom:10 }}>
               <label style={{ display:'block', fontSize:12, fontWeight:600, color:MUT, marginBottom:6 }}>Discuter avec</label>
               <select
@@ -487,6 +517,13 @@ export default function PatientAccount() {
               >
                 {visitedDocs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
+            </div>
+          ) : (
+            <div style={{ display:'flex', alignItems:'flex-start', gap:9, background:'#EAF6F0', border:'1px solid #C3E8D8', borderRadius:10, padding:'11px 13px', marginBottom:10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#138257" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:1 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              <span style={{ fontSize:12.5, color:'#1F6B4D', lineHeight:1.5 }}>
+                Vous ne pouvez démarrer une conversation qu'avec un médecin que vous avez déjà consulté. Prenez un rendez-vous pour pouvoir discuter.
+              </span>
             </div>
           )}
 

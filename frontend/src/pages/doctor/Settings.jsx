@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SPEC_INFO, CITY_OPTS } from '../../shared.jsx';
-import { saveDoctorServices, updateDoctorFields } from '../../lib/api';
+import { saveDoctorServices, updateDoctorFields, uploadAvatar } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 const villes = CITY_OPTS.map((c) => c.label);
@@ -175,6 +175,23 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
 
   const initialsOf = (form.prenom?.[0] || '') + (form.nom?.[0] || '');
 
+  // Profile photo
+  const photoRef = useRef(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const avatarUrl = appUser?.avatar_url || '';
+  async function onPickPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !appUser?.id) return;
+    setPhotoBusy(true);
+    try {
+      const url = await uploadAvatar(file, appUser.id);
+      setState({ appUser: { ...appUser, avatar_url: url }, toast: 'Photo mise à jour ✓', toastShow: true });
+    } catch (err) {
+      setState({ toast: 'Échec du téléversement : ' + (err?.message || 'erreur'), toastShow: true });
+    } finally { setPhotoBusy(false); }
+  }
+
   async function saveAll() {
     // Persist services + bio + city so patients see them and the profile is real.
     if (isSupabaseConfigured && myDoctor?.id) {
@@ -257,31 +274,18 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
             {/* Avatar */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
               <div style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: PRIMARY,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: 22,
-                flexShrink: 0,
+                width: 64, height: 64, borderRadius: '50%', background: PRIMARY,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 800, fontSize: 22, flexShrink: 0, overflow: 'hidden',
               }}>
-                {(initialsOf || 'DR').toUpperCase()}
+                {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (initialsOf || 'DR').toUpperCase()}
               </div>
-              <button style={{
-                background: 'transparent',
-                border: 'none',
-                color: PRIMARY,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: 0,
-                textDecoration: 'underline',
+              <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onPickPhoto} />
+              <button onClick={() => photoRef.current?.click()} disabled={photoBusy} style={{
+                background: 'transparent', border: 'none', color: PRIMARY, fontSize: 14,
+                fontWeight: 600, cursor: photoBusy ? 'default' : 'pointer', padding: 0, textDecoration: 'underline',
               }}>
-                Changer la photo
+                {photoBusy ? 'Téléversement…' : 'Changer la photo'}
               </button>
             </div>
 
