@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification } from '../lib/api';
+import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail } from '../lib/api';
 import { initials, CREDENTIAL_DOCS, DECLINE_REASONS } from '../shared.jsx';
 
 const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
@@ -40,12 +40,25 @@ export default function Admin() {
   const [declineReason, setDeclineReason] = useState(DECLINE_REASONS[0]);
   const [declineNote, setDeclineNote] = useState('');
 
+  // Email tester
+  const [testTo, setTestTo] = useState('');
+  const [testBusy, setTestBusy] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const runTestEmail = async () => {
+    if (!testTo.trim()) return;
+    setTestBusy(true); setTestResult(null);
+    const r = await sendTestEmail(testTo.trim());
+    setTestResult(r);
+    setTestBusy(false);
+  };
+
   const loadReview = () => fetchDoctorsForReview().then(setReviewList).catch((e) => setState({ toast: 'Chargement échoué : ' + (e?.message || ''), toastShow: true }));
 
   useEffect(() => {
     if (!isAdmin) return;
     fetchAllAccounts().then(setAccounts).catch((e) => setState({ toast: 'Chargement comptes échoué : ' + (e?.message || ''), toastShow: true }));
     fetchAppSettings().then((s) => { setRib(s.rib || ''); setBank(s.bank || ''); }).catch(() => {});
+    setTestTo(state.appUser?.email || '');
     loadReview();
   }, [isAdmin]);
 
@@ -347,6 +360,30 @@ export default function Admin() {
             <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>Banque / titulaire</label>
             <input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Attijariwafa Bank — TikDoc SAS" style={{ ...inputStyle, marginBottom: 22 }} />
             <button onClick={saveRib} disabled={busy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 22px', fontWeight: 700, fontSize: 14, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Enregistrement…' : 'Enregistrer le RIB'}</button>
+
+            {/* Email tester */}
+            <div style={{ marginTop: 28, paddingTop: 22, borderTop: `1px solid ${BORDER}` }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, margin: '0 0 6px' }}>Test des emails</h2>
+              <p style={{ fontSize: 13, color: MUTED, margin: '0 0 14px' }}>Envoyez un email de test pour vérifier votre configuration Resend. En mode test (<code>onboarding@resend.dev</code>), seul votre email d'inscription Resend reçoit les messages.</p>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>Destinataire</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <input value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="vous@gmail.com" style={{ ...inputStyle, flex: 1, minWidth: 220, direction: 'ltr' }} />
+                <button onClick={runTestEmail} disabled={testBusy} style={{ background: DARK, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 20px', fontWeight: 700, fontSize: 14, cursor: testBusy ? 'default' : 'pointer', opacity: testBusy ? 0.7 : 1, whiteSpace: 'nowrap' }}>{testBusy ? 'Envoi…' : 'Envoyer un test'}</button>
+              </div>
+              {testResult && (
+                <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, background: testResult.ok ? '#E7F6EE' : '#FCE7EE', color: testResult.ok ? '#0E7C52' : '#C2466A', border: `1px solid ${testResult.ok ? '#C3E8D8' : '#F2C2CD'}` }}>
+                  {testResult.ok ? (
+                    <><strong>Email envoyé ✓</strong> à {testResult.to || testTo} (expéditeur : {testResult.from}). Vérifiez la boîte de réception (et les spams).</>
+                  ) : (
+                    <><strong>Échec de l'envoi.</strong> {testResult.error || 'Erreur inconnue.'}
+                      <div style={{ marginTop: 6, color: MUTED, fontSize: 12 }}>
+                        Causes fréquentes : fonction non déployée, secrets manquants, ou (mode test Resend) destinataire différent de votre email d'inscription Resend.
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -408,6 +408,22 @@ export async function notifyVerification(payload) {
   }
 }
 
+/** Admin diagnostic: send a test email and surface the real result/error. */
+export async function sendTestEmail(to) {
+  try {
+    const { data, error } = await supabase.functions.invoke('notify-verification', { body: { type: 'test', to } });
+    if (error) {
+      // Function returned non-2xx or is not deployed.
+      let msg = error.message || 'Fonction injoignable';
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch (_) {}
+      return { ok: false, error: msg };
+    }
+    return data || { ok: false, error: 'Réponse vide de la fonction.' };
+  } catch (e) {
+    return { ok: false, error: e?.message || 'Erreur réseau' };
+  }
+}
+
 // ── Avatars (profile photos) ──────────────────────────────────────────────────
 /** Upload a profile photo and store its public URL on the user row. */
 export async function uploadAvatar(file, userId) {

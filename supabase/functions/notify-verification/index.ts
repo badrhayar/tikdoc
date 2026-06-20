@@ -40,15 +40,30 @@ async function sendEmail(to: string, subject: string, html: string) {
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: FROM, to, subject, html }),
   });
-  if (!res.ok) console.error("Resend error", await res.text());
-  return res.ok;
+  const body = await res.text();
+  if (!res.ok) console.error("Resend error", body);
+  return { ok: res.ok, status: res.status, body };
 }
+
+const json = (obj: unknown, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const p = await req.json();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // ── Diagnostic: send a test email and return the real result ──
+    if (p.type === "test") {
+      if (!RESEND_API_KEY) return json({ ok: false, error: "RESEND_API_KEY manquant dans les secrets de la fonction." });
+      if (!p.to) return json({ ok: false, error: "Adresse destinataire manquante." });
+      const r = await sendEmail(p.to, "Email de test — TikDoc", shell("Email de test ✓", `<p>Ceci est un email de test envoyé depuis la console d'administration TikDoc.</p><p>Si vous le recevez, votre configuration Resend (clé API + adresse d'envoi) fonctionne correctement.</p>`));
+      let detail: unknown = r.body;
+      try { detail = JSON.parse(r.body); } catch { /* keep raw */ }
+      const errMsg = !r.ok ? ((detail as any)?.message || (detail as any)?.error?.message || r.body) : null;
+      return json({ ok: r.ok, from: FROM, status: r.status, to: p.to, error: errMsg, detail });
+    }
 
     if (p.type === "new_registration") {
       // 1) Notify every admin that a doctor is awaiting review.
