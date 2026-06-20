@@ -57,19 +57,45 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUT = '#6B7B76';
 
-const NAV = [
-  { screen:'doctor',    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>, label:'Tableau de bord' },
-  { screen:'dcal',      icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>, label:'Calendrier' },
-  { screen:'dappts',    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>, label:'Rendez-vous' },
-  { screen:'dhist',     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/></svg>, label:'Historique consultations' },
-  { screen:'dpatients', icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>, label:'Patients' },
-  { screen:'ddocs',     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>, label:'Documents' },
-  { screen:'davail',    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></svg>, label:'Disponibilités' },
-  { screen:'dnotif',    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v11H9l-4 4z"/></svg>, label:'SMS & Notifications' },
-  { screen:'dchat',     icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, label:'Messages' },
-  { screen:'dstats',    icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg>, label:'Statistiques' },
-  { screen:'dabo',      icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>, label:'Abonnement' },
-  { screen:'dsettings', icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>, label:'Paramètres' },
+const IC = {
+  doctor:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  dcal:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>,
+  dappts:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+  davail:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></svg>,
+  dpatients: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>,
+  dhist:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/></svg>,
+  ddocs:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>,
+  dchat:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  dnotif:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v11H9l-4 4z"/></svg>,
+  dstats:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg>,
+  dabo:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>,
+  dsettings: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>,
+};
+
+// Grouped navigation — a divider is drawn between each group.
+const NAV_GROUPS = [
+  [
+    { screen:'doctor', icon:IC.doctor, label:'Tableau de bord' },
+    { screen:'dcal',   icon:IC.dcal,   label:'Calendrier' },
+    { screen:'dappts', icon:IC.dappts, label:'Rendez-vous' },
+    { screen:'davail', icon:IC.davail, label:'Disponibilités' },
+  ],
+  [
+    { screen:'dpatients', icon:IC.dpatients, label:'Patients' },
+    { screen:'dhist',     icon:IC.dhist,     label:'Historique consultations' },
+    { screen:'ddocs',     icon:IC.ddocs,     label:'Documents' },
+  ],
+  [
+    { screen:'dchat',  icon:IC.dchat,  label:'Messages' },
+    { screen:'dnotif', icon:IC.dnotif, label:'SMS & Notifications' },
+  ],
+  [
+    { screen:'dstats', icon:IC.dstats, label:'Statistiques' },
+    { screen:'dabo',   icon:IC.dabo,   label:'Abonnement' },
+  ],
+  [
+    { screen:'dsettings', icon:IC.dsettings, label:'Paramètres' },
+  ],
 ];
 
 export default function DoctorApp() {
@@ -209,21 +235,26 @@ export default function DoctorApp() {
           <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tik<span style={{ color:G }}>Doc</span></span>
         </div>
         <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>
-          {NAV.map(({ screen:sc, icon, label }) => {
-            const active = screen === sc;
-            return (
-              <button
-                key={sc}
-                onClick={() => goNav(sc)}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F8F5'; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 14px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'linear-gradient(135deg,#E9F8F0,#DBF1E6)' : 'transparent', color: active ? '#0E7C52' : MUT, textAlign:'start', boxShadow: active ? 'inset 0 1px 1px rgba(255,255,255,0.6), 0 4px 12px -6px rgba(22,160,106,0.4)' : 'none' }}
-              >
-                {active && <span style={{ position:'absolute', left:0, top:9, bottom:9, width:3, borderRadius:99, background:G }} />}
-                <span style={{ display:'flex', color: active ? G : '#94A39C' }}>{icon}</span> {label}
-              </button>
-            );
-          })}
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi} style={{ display:'flex', flexDirection:'column', gap:3 }}>
+              {gi > 0 && <div style={{ height:1, background:'#EDF2EF', margin:'7px 8px' }} />}
+              {group.map(({ screen:sc, icon, label }) => {
+                const active = screen === sc;
+                return (
+                  <button
+                    key={sc}
+                    onClick={() => goNav(sc)}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F8F5'; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                    style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 14px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'linear-gradient(135deg,#E9F8F0,#DBF1E6)' : 'transparent', color: active ? '#0E7C52' : MUT, textAlign:'start', boxShadow: active ? 'inset 0 1px 1px rgba(255,255,255,0.6), 0 4px 12px -6px rgba(22,160,106,0.4)' : 'none' }}
+                  >
+                    {active && <span style={{ position:'absolute', left:0, top:9, bottom:9, width:3, borderRadius:99, background:G }} />}
+                    <span style={{ display:'flex', color: active ? G : '#94A39C' }}>{icon}</span> {label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div style={{ margin:14, padding:'12px 13px', borderRadius:14, border:'1px solid #E8EFEB', background:'linear-gradient(140deg,#F6FBF8,#EEF6F1)', display:'flex', alignItems:'center', gap:11 }}>
           <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import PWAInstall from './components/PWAInstall';
 
@@ -43,8 +43,15 @@ const SCREEN_MAP = {
 };
 
 function AppShell() {
-  const { state } = useApp();
+  const { state, setState } = useApp();
   const { screen, toast, toastShow } = state;
+
+  // Auto-dismiss the toast a few seconds after it appears.
+  useEffect(() => {
+    if (!toastShow) return;
+    const id = setTimeout(() => setState({ toastShow: false }), 2600);
+    return () => clearTimeout(id);
+  }, [toastShow, toast]);
 
   const Screen = DOCTOR_SCREENS.has(screen) ? DoctorApp : (SCREEN_MAP[screen] ?? Landing);
 
