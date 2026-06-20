@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { SPEC_INFO } from '../../shared.jsx';
-import { saveDoctorServices } from '../../lib/api';
+import { SPEC_INFO, CITY_OPTS } from '../../shared.jsx';
+import { saveDoctorServices, updateDoctorFields } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
+
+const villes = CITY_OPTS.map((c) => c.label);
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -14,10 +16,6 @@ const specialites = [
   'Neurologue', 'Ophtalmologue', 'ORL', 'Pédiatre', 'Psychiatre', 'Radiologue',
 ];
 
-const villes = [
-  'Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Tanger',
-  'Agadir', 'Meknès', 'Oujda', 'Kenitra', 'Tétouan',
-];
 
 function Toggle({ checked, onChange }) {
   return (
@@ -147,8 +145,11 @@ function formFromProfile(appUser, myDoctor) {
     ville: myDoctor?.city || '',
     telephone: appUser?.phone || '',
     email: appUser?.email || '',
+    bio: myDoctor?.bio || '',
   };
 }
+
+const BIO_MAX = 1500;   // ~250 words
 
 export default function Settings({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
@@ -175,14 +176,15 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   const initialsOf = (form.prenom?.[0] || '') + (form.nom?.[0] || '');
 
   async function saveAll() {
-    // Persist the services so patients booking with this doctor see them.
+    // Persist services + bio + city so patients see them and the profile is real.
     if (isSupabaseConfigured && myDoctor?.id) {
       try {
         const saved = await saveDoctorServices(myDoctor.id, services);
-        setState({ services: saved, myDoctor: { ...myDoctor, services: saved }, toast: 'Modifications enregistrées ✓', toastShow: true });
+        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null });
+        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville }, toast: 'Modifications enregistrées ✓', toastShow: true });
         return;
       } catch (e) {
-        setState({ toast: 'Enregistrement des services échoué : ' + (e?.message || 'erreur'), toastShow: true });
+        setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
         return;
       }
     }
@@ -207,17 +209,17 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     setForm(prev => ({ ...prev, [key]: value }));
   }
 
-  function updateService(id, key, value) {
-    setServices(prev => prev.map(s => s.id === id ? { ...s, [key]: value } : s));
+  // Index-based (services loaded from the DB have no stable id).
+  function updateService(idx, key, value) {
+    setServices(prev => prev.map((s, i) => i === idx ? { ...s, [key]: value } : s));
   }
 
-  function deleteService(id) {
-    setServices(prev => prev.filter(s => s.id !== id));
+  function deleteService(idx) {
+    setServices(prev => prev.filter((_, i) => i !== idx));
   }
 
   function addService() {
-    const newId = Math.max(...services.map(s => s.id), 0) + 1;
-    setServices(prev => [...prev, { id: newId, name: '', price: 0, duration: '20' }]);
+    setServices(prev => [...prev, { name: '', price: 0, duration: '20' }]);
   }
 
   return (
@@ -311,6 +313,30 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
             </div>
           </Card>
 
+          {/* Biography Card — shown on the doctor's public profile */}
+          <Card title="Présentation (biographie)">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Votre présentation
+              </label>
+              <textarea
+                value={form.bio}
+                maxLength={BIO_MAX}
+                onChange={e => updateForm('bio', e.target.value)}
+                placeholder="Parcours, spécialités, approche de soin… (visible par les patients sur votre profil)"
+                rows={7}
+                style={{
+                  border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px',
+                  fontSize: 14, color: DARK, outline: 'none', background: '#fff',
+                  width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6,
+                }}
+              />
+              <div style={{ fontSize: 12, color: MUTED, textAlign: 'right' }}>
+                {(form.bio || '').length} / {BIO_MAX} caractères
+              </div>
+            </div>
+          </Card>
+
           {/* Security Card */}
           <Card title="Sécurité">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -355,8 +381,8 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
           {/* Services & Tarifs Card */}
           <Card title="Services & Tarifs">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {services.map(svc => (
-                <div key={svc.id} style={{
+              {services.map((svc, idx) => (
+                <div key={idx} style={{
                   display: 'flex',
                   gap: 10,
                   rowGap: 10,
@@ -369,7 +395,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 }}>
                   <input
                     value={svc.name}
-                    onChange={e => updateService(svc.id, 'name', e.target.value)}
+                    onChange={e => updateService(idx, 'name', e.target.value)}
                     placeholder="Nom du service"
                     style={{
                       flex: isMobile ? '1 1 100%' : 2,
@@ -387,7 +413,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                     <input
                       type="number"
                       value={svc.price}
-                      onChange={e => updateService(svc.id, 'price', Number(e.target.value))}
+                      onChange={e => updateService(idx, 'price', Number(e.target.value))}
                       style={{
                         flex: 1,
                         border: `1px solid ${BORDER}`,
@@ -404,7 +430,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                   </div>
                   <select
                     value={svc.duration}
-                    onChange={e => updateService(svc.id, 'duration', e.target.value)}
+                    onChange={e => updateService(idx, 'duration', e.target.value)}
                     style={{
                       border: `1px solid ${BORDER}`,
                       borderRadius: 6,
@@ -421,7 +447,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                     ))}
                   </select>
                   <button
-                    onClick={() => deleteService(svc.id)}
+                    onClick={() => deleteService(idx)}
                     style={{
                       background: 'transparent',
                       border: 'none',

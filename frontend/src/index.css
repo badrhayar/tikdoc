@@ -139,3 +139,23 @@ img { max-width: 100%; }
 
 /* Smooth momentum scrolling for any scroll container on iOS. */
 .sa-hscroll, .sa-navscroll, .sa-yscroll { -webkit-overflow-scrolling: touch; }
+
+/* ── Invoice printing: only the invoice appears in the printed/PDF output ── */
+@media print {
+  body * { visibility: hidden !important; }
+  #sa-invoice, #sa-invoice * { visibility: visible !important; }
+  .sa-invoice-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: #fff !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  #sa-invoice {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    padding: 24px !important;
+  }
+  .sa-invoice-actions { display: none !important; }
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { GOOGLE_SVG } from '../shared.jsx';
+import { GOOGLE_SVG, CITY_OPTS as CITY_LIST } from '../shared.jsx';
 import { createDoctorProfile } from '../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -24,9 +24,7 @@ const SPEC_OPTS = [
   { key: 'kine', label: 'Kinésithérapeute' },
 ];
 
-const CITY_OPTS = [
-  'Casablanca', 'Rabat', 'Marrakech', 'Fès', 'Tanger', 'Agadir', 'Meknès', 'Oujda',
-];
+const CITY_OPTS = CITY_LIST.map((c) => c.label);
 
 export default function DoctorRegister() {
   const { state, setState, go, authSignUp, isSupabaseConfigured } = useApp();

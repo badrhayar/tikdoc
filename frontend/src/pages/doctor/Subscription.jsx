@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useRef } from 'react';
+import { useViewport } from '../../hooks/useViewport';
+import { SPEC_INFO } from '../../shared.jsx';
+import { moroccoNow } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -6,429 +9,252 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
-const invoices = [
-  { id: 'TK-2024-05-001', period: 'Mai 2024', date: '17/05/2024', amount: 299, month: 'Mai 2024' },
-  { id: 'TK-2024-04-001', period: 'Avr 2024', date: '17/04/2024', amount: 299, month: 'Avr 2024' },
-  { id: 'TK-2024-03-001', period: 'Mar 2024', date: '17/03/2024', amount: 299, month: 'Mar 2024' },
-  { id: 'TK-2024-02-001', period: 'Fév 2024', date: '17/02/2024', amount: 299, month: 'Fév 2024' },
-  { id: 'TK-2024-01-001', period: 'Jan 2024', date: '17/01/2024', amount: 299, month: 'Jan 2024' },
-  { id: 'TK-2023-12-001', period: 'Déc 2023', date: '17/12/2023', amount: 299, month: 'Déc 2023' },
-];
+// TikDoc's collection account — shown on every invoice so the doctor knows
+// where to pay. (Managed from the Admin platform.)
+const TIKDOC_RIB = '230 810 0000000000000000 12';
+const TIKDOC_BANK = 'Attijariwafa Bank — TikDoc SAS';
 
-import { useViewport } from '../../hooks/useViewport';
+const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const FR_MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+const pad2 = (n) => String(n).padStart(2, '0');
 
-export default function Subscription({ state, setState, go, openNewAppt, openAddPatient }) {
+const Check = ({ c = PRIMARY }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+);
+const Download = ({ c = PRIMARY }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+);
+
+// Two plans only, with a clear value ladder.
+const PLANS = {
+  pro: {
+    key: 'pro', name: 'Pro', price: 299, tagline: 'Pour un cabinet individuel',
+    features: [
+      'Rendez-vous illimités',
+      'Agenda & rappels SMS (500/mois)',
+      'Messagerie patients',
+      'Documents médicaux',
+      'Statistiques & revenus',
+      'Support prioritaire',
+    ],
+  },
+  premium: {
+    key: 'premium', name: 'Premium', price: 499, tagline: 'Pour les cabinets multi-praticiens',
+    features: [
+      'Tout ce qui est inclus dans Pro',
+      'SMS illimités',
+      'Tableau de bord multi-cabinet',
+      'Comptes secrétaires multiples',
+      'Intégrations API',
+      'Gestionnaire de compte dédié',
+    ],
+  },
+};
+
+// Generate the monthly billing history up to the current Morocco month.
+function buildInvoices(plan, months = 6) {
+  const m = moroccoNow();
+  const out = [];
+  for (let i = 0; i < months; i++) {
+    let mo = m.month - i, yr = m.year;
+    while (mo < 0) { mo += 12; yr -= 1; }
+    out.push({
+      id: `TK-${yr}-${pad2(mo + 1)}-001`,
+      period: `${FR_MONTHS_SHORT[mo]} ${yr}`,
+      monthLabel: `${FR_MONTHS[mo]} ${yr}`,
+      date: `01/${pad2(mo + 1)}/${yr}`,
+      amount: plan.price,
+    });
+  }
+  return out;
+}
+
+export default function Subscription({ state, setState, go }) {
   const { isMobile } = useViewport();
-  const [annual, setAnnual] = useState(false);
+  const plansRef = useRef(null);
 
-  const proPrice = annual ? 239 : 299;
-  const premiumPrice = annual ? 399 : 499;
+  const currentKey = state?.plan || 'pro';
+  const annual = !!state?.aboAnnual;
+  const priceOf = (p) => (annual ? Math.round(p.price * 0.8) : p.price);
 
-  function openInvoice(row) {
-    setState({ invoiceOpen: true, invoiceRow: row });
-  }
-
-  function closeInvoice() {
-    setState({ invoiceOpen: false });
-  }
-
+  const currentPlan = PLANS[currentKey] || PLANS.pro;
+  const invoices = buildInvoices(currentPlan);
   const selectedInvoice = state?.invoiceRow || invoices[0];
+
+  // Real doctor identity for the invoice.
+  const docName = state?.appUser?.full_name ? (/^dr/i.test(state.appUser.full_name) ? state.appUser.full_name : `Dr. ${state.appUser.full_name}`) : 'Docteur';
+  const docCity = state?.myDoctor?.city || '';
+  const docSpec = state?.myDoctor?.specialty ? (SPEC_INFO[state.myDoctor.specialty]?.label || state.myDoctor.specialty) : '';
+  const docAddr = state?.myDoctor?.clinic_address || '';
+  const docInpe = state?.appUser?.cin_or_inpe || '';
+
+  const choosePlan = (key) => {
+    setState({ plan: key, toast: key === currentKey ? 'Ceci est déjà votre formule.' : `Formule ${PLANS[key].name} activée ✓`, toastShow: true });
+  };
+  const manage = () => {
+    plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setState({ toast: 'Choisissez ou modifiez votre formule ci-dessous.', toastShow: true });
+  };
+  const openInvoice = (row) => setState({ invoiceOpen: true, invoiceRow: row });
+  const closeInvoice = () => setState({ invoiceOpen: false });
+
+  const ttc = (selectedInvoice.amount * 1.2);
+
+  const card = (p) => {
+    const isCurrent = currentKey === p.key;
+    const recommended = p.key === 'pro';
+    return (
+      <div style={{ flex: 1, minWidth: 260, background: '#fff', border: `2px solid ${isCurrent ? PRIMARY : BORDER}`, borderRadius: 16, padding: 26, display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: isCurrent ? '0 14px 34px -16px rgba(22,160,106,0.45)' : 'none' }}>
+        {recommended && (
+          <div style={{ position: 'absolute', top: -13, left: 24, background: PRIMARY, color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>Recommandé</div>
+        )}
+        <div style={{ fontWeight: 800, fontSize: 19, color: DARK }}>{p.name}</div>
+        <div style={{ fontSize: 13, color: MUTED, marginTop: 2, marginBottom: 14 }}>{p.tagline}</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 18 }}>
+          <span style={{ fontSize: 34, fontWeight: 800, color: DARK }}>{priceOf(p)}</span>
+          <span style={{ fontSize: 15, fontWeight: 500, color: MUTED }}>MAD/mois</span>
+        </div>
+        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px 0', display: 'flex', flexDirection: 'column', gap: 11 }}>
+          {p.features.map((f, i) => (
+            <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13.5, color: DARK, fontWeight: i === 0 && p.key === 'premium' ? 700 : 400 }}>
+              <span style={{ flexShrink: 0, marginTop: 1 }}><Check /></span> {f}
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => choosePlan(p.key)}
+          disabled={isCurrent}
+          style={{ marginTop: 'auto', width: '100%', background: isCurrent ? '#EAF6F0' : (recommended ? PRIMARY : 'transparent'), color: isCurrent ? PRIMARY : (recommended ? '#fff' : PRIMARY), border: isCurrent ? `1px solid #C3E8D8` : `2px solid ${PRIMARY}`, borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: isCurrent ? 'default' : 'pointer' }}
+        >
+          {isCurrent ? 'Votre formule actuelle' : `Choisir ${p.name}`}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh' }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>Abonnement</h1>
 
-      {/* Header */}
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 28px 0' }}>
-        Abonnement
-      </h1>
-
-      {/* Current Plan Banner */}
-      <div style={{
-        background: `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`,
-        borderRadius: 16,
-        padding: '28px 32px',
-        marginBottom: 32,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 16,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: 10,
-            padding: '8px 16px',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 14,
-            letterSpacing: 0.5,
-          }}>
-            TikDoc Pro
-          </div>
+      {/* Current plan banner */}
+      <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`, borderRadius: 16, padding: isMobile ? '20px' : '26px 30px', marginBottom: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '8px 16px', color: '#fff', fontWeight: 700, fontSize: 14 }}>TikDoc {currentPlan.name}</div>
           <div>
-            <div style={{ color: '#fff', fontWeight: 600, fontSize: 18 }}>Plan actif</div>
-            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, marginTop: 2 }}>
-              Actif jusqu'au 17 Juin 2024
-            </div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>Plan actif</div>
+            <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13.5, marginTop: 2 }}>Facturé le 1er de chaque mois</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: 24 }}>
-            299 MAD<span style={{ fontSize: 14, fontWeight: 400, opacity: 0.8 }}>/mois</span>
-          </div>
-          <button style={{
-            background: '#fff',
-            color: PRIMARY,
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 20px',
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: 'pointer',
-          }}>
-            Gérer l'abonnement
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: 24 }}>{priceOf(currentPlan)} MAD<span style={{ fontSize: 14, fontWeight: 400, opacity: 0.85 }}>/mois</span></div>
+          <button onClick={manage} style={{ background: '#fff', color: PRIMARY, border: 'none', borderRadius: 9, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Gérer l'abonnement</button>
         </div>
       </div>
 
-      {/* Billing Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-        <div style={{
-          background: '#fff',
-          border: `1px solid ${BORDER}`,
-          borderRadius: 50,
-          padding: 4,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0,
-        }}>
-          <button
-            onClick={() => setAnnual(false)}
-            style={{
-              background: !annual ? PRIMARY : 'transparent',
-              color: !annual ? '#fff' : MUTED,
-              border: 'none',
-              borderRadius: 50,
-              padding: '8px 20px',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            Mensuel
-          </button>
-          <button
-            onClick={() => setAnnual(true)}
-            style={{
-              background: annual ? PRIMARY : 'transparent',
-              color: annual ? '#fff' : MUTED,
-              border: 'none',
-              borderRadius: 50,
-              padding: '8px 20px',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            Annuel
-            <span style={{
-              background: annual ? 'rgba(255,255,255,0.25)' : '#e8f5ee',
-              color: annual ? '#fff' : PRIMARY,
-              borderRadius: 20,
-              padding: '2px 8px',
-              fontSize: 11,
-              fontWeight: 700,
-            }}>−20%</span>
-          </button>
+      {/* Monthly / annual toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 26 }}>
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 50, padding: 4, display: 'flex' }}>
+          {[['Mensuel', false], ['Annuel −20%', true]].map(([label, val]) => (
+            <button key={label} onClick={() => setState({ aboAnnual: val })} style={{ background: annual === val ? PRIMARY : 'transparent', color: annual === val ? '#fff' : MUTED, border: 'none', borderRadius: 50, padding: '8px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>{label}</button>
+          ))}
         </div>
       </div>
 
-      {/* Plan Cards */}
-      <div style={{ display: 'flex', gap: 20, marginBottom: 40, flexWrap: 'wrap' }}>
-
-        {/* Gratuit */}
-        <div style={{
-          flex: 1,
-          minWidth: 220,
-          background: '#fff',
-          border: `1px solid ${BORDER}`,
-          borderRadius: 14,
-          padding: 24,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ fontWeight: 700, fontSize: 18, color: DARK, marginBottom: 4 }}>Gratuit</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: DARK, marginBottom: 16 }}>
-            0 <span style={{ fontSize: 16, fontWeight: 500, color: MUTED }}>MAD/mois</span>
-          </div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {['5 RDV/mois', 'Profil basique', 'SMS : 10/mois'].map(f => (
-              <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: MUTED }}>
-                <span style={{ color: MUTED, fontSize: 16 }}>✓</span> {f}
-              </li>
-            ))}
-          </ul>
-          <div style={{ marginTop: 'auto' }}>
-            <button disabled style={{
-              width: '100%',
-              background: '#f0f0f0',
-              color: MUTED,
-              border: 'none',
-              borderRadius: 8,
-              padding: '11px 0',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'not-allowed',
-            }}>
-              Plan actuel
-            </button>
-          </div>
-        </div>
-
-        {/* Pro */}
-        <div style={{
-          flex: 1,
-          minWidth: 220,
-          background: '#fff',
-          border: `2px solid ${PRIMARY}`,
-          borderRadius: 14,
-          padding: 24,
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: -13,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: PRIMARY,
-            color: '#fff',
-            borderRadius: 20,
-            padding: '4px 14px',
-            fontSize: 12,
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-          }}>
-            Recommandé
-          </div>
-          <div style={{ fontWeight: 700, fontSize: 18, color: DARK, marginBottom: 4 }}>Pro</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: DARK, marginBottom: 16 }}>
-            {proPrice} <span style={{ fontSize: 16, fontWeight: 500, color: MUTED }}>MAD/mois</span>
-          </div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {['RDV illimités', 'Profil Premium', 'SMS : 500/mois', 'Statistiques avancées', 'Support prioritaire'].map(f => (
-              <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: DARK }}>
-                <span style={{ color: PRIMARY, fontSize: 16 }}>✓</span> {f}
-              </li>
-            ))}
-          </ul>
-          <div style={{ marginTop: 'auto' }}>
-            <button style={{
-              width: '100%',
-              background: PRIMARY,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '11px 0',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}>
-              Votre plan
-            </button>
-          </div>
-        </div>
-
-        {/* Premium */}
-        <div style={{
-          flex: 1,
-          minWidth: 220,
-          background: '#fff',
-          border: `1px solid ${BORDER}`,
-          borderRadius: 14,
-          padding: 24,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ fontWeight: 700, fontSize: 18, color: DARK, marginBottom: 4 }}>Premium</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: DARK, marginBottom: 16 }}>
-            {premiumPrice} <span style={{ fontSize: 16, fontWeight: 500, color: MUTED }}>MAD/mois</span>
-          </div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {['Tout dans Pro', 'API intégrations', 'Tableau de bord multi-cabinet', 'Gestionnaire dédié'].map(f => (
-              <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: DARK }}>
-                <span style={{ color: PRIMARY, fontSize: 16 }}>✓</span> {f}
-              </li>
-            ))}
-          </ul>
-          <div style={{ marginTop: 'auto' }}>
-            <button style={{
-              width: '100%',
-              background: 'transparent',
-              color: PRIMARY,
-              border: `2px solid ${PRIMARY}`,
-              borderRadius: 8,
-              padding: '9px 0',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}>
-              Passer à Premium
-            </button>
-          </div>
-        </div>
+      {/* Two plan cards */}
+      <div ref={plansRef} style={{ display: 'flex', gap: 20, marginBottom: 36, flexWrap: 'wrap' }}>
+        {card(PLANS.pro)}
+        {card(PLANS.premium)}
       </div>
 
-      {/* Invoices Section */}
+      {/* Billing history */}
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}` }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: DARK }}>Historique de facturation</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Une facture est émise automatiquement le 1er de chaque mois.</p>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: BG }}>
-              {['Période', 'Date', 'Montant', 'Statut', 'Télécharger'].map(h => (
-                <th key={h} style={{
-                  padding: '12px 24px',
-                  textAlign: 'left',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: MUTED,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5,
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv, i) => (
-              <tr key={inv.id} style={{ borderTop: `1px solid ${BORDER}` }}>
-                <td style={{ padding: '14px 24px', fontSize: 14, color: DARK, fontWeight: 500 }}>{inv.period}</td>
-                <td style={{ padding: '14px 24px', fontSize: 14, color: MUTED }}>{inv.date}</td>
-                <td style={{ padding: '14px 24px', fontSize: 14, color: DARK, fontWeight: 600 }}>{inv.amount} MAD</td>
-                <td style={{ padding: '14px 24px' }}>
-                  <span style={{
-                    background: '#e6f7f0',
-                    color: PRIMARY,
-                    borderRadius: 20,
-                    padding: '4px 12px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}>
-                    Payé
-                  </span>
-                </td>
-                <td style={{ padding: '14px 24px' }}>
-                  <button
-                    onClick={() => openInvoice(inv)}
-                    style={{
-                      background: 'transparent',
-                      color: PRIMARY,
-                      border: `1px solid ${PRIMARY}`,
-                      borderRadius: 6,
-                      padding: '5px 12px',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ↓ PDF
-                  </button>
-                </td>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+            <thead>
+              <tr style={{ background: BG }}>
+                {['Période', 'Date', 'Montant', 'Statut', 'Facture'].map(h => (
+                  <th key={h} style={{ padding: '12px 22px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.id} style={{ borderTop: `1px solid ${BORDER}` }}>
+                  <td style={{ padding: '14px 22px', fontSize: 14, color: DARK, fontWeight: 500, whiteSpace: 'nowrap' }}>{inv.monthLabel}</td>
+                  <td style={{ padding: '14px 22px', fontSize: 14, color: MUTED, whiteSpace: 'nowrap' }}>{inv.date}</td>
+                  <td style={{ padding: '14px 22px', fontSize: 14, color: DARK, fontWeight: 600, whiteSpace: 'nowrap' }}>{inv.amount} MAD</td>
+                  <td style={{ padding: '14px 22px' }}>
+                    <span style={{ background: '#e6f7f0', color: PRIMARY, borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 600 }}>Payé</span>
+                  </td>
+                  <td style={{ padding: '14px 22px' }}>
+                    <button onClick={() => openInvoice(inv)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', color: PRIMARY, border: `1px solid ${PRIMARY}`, borderRadius: 7, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      <Download /> PDF
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Invoice Modal */}
+      {/* Invoice modal (print → Save as PDF) */}
       {state?.invoiceOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.55)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          padding: '40px 20px',
-          overflowY: 'auto',
-        }}>
-          <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            maxWidth: 700,
-            width: '100%',
-            padding: 48,
-            position: 'relative',
-          }}>
-            {/* Invoice Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
+        <div className="sa-invoice-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', overflowY: 'auto' }}>
+          <div id="sa-invoice" style={{ background: '#fff', borderRadius: 16, maxWidth: 720, width: '100%', padding: isMobile ? 24 : 48, position: 'relative' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontSize: 26, fontWeight: 800, color: PRIMARY, letterSpacing: -0.5 }}>TikDoc</div>
                 <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Plateforme médicale digitale</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: DARK, letterSpacing: 1 }}>FACTURE</div>
+                <div style={{ fontSize: 26, fontWeight: 800, color: DARK, letterSpacing: 1 }}>FACTURE</div>
                 <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>N° {selectedInvoice.id}</div>
                 <div style={{ fontSize: 13, color: MUTED }}>Date : {selectedInvoice.date}</div>
               </div>
             </div>
-
-            <div style={{ height: 1, background: BORDER, marginBottom: 32 }} />
+            <div style={{ height: 1, background: BORDER, marginBottom: 28 }} />
 
             {/* From / To */}
-            <div style={{ display: 'flex', gap: 40, marginBottom: 36 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>De</div>
+            <div style={{ display: 'flex', gap: 32, marginBottom: 30, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Émetteur</div>
                 <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>TikDoc SAS</div>
                 <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>Casablanca, Maroc</div>
                 <div style={{ color: MUTED, fontSize: 13 }}>contact@tikdoc.ma</div>
+                <div style={{ color: MUTED, fontSize: 13, marginTop: 8 }}><strong style={{ color: DARK }}>RIB :</strong> {TIKDOC_RIB}</div>
+                <div style={{ color: MUTED, fontSize: 12 }}>{TIKDOC_BANK}</div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>À</div>
-                <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>Dr. Khalid Benali</div>
-                <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>Cardiologue</div>
-                <div style={{ color: MUTED, fontSize: 13 }}>Casablanca, Maroc</div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Facturé à</div>
+                <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>{docName}</div>
+                {docSpec && <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>{docSpec}</div>}
+                {docAddr && <div style={{ color: MUTED, fontSize: 13 }}>{docAddr}</div>}
+                {docCity && <div style={{ color: MUTED, fontSize: 13 }}>{docCity}, Maroc</div>}
+                {docInpe && <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>INPE : {docInpe}</div>}
               </div>
             </div>
 
-            {/* Line items table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
+            {/* Line items */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 22 }}>
               <thead>
                 <tr style={{ background: BG }}>
-                  {['Description', 'Quantité', 'Prix unitaire', 'Total'].map(h => (
-                    <th key={h} style={{
-                      padding: '12px 16px',
-                      textAlign: h === 'Description' ? 'left' : 'right',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: MUTED,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
-                    }}>
-                      {h}
-                    </th>
+                  {['Description', 'Qté', 'Prix unitaire', 'Total'].map(h => (
+                    <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Description' ? 'left' : 'right', fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                  <td style={{ padding: '16px', fontSize: 14, color: DARK }}>
-                    Abonnement TikDoc Pro — {selectedInvoice.month}
-                  </td>
-                  <td style={{ padding: '16px', fontSize: 14, color: DARK, textAlign: 'right' }}>1</td>
-                  <td style={{ padding: '16px', fontSize: 14, color: DARK, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>
-                  <td style={{ padding: '16px', fontSize: 14, color: DARK, fontWeight: 600, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>
+                  <td style={{ padding: '14px', fontSize: 14, color: DARK }}>Abonnement TikDoc {currentPlan.name} — {selectedInvoice.monthLabel}</td>
+                  <td style={{ padding: '14px', fontSize: 14, color: DARK, textAlign: 'right' }}>1</td>
+                  <td style={{ padding: '14px', fontSize: 14, color: DARK, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>
+                  <td style={{ padding: '14px', fontSize: 14, color: DARK, fontWeight: 600, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>
                 </tr>
               </tbody>
             </table>
@@ -436,56 +262,23 @@ export default function Subscription({ state, setState, go, openNewAppt, openAdd
             {/* Totals */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <div style={{ minWidth: 240 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, color: MUTED }}>
-                  <span>Sous-total HT</span>
-                  <span>{selectedInvoice.amount} MAD</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, color: MUTED }}>
-                  <span>TVA 20%</span>
-                  <span>{(selectedInvoice.amount * 0.2).toFixed(2)} MAD</span>
-                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, color: MUTED }}><span>Sous-total HT</span><span>{selectedInvoice.amount} MAD</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, color: MUTED }}><span>TVA 20%</span><span>{(selectedInvoice.amount * 0.2).toFixed(2)} MAD</span></div>
                 <div style={{ height: 1, background: BORDER, margin: '8px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 16, fontWeight: 700, color: DARK }}>
-                  <span>Total TTC</span>
-                  <span>{(selectedInvoice.amount * 1.2).toFixed(2)} MAD</span>
-                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 16, fontWeight: 700, color: DARK }}><span>Total TTC</span><span>{ttc.toFixed(2)} MAD</span></div>
               </div>
             </div>
 
-            <div style={{ height: 1, background: BORDER, margin: '32px 0 24px' }} />
+            <div style={{ marginTop: 24, padding: '12px 14px', background: BG, borderRadius: 10, fontSize: 12, color: MUTED }}>
+              Paiement à effectuer sur le RIB indiqué ci-dessus en mentionnant le numéro de facture {selectedInvoice.id}.
+            </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button
-                onClick={closeInvoice}
-                style={{
-                  background: 'transparent',
-                  color: MUTED,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 8,
-                  padding: '10px 20px',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                Fermer
-              </button>
-              <button
-                onClick={() => window.print()}
-                style={{
-                  background: PRIMARY,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 20px',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                Imprimer
-              </button>
+            <div style={{ height: 1, background: BORDER, margin: '24px 0' }} />
+
+            {/* Actions (hidden when printing) */}
+            <div className="sa-invoice-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button onClick={closeInvoice} style={{ background: 'transparent', color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Fermer</button>
+              <button onClick={() => window.print()} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Télécharger / Imprimer le PDF</button>
             </div>
           </div>
         </div>

@@ -41,16 +41,20 @@ export const SPEC_OPTS = [
   {key:'kine',label:'Kinésithérapeute'},
 ];
 
+// Moroccan cities with population over ~50,000 (the doctor directory + patient
+// search both use this single list).
 export const CITY_OPTS = [
-  {key:'Casablanca',label:'Casablanca'},
-  {key:'Rabat',label:'Rabat'},
-  {key:'Marrakech',label:'Marrakech'},
-  {key:'Fès',label:'Fès'},
-  {key:'Tanger',label:'Tanger'},
-  {key:'Agadir',label:'Agadir'},
-  {key:'Meknès',label:'Meknès'},
-  {key:'Oujda',label:'Oujda'},
-];
+  'Casablanca','Rabat','Fès','Marrakech','Tanger','Salé','Meknès','Oujda','Kénitra',
+  'Agadir','Tétouan','Témara','Safi','Mohammedia','Khouribga','El Jadida','Béni Mellal',
+  'Aït Melloul','Nador','Taza','Settat','Berrechid','Khémisset','Inezgane','Ksar El Kébir',
+  'Larache','Guelmim','Khénifra','Berkane','Taourirt','Bouskoura','Fquih Ben Salah',
+  'Dcheira El Jihadia','Oued Zem','El Kelâa des Sraghna','Sidi Slimane','Errachidia',
+  'Guercif','Oulad Teima','Ben Guerir','Tiflet','Lqliâa','Taroudant','Sefrou','Essaouira',
+  'Fnideq','Sidi Kacem','Tiznit','Tan-Tan','Ouarzazate','Souk El Arbaa','Youssoufia',
+  'Martil','Skhirat','Ouazzane','Benslimane','Al Hoceïma','M\'diq','Sidi Bennour','Midelt',
+  'Azrou','Khemis Zemamra','Beni Ansar','Laâyoune','Dakhla','Tinghir','Chefchaouen',
+  'Jerada','Zagora','Sidi Ifni','Bouznika','Demnate',
+].map((c) => ({ key: c, label: c }));
 
 export const MOTIF_OPTS = [
   'Consultation générale','Suivi de grossesse','Échographie','Contraception',
@@ -114,7 +118,10 @@ export const kmOf = (d) => {
 };
 
 export const bioFor = (d) => {
+  // Prefer the doctor's own saved biography; fall back to a generated one.
+  if (d.bio && d.bio.trim()) return d.bio;
   const si = SPEC_INFO[d.spec];
+  if (!si) return `${d.name} accompagne ses patients à ${d.city || ''}.`;
   return `${d.name} est ${si.label.toLowerCase()} à ${d.city}, avec ${d.exp} ans d'expérience. Praticien(ne) reconnu(e) pour son écoute, ${d.name.split(' ').slice(-1)[0]} accompagne ses patients dans la durée — au cabinet${d.tele ? ' comme en téléconsultation.' : '.'}`;
 };
 

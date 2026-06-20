@@ -299,6 +299,13 @@ export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, pra
   return true;
 }
 
+/** Update arbitrary columns on the current doctor's row (bio, city, …). */
+export async function updateDoctorFields(doctorId, fields) {
+  const { error } = await supabase.from('doctors').update(fields).eq('id', doctorId);
+  if (error) throw error;
+  return true;
+}
+
 /** Persist a doctor's services list (shared with the patient booking page). */
 export async function saveDoctorServices(doctorId, services) {
   const clean = (services || [])
