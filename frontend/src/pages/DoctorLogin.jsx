@@ -26,6 +26,7 @@ export default function DoctorLogin() {
     setBusy(true);
     try {
       const u = await authSignIn(email.trim(), password);
+      if (u?.role === 'admin') { go('admin'); return; }
       if (u && u.role !== 'doctor') { setError('Ce compte n’est pas un espace médecin.'); return; }
       go('doctor');
     } catch (e) {

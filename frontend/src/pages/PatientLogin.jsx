@@ -24,8 +24,11 @@ export default function PatientLogin() {
     if (!email || !password) { setError('Saisissez votre email et votre mot de passe.'); return; }
     setBusy(true);
     try {
-      await authSignIn(email.trim(), password);
-      go('paccount');
+      const u = await authSignIn(email.trim(), password);
+      // Route by role so admins/doctors don't land on the patient account.
+      if (u?.role === 'admin') go('admin');
+      else if (u?.role === 'doctor') go('doctor');
+      else go('paccount');
     } catch (e) {
       setError(e?.message === 'Invalid login credentials'
         ? 'Email ou mot de passe incorrect.'
