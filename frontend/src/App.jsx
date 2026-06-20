@@ -18,6 +18,7 @@ const DoctorLogin    = lazy(() => import('./pages/DoctorLogin'));
 const DoctorRegister = lazy(() => import('./pages/DoctorRegister'));
 const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
 const Admin          = lazy(() => import('./pages/Admin'));
+const DoctorPending  = lazy(() => import('./pages/DoctorPending'));
 
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
@@ -53,7 +54,13 @@ function AppShell() {
     return () => clearTimeout(id);
   }, [toastShow, toast]);
 
-  const Screen = DOCTOR_SCREENS.has(screen) ? DoctorApp : (SCREEN_MAP[screen] ?? Landing);
+  // A signed-in doctor whose credentials aren't approved can't enter the app.
+  const md = state.myDoctor;
+  const gateDoctor = state.appUser?.role === 'doctor' && md && md.verification_status && md.verification_status !== 'approved';
+
+  let Screen;
+  if (gateDoctor && DOCTOR_SCREENS.has(screen)) Screen = DoctorPending;
+  else Screen = DOCTOR_SCREENS.has(screen) ? DoctorApp : (SCREEN_MAP[screen] ?? Landing);
 
   return (
     <>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings } from '../lib/api';
-import { initials } from '../shared.jsx';
+import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification } from '../lib/api';
+import { initials, CREDENTIAL_DOCS, DECLINE_REASONS } from '../shared.jsx';
+
+const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -30,11 +32,51 @@ export default function Admin() {
   const [bank, setBank] = useState(state?.appSettings?.bank || '');
   const [busy, setBusy] = useState(false);
 
+  // Doctor verification
+  const [reviewList, setReviewList] = useState([]);
+  const [reviewFilter, setReviewFilter] = useState('pending');
+  const [detail, setDetail] = useState(null);        // doctor detail modal
+  const [declineFor, setDeclineFor] = useState(null); // doctor being declined
+  const [declineReason, setDeclineReason] = useState(DECLINE_REASONS[0]);
+  const [declineNote, setDeclineNote] = useState('');
+
+  const loadReview = () => fetchDoctorsForReview().then(setReviewList).catch((e) => setState({ toast: 'Chargement échoué : ' + (e?.message || ''), toastShow: true }));
+
   useEffect(() => {
     if (!isAdmin) return;
     fetchAllAccounts().then(setAccounts).catch((e) => setState({ toast: 'Chargement comptes échoué : ' + (e?.message || ''), toastShow: true }));
     fetchAppSettings().then((s) => { setRib(s.rib || ''); setBank(s.bank || ''); }).catch(() => {});
+    loadReview();
   }, [isAdmin]);
+
+  const pendingCount = reviewList.filter((d) => d.verification_status === 'pending').length;
+  const reviewRows = reviewList.filter((d) => reviewFilter === 'all' || d.verification_status === reviewFilter);
+
+  const openDoc = async (path) => {
+    try { window.open(await getCredentialUrl(path), '_blank'); }
+    catch (e) { setState({ toast: 'Document indisponible : ' + (e?.message || ''), toastShow: true }); }
+  };
+
+  const approve = async (doc) => {
+    try {
+      await reviewDoctor(doc.id, { status: 'approved', reviewerId: state.appUser?.id });
+      notifyVerification({ type: 'decision', status: 'approved', doctorName: doc.user?.full_name, doctorEmail: doc.user?.email });
+      setDetail(null);
+      setState({ toast: 'Médecin approuvé ✓', toastShow: true });
+      loadReview();
+    } catch (e) { setState({ toast: 'Action impossible : ' + (e?.message || ''), toastShow: true }); }
+  };
+
+  const confirmDecline = async () => {
+    const doc = declineFor;
+    try {
+      await reviewDoctor(doc.id, { status: 'rejected', reason: declineReason, note: declineNote || null, reviewerId: state.appUser?.id });
+      notifyVerification({ type: 'decision', status: 'rejected', doctorName: doc.user?.full_name, doctorEmail: doc.user?.email, reason: declineReason, note: declineNote });
+      setDeclineFor(null); setDetail(null); setDeclineNote('');
+      setState({ toast: 'Médecin refusé', toastShow: true });
+      loadReview();
+    } catch (e) { setState({ toast: 'Action impossible : ' + (e?.message || ''), toastShow: true }); }
+  };
 
   if (!isAdmin) {
     return (
@@ -113,8 +155,11 @@ export default function Admin() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BORDER}`, marginBottom: 24 }}>
-          {[['accounts', 'Comptes'], ['billing', 'Paramètres de facturation (RIB)']].map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>{label}</button>
+          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['billing', 'Facturation (RIB)']].map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>
+              {label}
+              {k === 'review' && pendingCount > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#E2748A', borderRadius: 99, padding: '1px 7px' }}>{pendingCount}</span>}
+            </button>
           ))}
         </div>
 
@@ -181,6 +226,115 @@ export default function Admin() {
                 </table>
               </div>
             </div>
+          </>
+        )}
+
+        {tab === 'review' && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {[['pending', 'En attente'], ['approved', 'Approuvés'], ['rejected', 'Refusés'], ['all', 'Tous']].map(([k, label]) => (
+                <button key={k} onClick={() => setReviewFilter(k)} style={{ padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: reviewFilter === k ? PRIMARY : '#fff', color: reviewFilter === k ? '#fff' : MUTED, border: `1.5px solid ${reviewFilter === k ? PRIMARY : BORDER}` }}>{label}</button>
+              ))}
+            </div>
+            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+                  <thead>
+                    <tr style={{ background: BG }}>
+                      {['Médecin', 'Spécialité / Ville', 'Documents', 'Statut', 'Décision'].map((h) => (
+                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reviewRows.map((doc) => {
+                      const st = doc.verification_status;
+                      const pill = st === 'approved' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Approuvé' } : st === 'rejected' ? { bg: '#FCE7EE', c: '#C2466A', t: 'Refusé' } : { bg: '#FEF6E7', c: '#C28A1B', t: 'En attente' };
+                      return (
+                        <tr key={doc.id} style={{ borderTop: `1px solid ${BORDER}` }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <button onClick={() => setDetail(doc)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'start' }}>
+                              <div style={{ width: 34, height: 34, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(doc.user?.full_name)}</div>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, textDecoration: 'underline' }}>{doc.user?.full_name || '—'}</span>
+                            </button>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: 13, color: DARK }}>{doc.specialty || '—'}<div style={{ color: MUTED, fontSize: 12 }}>{doc.city || ''}</div></td>
+                          <td style={{ padding: '12px 16px', fontSize: 13, color: MUTED }}>{(doc.docs || []).length} fichier(s)</td>
+                          <td style={{ padding: '12px 16px' }}><span style={{ background: pill.bg, color: pill.c, borderRadius: 20, padding: '3px 11px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{pill.t}</span></td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => approve(doc)} disabled={st === 'approved'} title="Accepter" style={{ background: '#E7F6EE', color: '#0E7C52', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: st === 'approved' ? 'default' : 'pointer', opacity: st === 'approved' ? 0.5 : 1 }}>Accepter</button>
+                              <button onClick={() => { setDeclineFor(doc); setDeclineReason(DECLINE_REASONS[0]); setDeclineNote(''); }} disabled={st === 'rejected'} title="Refuser" style={{ background: '#FCE8EC', color: '#C2415C', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: st === 'rejected' ? 'default' : 'pointer', opacity: st === 'rejected' ? 0.5 : 1 }}>Refuser</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {reviewRows.length === 0 && <tr><td colSpan={5} style={{ padding: '32px 16px', textAlign: 'center', color: MUTED, fontSize: 14 }}>Aucun médecin dans cette catégorie.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Doctor detail modal */}
+            {detail && (
+              <div onClick={(e) => { if (e.target === e.currentTarget) setDetail(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '28px 14px', overflowY: 'auto' }}>
+                <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540 }}>
+                  <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>{initials(detail.user?.full_name)}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{detail.user?.full_name}</div>
+                      <div style={{ fontSize: 13, color: MUTED }}>{detail.specialty} · {detail.city}</div>
+                    </div>
+                    <button onClick={() => setDetail(null)} style={{ background: BG, border: `1px solid ${BORDER}`, width: 30, height: 30, borderRadius: 8, cursor: 'pointer', color: MUTED }}>✕</button>
+                  </div>
+                  <div style={{ padding: '18px 22px' }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Informations</div>
+                    {[['Email', detail.user?.email], ['Téléphone', detail.user?.phone], ['INPE', detail.user?.cin_or_inpe], ['Ordre (CNOM)', detail.cnom], ['Cabinet', detail.clinic_address]].map(([k, v]) => (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 13.5, padding: '5px 0' }}>
+                        <span style={{ color: MUTED }}>{k}</span><span style={{ color: DARK, fontWeight: 600, direction: 'ltr', textAlign: 'end' }}>{v || '—'}</span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, margin: '18px 0 10px' }}>Documents soumis</div>
+                    {(detail.docs || []).length === 0 && <div style={{ fontSize: 13, color: MUTED }}>Aucun document soumis.</div>}
+                    {(detail.docs || []).map((dc) => (
+                      <button key={dc.id} onClick={() => openDoc(dc.file_url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', marginBottom: 8, cursor: 'pointer', textAlign: 'start' }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: DARK }}>{DOC_LABEL[dc.doc_type] || dc.doc_type}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: PRIMARY }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Voir
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {detail.verification_status === 'pending' && (
+                    <div style={{ padding: '0 22px 20px', display: 'flex', gap: 10 }}>
+                      <button onClick={() => approve(detail)} style={{ flex: 1, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Accepter</button>
+                      <button onClick={() => { setDeclineFor(detail); setDeclineReason(DECLINE_REASONS[0]); setDeclineNote(''); }} style={{ flex: 1, background: '#FCE8EC', color: '#C2415C', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Refuser</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Decline reason modal */}
+            {declineFor && (
+              <div onClick={(e) => { if (e.target === e.currentTarget) setDeclineFor(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.55)', zIndex: 320, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '28px 14px', overflowY: 'auto' }}>
+                <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24 }}>
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: DARK, margin: '0 0 4px' }}>Refuser ce médecin</h2>
+                  <p style={{ fontSize: 13, color: MUTED, margin: '0 0 16px' }}>{declineFor.user?.full_name} sera informé par email du motif.</p>
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>Motif du refus</label>
+                  <select value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', marginBottom: 14 }}>
+                    {DECLINE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>Précisions {declineReason === 'Autre raison' ? '(obligatoire)' : '(optionnel)'}</label>
+                  <textarea value={declineNote} onChange={(e) => setDeclineNote(e.target.value)} rows={4} placeholder="Détaillez le motif ou les corrections attendues…" style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', marginBottom: 18 }} />
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button onClick={() => setDeclineFor(null)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+                    <button onClick={confirmDecline} disabled={declineReason === 'Autre raison' && !declineNote.trim()} style={{ background: '#C2415C', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: (declineReason === 'Autre raison' && !declineNote.trim()) ? 0.6 : 1 }}>Confirmer le refus</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 

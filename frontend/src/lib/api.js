@@ -228,6 +228,8 @@ export async function createDoctorProfile(appUserId, p) {
       cnss_cnopss: !!p.cnssCnopss,
       teleconsultation: !!p.teleconsultation,
       bio: p.bio || null,
+      cnom: p.cnom || null,
+      verification_status: 'pending',
     })
     .select()
     .single();
@@ -340,6 +342,70 @@ export async function adminDeleteUser(id) {
   const { error } = await supabase.from('users').delete().eq('id', id);
   if (error) throw error;
   return true;
+}
+
+// ── Doctor credentialing / verification ──────────────────────────────────────
+/** Upload one credential file to the private "credentials" bucket + index it. */
+export async function uploadCredential({ file, userId, doctorId, docType }) {
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const path = `${userId}/${docType}_${Date.now()}.${ext}`;
+  const up = await supabase.storage.from('credentials').upload(path, file, { upsert: true, contentType: file.type });
+  if (up.error) throw up.error;
+  const { error } = await supabase.from('doctor_documents').insert({ doctor_id: doctorId, doc_type: docType, file_url: path });
+  if (error) throw error;
+  return path;
+}
+
+/** Signed URL (1h) to view a private credential file (owner or admin). */
+export async function getCredentialUrl(path) {
+  const { data, error } = await supabase.storage.from('credentials').createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+/** Admin: doctors awaiting review (or filtered by status), with their user + docs. */
+export async function fetchDoctorsForReview(status = null) {
+  let q = supabase
+    .from('doctors')
+    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, user:users(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url)')
+    .order('submitted_at', { ascending: false });
+  if (status) q = q.eq('verification_status', status);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+/** Admin: approve or reject a doctor. */
+export async function reviewDoctor(doctorId, { status, reason = null, note = null, reviewerId = null }) {
+  const { data, error } = await supabase
+    .from('doctors')
+    .update({ verification_status: status, rejection_reason: reason, rejection_note: note, reviewed_at: new Date().toISOString(), reviewed_by: reviewerId })
+    .eq('id', doctorId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** A rejected doctor resets their own status to 'pending' (secured RPC). */
+export async function doctorResubmit() {
+  const { error } = await supabase.rpc('doctor_resubmit');
+  if (error) throw error;
+  return true;
+}
+
+/** Fire a verification email (Edge Function). Resolves quietly if unavailable. */
+export async function notifyVerification(payload) {
+  try {
+    const { data, error } = await supabase.functions.invoke('notify-verification', {
+      body: { ...payload, appUrl: (typeof window !== 'undefined' ? window.location.origin : '') },
+    });
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.warn('[TikDoc] notify-verification unavailable', e);
+    return { ok: false, pending: true };
+  }
 }
 
 // ── Avatars (profile photos) ──────────────────────────────────────────────────

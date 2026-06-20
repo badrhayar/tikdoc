@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { GOOGLE_SVG, CITY_OPTS as CITY_LIST } from '../shared.jsx';
-import { createDoctorProfile } from '../lib/api';
+import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS } from '../shared.jsx';
+import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -38,6 +38,7 @@ export default function DoctorRegister() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needConfirm, setNeedConfirm] = useState(false);
+  const [docFiles, setDocFiles] = useState({});   // { docType: File }
 
   const setDreg = (field, value) => {
     setState({ dreg: { ...state.dreg, [field]: value } });
@@ -48,6 +49,8 @@ export default function DoctorRegister() {
     if (!isSupabaseConfigured) { setError('Supabase non configuré — vérifiez votre fichier .env.'); return; }
     if (!dreg.name || !dreg.email || !dreg.pass) { setError('Renseignez le nom, l’email et le mot de passe.'); return; }
     if (dreg.pass.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    const missing = CREDENTIAL_DOCS.filter((d) => d.required && !docFiles[d.key]);
+    if (missing.length) { setError('Documents obligatoires manquants : ' + missing.map((d) => d.label).join(', ')); return; }
     setBusy(true);
     try {
       const res = await authSignUp({
@@ -62,7 +65,7 @@ export default function DoctorRegister() {
         setNeedConfirm(true);   // email confirmation required → finish profile after first login
         return;
       }
-      await createDoctorProfile(res.appUser.id, {
+      const doctorRow = await createDoctorProfile(res.appUser.id, {
         specialty: dreg.spec,
         city: dreg.city,
         clinicAddress: dreg.address,
@@ -71,7 +74,17 @@ export default function DoctorRegister() {
         cnssCnopss: !!(state.dregCnss || state.dregCnops),
         teleconsultation: false,
         bio: '',
+        cnom: dreg.ordre,
       });
+      // Upload each submitted credential document.
+      for (const d of CREDENTIAL_DOCS) {
+        const file = docFiles[d.key];
+        if (file) { try { await uploadCredential({ file, userId: res.appUser.id, doctorId: doctorRow.id, docType: d.key }); } catch (_) {} }
+      }
+      // Email the admins that a doctor is awaiting review.
+      notifyVerification({ type: 'new_registration', doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre });
+      // Show the doctor the "pending review" screen.
+      setState({ myDoctor: doctorRow });
       go('doctor');
     } catch (e) {
       setError(e?.message || 'Inscription impossible.');
@@ -371,6 +384,37 @@ export default function DoctorRegister() {
                 CNOPS
               </div>
             </div>
+          </div>
+
+          {/* Section: Credential documents */}
+          <div style={{ marginBottom: 28 }}>
+            <p style={sectionHeadingStyle}>Documents justificatifs</p>
+            <p style={{ fontSize: 12.5, color: MUTED, margin: '-6px 0 16px', lineHeight: 1.6 }}>
+              Pour garantir la sécurité des patients, votre compte est vérifié par notre équipe avant activation. Téléversez des copies lisibles (PDF, JPG ou PNG).
+            </p>
+            {CREDENTIAL_DOCS.map((d) => {
+              const f = docFiles[d.key];
+              return (
+                <div key={d.key} style={{ marginBottom: 12 }}>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>
+                    {d.label} {d.required ? <span style={{ color: '#C2466A' }}>*</span> : <span style={{ color: MUTED, fontWeight: 400 }}>(si spécialiste)</span>}
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1.5px dashed ${f ? PRIMARY : INPUT_BORDER}`, background: f ? '#EAF6F0' : INPUT_BG, borderRadius: 10, padding: '11px 14px', cursor: 'pointer' }}>
+                    <span style={{ color: f ? PRIMARY : MUTED, display: 'flex', flexShrink: 0 }}>
+                      {f ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v12"/></svg>
+                      )}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 13, color: f ? DARK : MUTED, fontWeight: f ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f ? f.name : 'Choisir un fichier…'}
+                    </span>
+                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => setDocFiles((m) => ({ ...m, [d.key]: e.target.files?.[0] || undefined }))} />
+                  </label>
+                </div>
+              );
+            })}
           </div>
 
           {/* Section 4: Password + Submit */}

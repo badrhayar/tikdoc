@@ -65,6 +65,30 @@ export const DOC_TYPE_OPTS = [
   'Résultat','Ordonnance','Compte-rendu','Facture','Radiographie','Certificat','Échographie',
 ];
 
+// ── Doctor credentialing (verification) ─────────────────────────────────────
+// Documents a doctor must submit to be accepted on TikDoc (Morocco).
+export const CREDENTIAL_DOCS = [
+  { key: 'cin',          label: "Carte Nationale d'Identité (recto-verso)", required: true },
+  { key: 'diplome',      label: 'Diplôme de Docteur en Médecine',           required: true },
+  { key: 'ordre',        label: "Attestation d'inscription à l'Ordre National des Médecins", required: true },
+  { key: 'autorisation', label: "Autorisation d'exercice (Ministère de la Santé)", required: true },
+  { key: 'specialite',   label: 'Diplôme de spécialité (si spécialiste)',    required: false },
+];
+
+// Preset reasons an admin can pick when declining a doctor.
+export const DECLINE_REASONS = [
+  'Documents illisibles ou de mauvaise qualité',
+  'Document obligatoire manquant',
+  'INPE invalide ou introuvable',
+  "Numéro d'inscription à l'Ordre (CNOM) invalide",
+  'Diplôme non reconnu ou non valide',
+  'Informations incohérentes entre les documents',
+  'Spécialité non justifiée par un diplôme',
+  "Autorisation d'exercice manquante ou expirée",
+  'Soupçon de fraude / faux documents',
+  'Autre raison',
+];
+
 // Shared demo patient roster — used by the Patients directory and the Documents
 // recipient selector so both always show the same complete list.
 export const DEMO_PATIENTS = [
