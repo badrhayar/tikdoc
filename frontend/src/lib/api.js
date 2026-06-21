@@ -348,7 +348,11 @@ export async function adminDeleteUser(id) {
 /** Upload one credential file to the private "credentials" bucket + index it. */
 export async function uploadCredential({ file, userId, doctorId, docType }) {
   const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
-  const path = `${userId}/${docType}_${Date.now()}.${ext}`;
+  // Storage RLS keys the folder on auth.uid() (the auth user id), NOT the
+  // public.users id — they differ, so the folder MUST be auth.uid().
+  const { data: auth } = await supabase.auth.getUser();
+  const folder = auth?.user?.id || userId;
+  const path = `${folder}/${docType}_${Date.now()}.${ext}`;
   const up = await supabase.storage.from('credentials').upload(path, file, { upsert: true, contentType: file.type });
   if (up.error) throw up.error;
   const { error } = await supabase.from('doctor_documents').insert({ doctor_id: doctorId, doc_type: docType, file_url: path });
@@ -414,12 +418,25 @@ export async function sendTestEmail(to) {
   try {
     const { data, error } = await supabase.functions.invoke('notify-verification', { body: { type: 'test', to } });
     if (error) {
-      // Function returned non-2xx or is not deployed.
+      // Non-2xx or function not deployed — dig the real message out of the response.
       let msg = error.message || 'Fonction injoignable';
-      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch (_) {}
-      return { ok: false, error: msg };
+      let status = '';
+      try {
+        const ctx = error.context;
+        if (ctx?.status) status = `${ctx.status} `;
+        if (ctx && typeof ctx.text === 'function') {
+          const t = await ctx.text();
+          if (t) { try { const j = JSON.parse(t); msg = j.error || j.message || t; } catch { msg = t; } }
+        }
+      } catch (_) { /* ignore */ }
+      return { ok: false, error: `${status}${msg}` };
     }
-    return data || { ok: false, error: 'Réponse vide de la fonction.' };
+    if (data && typeof data === 'object') {
+      // The function always includes an error string when ok is false.
+      if (data.ok) return data;
+      return { ok: false, error: data.error || `Resend status ${data.status ?? '?'} (voir logs de la fonction)` };
+    }
+    return { ok: false, error: 'Réponse inattendue de la fonction (déployée ?).' };
   } catch (e) {
     return { ok: false, error: e?.message || 'Erreur réseau' };
   }
