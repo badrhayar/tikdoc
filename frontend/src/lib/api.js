@@ -365,9 +365,10 @@ export async function getCredentialUrl(path) {
 
 /** Admin: doctors awaiting review (or filtered by status), with their user + docs. */
 export async function fetchDoctorsForReview(status = null) {
+  // `doctors` has two FKs to users (user_id, reviewed_by) → disambiguate the embed.
   let q = supabase
     .from('doctors')
-    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, user:users(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url)')
+    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, user:users!doctors_user_id_fkey(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url)')
     .order('submitted_at', { ascending: false });
   if (status) q = q.eq('verification_status', status);
   const { data, error } = await q;
