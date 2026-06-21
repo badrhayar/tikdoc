@@ -154,6 +154,32 @@ export function subscriptionState(d) {
   return { canUse: !blocked && !expired, status, daysLeft, blocked, expired, trial: trial && !expired, active: status === 'active' };
 }
 
+// Next renewal date + days left. Monthly → 1st of next month; yearly → the
+// anniversary of period_start.
+export function renewalInfo(d) {
+  if (!d) return null;
+  const cycle = d.billing_cycle || 'monthly';
+  const now = new Date();
+  let next;
+  if (cycle === 'yearly') {
+    const start = d.period_start ? new Date(`${d.period_start}T00:00:00`) : now;
+    next = new Date(now.getFullYear(), start.getMonth(), start.getDate());
+    if (next <= now) next = new Date(now.getFullYear() + 1, start.getMonth(), start.getDate());
+  } else {
+    next = new Date(now.getFullYear(), now.getMonth() + 1, 1);   // 1st of next month
+  }
+  const daysLeft = Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 86400000));
+  const dateStr = `${String(next.getDate()).padStart(2, '0')}/${String(next.getMonth() + 1).padStart(2, '0')}/${next.getFullYear()}`;
+  return { cycle, date: next, dateStr, daysLeft };
+}
+
+// Payment reference a doctor mentions on the bank transfer (doctor + month).
+export function paymentRef(doctorId, period) {
+  const id = String(doctorId || '').replace(/-/g, '').slice(-5).toUpperCase() || 'XXXXX';
+  const ym = (period || '').replace(/[^0-9]/g, '').slice(-6) || new Date().toISOString().slice(0, 7).replace('-', '');
+  return `TIK-${id}-${ym}`;
+}
+
 // Preset reasons an admin can pick when declining a doctor.
 export const DECLINE_REASONS = [
   'Documents illisibles ou de mauvaise qualité',

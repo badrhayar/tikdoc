@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { SPEC_INFO, subscriptionState } from '../../shared.jsx';
+import { SPEC_INFO, subscriptionState, renewalInfo, paymentRef } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
 import { fetchDoctorPayments, declarePayment, doctorRequestActivation, notifyVerification } from '../../lib/api';
 
@@ -78,8 +78,18 @@ export default function Subscription({ state, setState, go }) {
   const priceOf = (p) => (annual ? Math.round(p.price * 0.8) : p.price);
 
   const currentPlan = PLANS[currentKey] || PLANS.pro;
-  const invoices = buildInvoices(currentPlan);
-  const selectedInvoice = state?.invoiceRow || invoices[0];
+
+  // Real billing history = the doctor's confirmed (paid) payments. Empty for new.
+  const [pays, setPays] = useState([]);
+  const loadPays = () => { if (state?.myDoctor?.id) fetchDoctorPayments(state.myDoctor.id).then(setPays).catch(() => {}); };
+  useEffect(() => { loadPays(); }, [state?.myDoctor?.id]);
+  const invoices = pays.filter((p) => p.status === 'paid').map((p) => ({
+    id: paymentRef(state?.myDoctor?.id, p.period),
+    period: p.period, monthLabel: p.period,
+    date: p.confirmed_at ? new Date(p.confirmed_at).toLocaleDateString('fr-FR') : '',
+    amount: p.amount,
+  }));
+  const selectedInvoice = state?.invoiceRow || invoices[0] || { id: '—', period: '', monthLabel: '', date: '', amount: 0 };
 
   // Real doctor identity for the invoice.
   const docName = state?.appUser?.full_name ? (/^dr/i.test(state.appUser.full_name) ? state.appUser.full_name : `Dr. ${state.appUser.full_name}`) : 'Docteur';
@@ -101,11 +111,9 @@ export default function Subscription({ state, setState, go }) {
   const RIB = state?.appSettings?.rib || DEFAULT_RIB;
   const BANK = state?.appSettings?.bank || DEFAULT_BANK;
 
-  // Live subscription status + real payments (declare "J'ai payé").
+  // Live subscription status + renewal countdown.
   const sub = subscriptionState(state?.myDoctor);
-  const [pays, setPays] = useState([]);
-  const loadPays = () => { if (state?.myDoctor?.id) fetchDoctorPayments(state.myDoctor.id).then(setPays).catch(() => {}); };
-  useEffect(() => { loadPays(); }, [state?.myDoctor?.id]);
+  const renew = renewalInfo(state?.myDoctor);
   const declare = async (p) => {
     try {
       await declarePayment(p.id);
@@ -208,6 +216,7 @@ export default function Subscription({ state, setState, go }) {
           : sub.blocked ? "Contactez l'administration pour réactiver votre compte."
           : sub.expired ? 'Choisissez une formule ci-dessous et réglez pour réactiver.'
           : sub.trial ? 'Choisissez une formule pour continuer après la période d\'essai.'
+          : renew ? `Renouvellement ${renew.cycle === 'yearly' ? 'annuel' : 'mensuel'} le ${renew.dateStr} — dans ${renew.daysLeft} jour(s).`
           : 'Facturé le 1er de chaque mois.';
         return (
           <div style={{ background: grad, borderRadius: 16, padding: isMobile ? '18px 20px' : '24px 30px', marginBottom: 28, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
@@ -262,6 +271,10 @@ export default function Subscription({ state, setState, go }) {
               <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Virement à effectuer</div>
               <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{RIB}</span></div>
               <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{BANK}</div>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${BORDER}`, fontSize: 13, color: DARK }}>
+                <strong>Référence à mentionner :</strong> <span style={{ fontFamily: 'monospace', color: PRIMARY, fontWeight: 700 }}>{paymentRef(state?.myDoctor?.id, new Date().toISOString().slice(0, 7))}</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>Indiquez cette référence dans le motif du virement pour accélérer la validation.</div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setPayFor(null)} style={{ flex: 1, background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
@@ -275,7 +288,7 @@ export default function Subscription({ state, setState, go }) {
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}` }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: DARK }}>Historique de facturation</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Une facture est émise automatiquement le 1er de chaque mois.</p>
+          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Vos paiements confirmés apparaissent ici.</p>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
@@ -302,6 +315,9 @@ export default function Subscription({ state, setState, go }) {
                   </td>
                 </tr>
               ))}
+              {invoices.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '28px 22px', textAlign: 'center', color: MUTED, fontSize: 13.5 }}>Aucune facture pour le moment.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

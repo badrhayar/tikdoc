@@ -28,8 +28,15 @@ const MOCK_PDOCS = [
   { id: 3, doctor: 'Dr. Karim Berrada',  type: 'Compte-rendu', name: 'Consultation cardiologie', date: '2024-05-05', url: '#' },
 ];
 
+// Screens that require being signed in (reset to home if there's no session).
+const PROTECTED_SCREENS = new Set([
+  'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
+  'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'admin', 'paccount',
+]);
+const restoreScreen = () => { try { return sessionStorage.getItem('tikdoc_screen') || 'home'; } catch { return 'home'; } };
+
 const initialState = {
-  screen: 'home',
+  screen: restoreScreen(),
   patient: null,
   selDoc: 1,
   selPin: null,
@@ -240,12 +247,19 @@ export function AppProvider({ children }) {
     }
   };
 
+  // Persist the current screen so a refresh keeps the user where they were.
+  useEffect(() => {
+    try { sessionStorage.setItem('tikdoc_screen', state.screen); } catch (e) { /* ignore */ }
+  }, [state.screen]);
+
   // Bootstrap session on mount + subscribe to auth changes.
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let unsub = () => {};
     (async () => {
       const session = await getSession().catch(() => null);
+      // No session but the restored screen needs auth → send home.
+      if (!session && PROTECTED_SCREENS.has(restoreScreen())) dispatch({ screen: 'home' });
       await loadUser(session);
       unsub = onAuthChange((s) => loadUser(s));
     })();

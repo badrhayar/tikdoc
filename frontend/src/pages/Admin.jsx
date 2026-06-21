@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment } from '../lib/api';
-import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState } from '../shared.jsx';
+import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState, renewalInfo } from '../shared.jsx';
 
 const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
 
@@ -228,12 +228,15 @@ export default function Admin() {
                       const doc = a.role === 'doctor' ? docByUser[a.id] : null;
                       const s = doc ? subscriptionState(doc) : null;
                       const declared = doc ? (doc.payments || []).find((p) => p.status === 'declared') : null;
+                      const rnw = doc ? renewalInfo(doc) : null;
+                      const dueSoon = rnw && rnw.daysLeft <= (rnw.cycle === 'yearly' ? 30 : 7);
                       const chip = !doc ? null
                         : declared ? { bg: '#FEF6E7', c: '#C28A1B', t: 'A payé — à valider' }
                         : doc.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Bloqué' }
                         : s.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Expiré' }
-                        : s.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai · ${s.daysLeft}j` }
-                        : { bg: '#E7F6EE', c: '#0E7C52', t: 'Actif' };
+                        : s.trial ? { bg: s.daysLeft <= 14 ? '#FEF6E7' : '#E7F6EE', c: s.daysLeft <= 14 ? '#C28A1B' : '#0E7C52', t: `Essai · paiement dû ${s.daysLeft}j` }
+                        : dueSoon ? { bg: '#FEF6E7', c: '#C28A1B', t: `Paiement dû · ${rnw.daysLeft}j` }
+                        : { bg: '#E7F6EE', c: '#0E7C52', t: `Actif · renouv. ${rnw ? rnw.daysLeft + 'j' : ''}` };
                       return (
                         <tr key={a.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                           <td style={{ padding: '12px 16px' }}>

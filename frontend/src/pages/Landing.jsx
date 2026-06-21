@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../shared.jsx';
@@ -36,6 +37,16 @@ export default function Landing() {
   const [sugOpen, setSugOpen] = useState(false);
   const [cityKey, setCityKey] = useState('all');
   const [cityOpen, setCityOpen] = useState(false);
+  const barRef = useRef(null);
+  // Close the menus on scroll/resize so the fixed dropdown never floats detached.
+  useEffect(() => {
+    if (!sugOpen && !cityOpen) return;
+    const close = () => { setSugOpen(false); setCityOpen(false); };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [sugOpen, cityOpen]);
+  const barRect = () => barRef.current?.getBoundingClientRect();
 
   const doctorsList = state.doctors?.length ? state.doctors : DOCTORS;
   const q = searchQ.trim().toLowerCase();
@@ -260,8 +271,7 @@ export default function Landing() {
 
             {/* Search bar — autocomplete + city picker, stacks on mobile */}
             <div style={{ position: 'relative', marginBottom: 22, zIndex: 200 }}>
-              {(sugOpen || cityOpen) && <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 41 }} />}
-              <div style={{ position: 'relative', zIndex: 45, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 12px 40px -16px rgba(13,43,30,0.28), 0 2px 6px -2px rgba(13,43,30,0.06)', padding: isMobile ? 10 : 0, gap: isMobile ? 8 : 0 }}>
+              <div ref={barRef} style={{ position: 'relative', zIndex: 45, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 12px 40px -16px rgba(13,43,30,0.28), 0 2px 6px -2px rgba(13,43,30,0.06)', padding: isMobile ? 10 : 0, gap: isMobile ? 8 : 0 }}>
                 {/* Specialty / doctor / clinic input */}
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '0 8px' : '0 18px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0, minWidth: 0 }}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
@@ -292,9 +302,13 @@ export default function Landing() {
                 </button>
               </div>
 
-              {/* Suggestions dropdown */}
-              {sugOpen && q && hasSug ? (
-                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.18)', overflow: 'hidden', zIndex: 50, maxHeight: 380, overflowY: 'auto' }}>
+              {/* Menus rendered in a PORTAL (document.body) so they sit above the
+                  KPIs / phone mockup and escape the hero's transform/overflow. */}
+              {(sugOpen || cityOpen) && createPortal(
+                <>
+                  <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
+                  {sugOpen && q && hasSug ? (
+                    <div style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: barRect()?.left ?? 0, width: barRect()?.width ?? 320, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 360, overflowY: 'auto' }}>
                   {specMatches.length > 0 && (
                     <div>
                       <div style={sugHead}>Spécialités</div>
@@ -327,9 +341,9 @@ export default function Landing() {
                 </div>
               ) : null}
 
-              {/* City dropdown */}
+              {/* City dropdown (fixed → above everything) */}
               {cityOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, left: isMobile ? 0 : 'auto', width: isMobile ? 'auto' : 260, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.18)', overflow: 'hidden', zIndex: 50, maxHeight: 320, overflowY: 'auto' }}>
+                <div style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: isMobile ? (barRect()?.left ?? 0) : undefined, right: isMobile ? undefined : Math.max(8, (typeof window !== 'undefined' ? window.innerWidth : 0) - (barRect()?.right ?? 0)), width: isMobile ? (barRect()?.width ?? 260) : 260, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 320, overflowY: 'auto' }}>
                   <button onMouseDown={(e) => { e.preventDefault(); pickCity('all'); }} style={{ ...sugRow, fontWeight: 700 }}>
                     <span style={{ flex: 1, fontSize: 14.5, color: cityKey === 'all' ? PRIMARY : DARK, fontWeight: 700 }}>Toutes les villes</span>
                   </button>
@@ -339,6 +353,9 @@ export default function Landing() {
                     </button>
                   ))}
                 </div>
+              )}
+                </>,
+                document.body
               )}
             </div>
 

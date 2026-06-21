@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { subscriptionState } from '../shared.jsx';
+import { subscriptionState, paymentRef } from '../shared.jsx';
 import { fetchDoctorPayments, declarePayment, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -60,6 +60,7 @@ export default function DoctorBlocked() {
           <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Régler par virement</div>
           <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{rib}</span></div>
           <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{bank}</div>
+          <div style={{ marginTop: 8, fontSize: 13, color: DARK }}><strong>Référence à mentionner :</strong> <span style={{ fontFamily: 'monospace', color: PRIMARY, fontWeight: 700 }}>{paymentRef(d?.id, new Date().toISOString().slice(0, 7))}</span></div>
           <div style={{ fontSize: 12.5, color: MUTED, marginTop: 8 }}>Après le virement, cliquez sur « J'ai payé » ci-dessous. Votre compte est réactivé dès que TikDoc confirme la réception.</div>
         </div>
 
