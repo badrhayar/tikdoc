@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS } from '../shared.jsx';
+import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS } from '../shared.jsx';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -10,19 +10,6 @@ const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const INPUT_BG = '#F8FBF9';
 const INPUT_BORDER = '#DCE5E0';
-
-const SPEC_OPTS = [
-  { key: 'generaliste', label: 'Médecin généraliste' },
-  { key: 'gyneco', label: 'Gynécologue' },
-  { key: 'cardio', label: 'Cardiologue' },
-  { key: 'dermato', label: 'Dermatologue' },
-  { key: 'pediatre', label: 'Pédiatre' },
-  { key: 'ophtalmo', label: 'Ophtalmologue' },
-  { key: 'dentiste', label: 'Dentiste' },
-  { key: 'psy', label: 'Psychiatre' },
-  { key: 'orl', label: 'ORL' },
-  { key: 'kine', label: 'Kinésithérapeute' },
-];
 
 const CITY_OPTS = CITY_LIST.map((c) => c.label);
 

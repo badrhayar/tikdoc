@@ -39,19 +39,15 @@ export default function Landing() {
 
   const doctorsList = state.doctors?.length ? state.doctors : DOCTORS;
   const q = searchQ.trim().toLowerCase();
-  const specMatches = q ? SPEC_OPTS.filter((s) => s.label.toLowerCase().includes(q)).slice(0, 4) : [];
-  const docMatches = q ? doctorsList.filter((d) => (d.name || '').toLowerCase().includes(q)).slice(0, 4) : [];
-  const clinicMatches = q
-    ? [...new Set(doctorsList.map((d) => d.clinic).filter((c) => c && c.toLowerCase().includes(q)))].slice(0, 3)
-    : [];
-  const hasSug = specMatches.length || docMatches.length || clinicMatches.length;
+  const specMatches = q ? SPEC_OPTS.filter((s) => s.label.toLowerCase().includes(q)).slice(0, 5) : [];
+  const docMatches = q ? doctorsList.filter((d) => (d.name || '').toLowerCase().includes(q)).slice(0, 5) : [];
+  const hasSug = specMatches.length || docMatches.length;
   const cityLabel = cityKey === 'all' ? 'Toutes les villes' : cityKey;
 
   const closeMenus = () => { setSugOpen(false); setCityOpen(false); };
   const goSearch = (patch) => { setState({ scQ: '', scSpec: 'all', scType: 'all', scConv: false, scCity: cityKey, ...patch }); closeMenus(); go('search'); };
   const pickDoctor = (d) => { setState({ selDoc: d.id }); closeMenus(); go('profile'); };
   const pickSpec = (s) => goSearch({ scSpec: s.key });
-  const pickClinic = (c) => goSearch({ scQ: c });
   const runSearch = () => goSearch({ scQ: searchQ.trim() });
   const pickCity = (key) => { setCityKey(key); setCityOpen(false); };
 
@@ -263,8 +259,8 @@ export default function Landing() {
             </p>
 
             {/* Search bar — autocomplete + city picker, stacks on mobile */}
-            <div style={{ position: 'relative', marginBottom: 22, zIndex: 30 }}>
-              {(sugOpen || cityOpen) && <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />}
+            <div style={{ position: 'relative', marginBottom: 22, zIndex: 200 }}>
+              {(sugOpen || cityOpen) && <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 41 }} />}
               <div style={{ position: 'relative', zIndex: 45, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 12px 40px -16px rgba(13,43,30,0.28), 0 2px 6px -2px rgba(13,43,30,0.06)', padding: isMobile ? 10 : 0, gap: isMobile ? 8 : 0 }}>
                 {/* Specialty / doctor / clinic input */}
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '0 8px' : '0 18px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0, minWidth: 0 }}>
@@ -324,20 +320,6 @@ export default function Landing() {
                             <span style={{ display: 'block', fontSize: 12.5, color: '#6B7B76' }}>{SPEC_INFO[d.spec]?.label || d.spec} · {d.city}</span>
                           </span>
                           <span style={{ ...sugTag, background: '#EAF2FC', color: '#3B6FB0' }}>Profil</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {clinicMatches.length > 0 && (
-                    <div>
-                      <div style={sugHead}>Cliniques</div>
-                      {clinicMatches.map((c) => (
-                        <button key={c} onMouseDown={(e) => { e.preventDefault(); pickClinic(c); }} style={sugRow}>
-                          <span style={{ ...sugIcon, background: '#F3EEFB', color: '#6B57A6' }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-2M9 9v.01M9 13v.01M9 17v.01" /></svg>
-                          </span>
-                          <span style={{ flex: 1, fontSize: 14.5, color: DARK, fontWeight: 600 }}>{c}</span>
-                          <span style={{ ...sugTag, background: '#F3EEFB', color: '#6B57A6' }}>Clinique</span>
                         </button>
                       ))}
                     </div>

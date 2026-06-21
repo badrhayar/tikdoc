@@ -68,6 +68,9 @@ export default function Admin() {
   const detail = reviewList.find((d) => d.id === detailId) || null;   // live snapshot
   // Approved doctors that are blocked or whose subscription has lapsed.
   const expiredList = reviewList.filter((d) => d.verification_status === 'approved' && (d.blocked || subscriptionState(d).expired));
+  // Map a user id → their doctor record (subscription + payments) for the Comptes tab.
+  const docByUser = {};
+  reviewList.forEach((d) => { if (d.user?.id) docByUser[d.user.id] = d; });
 
   const refreshDetail = () => loadReview();
   const blockToggle = async (doc) => { try { await adminSetBlocked(doc.id, !doc.blocked); loadReview(); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
@@ -222,12 +225,25 @@ export default function Admin() {
                   <tbody>
                     {filtered.map((a) => {
                       const rb = ROLE_BADGE[a.role] || ROLE_BADGE.patient;
+                      const doc = a.role === 'doctor' ? docByUser[a.id] : null;
+                      const s = doc ? subscriptionState(doc) : null;
+                      const declared = doc ? (doc.payments || []).find((p) => p.status === 'declared') : null;
+                      const chip = !doc ? null
+                        : declared ? { bg: '#FEF6E7', c: '#C28A1B', t: 'A payé — à valider' }
+                        : doc.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Bloqué' }
+                        : s.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Expiré' }
+                        : s.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai · ${s.daysLeft}j` }
+                        : { bg: '#E7F6EE', c: '#0E7C52', t: 'Actif' };
                       return (
                         <tr key={a.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                           <td style={{ padding: '12px 16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              {declared && <button onClick={() => confirmPay(doc, declared)} title="Valider le paiement reçu" style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>Valider</button>}
                               <div style={{ width: 34, height: 34, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(a.full_name)}</div>
-                              <span style={{ fontSize: 14, fontWeight: 600, color: DARK }}>{a.full_name || '—'}</span>
+                              <div style={{ minWidth: 0 }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: DARK }}>{a.full_name || '—'}</span>
+                                {chip && <div style={{ marginTop: 3 }}><span style={{ background: chip.bg, color: chip.c, borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{chip.t}</span></div>}
+                              </div>
                             </div>
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>

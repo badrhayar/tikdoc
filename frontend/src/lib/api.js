@@ -418,6 +418,13 @@ export async function declarePayment(paymentId) {
   return true;
 }
 
+/** Doctor picks a plan and signals a transfer → creates a 'declared' payment. */
+export async function doctorRequestActivation(plan) {
+  const { error } = await supabase.rpc('doctor_request_activation', { p_plan: plan });
+  if (error) throw error;
+  return true;
+}
+
 /** Admin: create a due payment for a doctor. */
 export async function adminAddPayment(doctorId, { period, amount }) {
   const { data, error } = await supabase

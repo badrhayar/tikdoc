@@ -15,7 +15,8 @@ export const initials = (name) => {
   return ((p[0]||'')[0]||'').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
 };
 
-export const SPEC_INFO = {
+// Detailed actes for the original specialties (richer profile tags).
+const SPEC_DETAILED = {
   generaliste: { label:'Médecin généraliste', tags:['Consultation générale','Suivi','Vaccination','Certificat médical'] },
   gyneco:      { label:'Gynécologue',          tags:['Suivi de grossesse','Gynécologie médicale','Échographie','Contraception'] },
   cardio:      { label:'Cardiologue',          tags:['ECG','Échocardiographie','Hypertension','Bilan cardiaque'] },
@@ -28,18 +29,80 @@ export const SPEC_INFO = {
   kine:        { label:'Kinésithérapeute',     tags:['Rééducation','Médecine du sport','Dos & cou','Post-opératoire'] },
 };
 
+// Comprehensive list of medical specialties (key → French label).
 export const SPEC_OPTS = [
-  {key:'generaliste',label:'Médecin généraliste'},
-  {key:'gyneco',label:'Gynécologue'},
-  {key:'cardio',label:'Cardiologue'},
-  {key:'dermato',label:'Dermatologue'},
-  {key:'pediatre',label:'Pédiatre'},
-  {key:'ophtalmo',label:'Ophtalmologue'},
-  {key:'dentiste',label:'Dentiste'},
-  {key:'psy',label:'Psychiatre'},
-  {key:'orl',label:'ORL'},
-  {key:'kine',label:'Kinésithérapeute'},
+  { key:'generaliste',       label:'Médecin généraliste' },
+  { key:'gyneco',            label:'Gynécologue-obstétricien' },
+  { key:'cardio',            label:'Cardiologue' },
+  { key:'dermato',           label:'Dermatologue' },
+  { key:'pediatre',          label:'Pédiatre' },
+  { key:'ophtalmo',          label:'Ophtalmologue' },
+  { key:'dentiste',          label:'Chirurgien-dentiste' },
+  { key:'psy',               label:'Psychiatre' },
+  { key:'orl',               label:'ORL (Oto-rhino-laryngologiste)' },
+  { key:'kine',              label:'Kinésithérapeute' },
+  { key:'neuro',             label:'Neurologue' },
+  { key:'neurochirurgien',   label:'Neurochirurgien' },
+  { key:'gastro',            label:'Gastro-entérologue' },
+  { key:'endocrino',         label:'Endocrinologue' },
+  { key:'diabetologue',      label:'Diabétologue' },
+  { key:'rhumato',           label:'Rhumatologue' },
+  { key:'pneumo',            label:'Pneumologue' },
+  { key:'nephro',            label:'Néphrologue' },
+  { key:'uro',               label:'Urologue' },
+  { key:'ortho',             label:'Chirurgien orthopédiste' },
+  { key:'chirgen',           label:'Chirurgien général' },
+  { key:'chirplast',         label:'Chirurgien plasticien & esthétique' },
+  { key:'chirvasculaire',    label:'Chirurgien vasculaire' },
+  { key:'chirthoracique',    label:'Chirurgien thoracique' },
+  { key:'chircardiaque',     label:'Chirurgien cardiaque' },
+  { key:'chirpediatrique',   label:'Chirurgien pédiatrique' },
+  { key:'chirmaxillo',       label:'Chirurgien maxillo-facial' },
+  { key:'anesthesiste',      label:'Anesthésiste-réanimateur' },
+  { key:'reanimateur',       label:'Réanimateur / Soins intensifs' },
+  { key:'urgentiste',        label:'Médecin urgentiste' },
+  { key:'radiologue',        label:'Radiologue' },
+  { key:'radiotherapeute',   label:'Radiothérapeute' },
+  { key:'mednucleaire',      label:'Médecin nucléaire' },
+  { key:'oncologue',         label:'Oncologue (cancérologue)' },
+  { key:'hematologue',       label:'Hématologue' },
+  { key:'allergologue',      label:'Allergologue' },
+  { key:'immunologue',       label:'Immunologue' },
+  { key:'infectiologue',     label:'Infectiologue' },
+  { key:'interniste',        label:'Médecin interniste' },
+  { key:'geriatre',          label:'Gériatre' },
+  { key:'medsport',          label:'Médecin du sport' },
+  { key:'medtravail',        label:'Médecin du travail' },
+  { key:'medlegale',         label:'Médecin légiste' },
+  { key:'nutritionniste',    label:'Médecin nutritionniste' },
+  { key:'sexologue',         label:'Sexologue' },
+  { key:'addictologue',      label:'Addictologue' },
+  { key:'algologue',         label:'Algologue (médecin de la douleur)' },
+  { key:'phlebologue',       label:'Phlébologue' },
+  { key:'angiologue',        label:'Angiologue' },
+  { key:'proctologue',       label:'Proctologue' },
+  { key:'genetique',         label:'Généticien' },
+  { key:'anapath',           label:'Anatomopathologiste' },
+  { key:'biologiste',        label:'Biologiste médical' },
+  { key:'medphysique',       label:'Médecin de rééducation (MPR)' },
+  { key:'dermatoveneuro',    label:'Vénérologue' },
+  { key:'psychologue',       label:'Psychologue' },
+  { key:'orthophoniste',     label:'Orthophoniste' },
+  { key:'orthoptiste',       label:'Orthoptiste' },
+  { key:'podologue',         label:'Podologue' },
+  { key:'osteopathe',        label:'Ostéopathe' },
+  { key:'sagefemme',         label:'Sage-femme' },
+  { key:'dieteticien',       label:'Diététicien' },
+  { key:'audioprothesiste',  label:'Audioprothésiste' },
+  { key:'opticien',          label:'Opticien-optométriste' },
+  { key:'pharmacien',        label:'Pharmacien' },
+  { key:'infirmier',         label:'Infirmier' },
 ];
+
+// Build SPEC_INFO for every specialty (detailed where available, else generic).
+export const SPEC_INFO = Object.fromEntries(
+  SPEC_OPTS.map((s) => [s.key, SPEC_DETAILED[s.key] || { label: s.label, tags: ['Consultation', 'Suivi', 'Diagnostic', 'Conseil'] }])
+);
 
 // Moroccan cities with population over ~50,000 (the doctor directory + patient
 // search both use this single list).
@@ -190,7 +253,7 @@ export const I18N = {
     btnLogin:'Se connecter', btnRegister:'Créer un compte',
     heroTitle:'Prenez rendez-vous avec votre médecin en toute simplicité',
     heroSub:'Trouvez le bon spécialiste et réservez votre rendez-vous en ligne 24h/24 et 7j/7.',
-    searchSpec:'Spécialité, médecin, clinique…', searchCity:'Ville', searchBtn:'Rechercher',
+    searchSpec:'Spécialité ou nom du médecin…', searchCity:'Ville', searchBtn:'Rechercher',
     f1t:'Réservation en ligne', f1s:'Disponible 24h/24', f2t:'Rappels par SMS', f2s:'Ne manquez plus vos rendez-vous', f3t:'Sécurisé et fiable', f3s:'Vos données sont protégées',
     howTitle:'Comment ça marche ?', s1t:'1. Trouvez un médecin', s1s:'Recherchez par spécialité ou par ville.', s2t:'2. Choisissez votre créneau', s2s:"Sélectionnez la date et l'heure qui vous conviennent.", s3t:'3. Confirmez votre rendez-vous', s3s:'Recevez une confirmation par SMS.' },
   en: { dir:'ltr', langLabel:'EN',
@@ -198,7 +261,7 @@ export const I18N = {
     btnLogin:'Log in', btnRegister:'Sign up',
     heroTitle:'Book an appointment with your doctor, effortlessly',
     heroSub:'Find the right specialist and book your appointment online, 24/7.',
-    searchSpec:'Specialty, doctor, clinic…', searchCity:'City', searchBtn:'Search',
+    searchSpec:'Specialty or doctor name…', searchCity:'City', searchBtn:'Search',
     f1t:'Online booking', f1s:'Available 24/7', f2t:'SMS reminders', f2s:'Never miss an appointment', f3t:'Secure & reliable', f3s:'Your data is protected',
     howTitle:'How it works', s1t:'1. Find a doctor', s1s:'Search by specialty or by city.', s2t:'2. Pick a time slot', s2s:'Choose the date and time that suit you.', s3t:'3. Confirm your appointment', s3s:'Get a confirmation by SMS.' },
   ar: { dir:'rtl', langLabel:'AR',
@@ -206,7 +269,7 @@ export const I18N = {
     btnLogin:'تسجيل الدخول', btnRegister:'إنشاء حساب',
     heroTitle:'احجز موعدك مع طبيبك بكل سهولة',
     heroSub:'اعثر على الأخصائي المناسب واحجز موعدك عبر الإنترنت على مدار الساعة طوال أيام الأسبوع.',
-    searchSpec:'التخصص، الطبيب، العيادة…', searchCity:'المدينة', searchBtn:'بحث',
+    searchSpec:'التخصص أو اسم الطبيب…', searchCity:'المدينة', searchBtn:'بحث',
     f1t:'الحجز عبر الإنترنت', f1s:'متاح 24/24', f2t:'تذكير بالرسائل', f2s:'لا تفوّت أي موعد', f3t:'آمن وموثوق', f3s:'بياناتك محمية',
     howTitle:'كيف تعمل المنصة؟', s1t:'١. ابحث عن طبيب', s1s:'ابحث حسب التخصص أو المدينة.', s2t:'٢. اختر الموعد', s2s:'حدّد التاريخ والوقت المناسبين لك.', s3t:'٣. أكّد موعدك', s3s:'استلم تأكيدًا عبر الرسائل القصيرة.' },
 };

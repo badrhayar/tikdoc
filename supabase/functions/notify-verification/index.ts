@@ -104,6 +104,22 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: recipients.length }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (p.type === "payment_declared") {
+      // A doctor signalled a transfer → notify admins to validate.
+      const { data: admins } = await admin.from("users").select("email").eq("role", "admin");
+      const recipients = (admins ?? []).map((a: any) => a.email).filter(Boolean);
+      const body = `
+        <p>Un médecin a signalé un paiement par virement. Validation requise.</p>
+        <table style="font-size:14px;margin:10px 0 18px">
+          <tr><td style="color:#6B7B76;padding:3px 14px 3px 0">Médecin</td><td style="font-weight:600">${p.doctorName ?? "—"}</td></tr>
+          <tr><td style="color:#6B7B76;padding:3px 14px 3px 0">Formule</td><td style="font-weight:600">${p.plan ?? "—"}</td></tr>
+          <tr><td style="color:#6B7B76;padding:3px 14px 3px 0">Montant</td><td style="font-weight:600">${p.amount ?? "—"} MAD</td></tr>
+        </table>
+        <p style="font-size:14px"><strong>Action requise :</strong> vérifiez la réception sur le compte bancaire puis cliquez « Valider » dans la console TikDoc pour activer le compte.</p>`;
+      for (const to of recipients) await sendEmail(to, `Paiement à valider — ${p.doctorName ?? ""}`, shell("Paiement signalé — validation en attente", body));
+      return new Response(JSON.stringify({ ok: true, sent: recipients.length }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     if (p.type === "decision" && p.doctorEmail) {
       if (p.status === "approved") {
         const body = `

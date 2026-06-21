@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { SPEC_INFO, subscriptionState } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
-import { fetchDoctorPayments, declarePayment } from '../../lib/api';
+import { fetchDoctorPayments, declarePayment, doctorRequestActivation, notifyVerification } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -88,12 +88,11 @@ export default function Subscription({ state, setState, go }) {
   const docAddr = state?.myDoctor?.clinic_address || '';
   const docInpe = state?.appUser?.cin_or_inpe || '';
 
-  const choosePlan = (key) => {
-    setState({ plan: key, toast: key === currentKey ? 'Ceci est déjà votre formule.' : `Formule ${PLANS[key].name} activée ✓`, toastShow: true });
-  };
+  const [payFor, setPayFor] = useState(null);   // plan key being paid
+  const [payBusy, setPayBusy] = useState(false);
+  const choosePlan = (key) => setPayFor(key);
   const manage = () => {
     plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setState({ toast: 'Choisissez ou modifiez votre formule ci-dessous.', toastShow: true });
   };
   const openInvoice = (row) => setState({ invoiceOpen: true, invoiceRow: row });
   const closeInvoice = () => setState({ invoiceOpen: false });
@@ -114,14 +113,31 @@ export default function Subscription({ state, setState, go }) {
       setState({ toast: 'Paiement signalé — en attente de confirmation TikDoc.', toastShow: true });
     } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); }
   };
-  const subPill = sub.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Compte bloqué' }
+  const pendingPay = pays.find((p) => p.status === 'declared');
+  const subPill = pendingPay ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Activation en attente' }
+    : sub.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Compte bloqué' }
     : sub.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Abonnement expiré' }
     : sub.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai gratuit — ${sub.daysLeft} jour(s) restant(s)` }
     : { bg: '#E7F6EE', c: '#0E7C52', t: 'Abonnement actif' };
 
+  const submitPayment = async () => {
+    const plan = payFor;
+    setPayBusy(true);
+    try {
+      await doctorRequestActivation(plan);
+      notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: PLANS[plan].name, amount: PLANS[plan].price });
+      setState({ plan, toast: 'Paiement signalé — validation en attente.', toastShow: true });
+      setPayFor(null);
+      loadPays();
+    } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); }
+    finally { setPayBusy(false); }
+  };
+
   const card = (p) => {
-    const isCurrent = currentKey === p.key;
+    const isCurrent = sub.active && currentKey === p.key;   // only "current" once paid/active
     const recommended = p.key === 'pro';
+    const label = isCurrent ? 'Votre formule actuelle' : (pendingPay ? 'Activation en attente' : `Choisir ${p.name}`);
+    const locked = isCurrent || !!pendingPay;
     return (
       <div style={{ flex: 1, minWidth: 260, background: '#fff', border: `2px solid ${isCurrent ? PRIMARY : BORDER}`, borderRadius: 16, padding: 26, display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: isCurrent ? '0 14px 34px -16px rgba(22,160,106,0.45)' : 'none' }}>
         {recommended && (
@@ -142,10 +158,10 @@ export default function Subscription({ state, setState, go }) {
         </ul>
         <button
           onClick={() => choosePlan(p.key)}
-          disabled={isCurrent}
-          style={{ marginTop: 'auto', width: '100%', background: isCurrent ? '#EAF6F0' : (recommended ? PRIMARY : 'transparent'), color: isCurrent ? PRIMARY : (recommended ? '#fff' : PRIMARY), border: isCurrent ? `1px solid #C3E8D8` : `2px solid ${PRIMARY}`, borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: isCurrent ? 'default' : 'pointer' }}
+          disabled={locked}
+          style={{ marginTop: 'auto', width: '100%', background: locked ? '#EAF6F0' : (recommended ? PRIMARY : 'transparent'), color: locked ? '#0E7C52' : (recommended ? '#fff' : PRIMARY), border: locked ? `1px solid #C3E8D8` : `2px solid ${PRIMARY}`, borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: locked ? 'default' : 'pointer' }}
         >
-          {isCurrent ? 'Votre formule actuelle' : `Choisir ${p.name}`}
+          {label}
         </button>
       </div>
     );
@@ -179,20 +195,43 @@ export default function Subscription({ state, setState, go }) {
         </div>
       )}
 
-      {/* Current plan banner */}
-      <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`, borderRadius: 16, padding: isMobile ? '20px' : '26px 30px', marginBottom: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '8px 16px', color: '#fff', fontWeight: 700, fontSize: 14 }}>TikDoc {currentPlan.name}</div>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>Plan actif</div>
-            <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13.5, marginTop: 2 }}>Facturé le 1er de chaque mois</div>
+      {/* Status banner — trial countdown / pending / active / expired */}
+      {(() => {
+        const amber = pendingPay || sub.expired || sub.blocked;
+        const grad = amber ? 'linear-gradient(135deg,#E9A23B,#C28A1B)' : `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`;
+        const title = pendingPay ? 'Activation en attente'
+          : sub.blocked ? 'Compte suspendu'
+          : sub.expired ? 'Abonnement expiré'
+          : sub.trial ? 'Essai gratuit en cours'
+          : `Abonnement ${currentPlan.name} actif`;
+        const subtitle = pendingPay ? "Paiement signalé — l'administrateur a été notifié et validera sous peu."
+          : sub.blocked ? "Contactez l'administration pour réactiver votre compte."
+          : sub.expired ? 'Choisissez une formule ci-dessous et réglez pour réactiver.'
+          : sub.trial ? 'Choisissez une formule pour continuer après la période d\'essai.'
+          : 'Facturé le 1er de chaque mois.';
+        return (
+          <div style={{ background: grad, borderRadius: 16, padding: isMobile ? '18px 20px' : '24px 30px', marginBottom: 28, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>{title}</div>
+                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 2 }}>{subtitle}</div>
+              </div>
+            </div>
+            {sub.trial && !pendingPay && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '8px 16px' }}>
+                <span style={{ color: '#fff', fontWeight: 800, fontSize: 26 }}>{sub.daysLeft}</span>
+                <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 600 }}>jour(s) restant(s)</span>
+              </div>
+            )}
+            {sub.active && !pendingPay && (
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 22 }}>{priceOf(currentPlan)} MAD<span style={{ fontSize: 13, fontWeight: 400, opacity: 0.85 }}>/mois</span></div>
+            )}
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-          <div style={{ color: '#fff', fontWeight: 800, fontSize: 24 }}>{priceOf(currentPlan)} MAD<span style={{ fontSize: 14, fontWeight: 400, opacity: 0.85 }}>/mois</span></div>
-          <button onClick={manage} style={{ background: '#fff', color: PRIMARY, border: 'none', borderRadius: 9, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Gérer l'abonnement</button>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Monthly / annual toggle */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 26 }}>
@@ -208,6 +247,29 @@ export default function Subscription({ state, setState, go }) {
         {card(PLANS.pro)}
         {card(PLANS.premium)}
       </div>
+
+      {/* Payment instructions modal (after choosing a plan) */}
+      {payFor && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setPayFor(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', zIndex: 1000, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', padding: isMobile ? '16px' : 24, overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, padding: isMobile ? 22 : 28 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: DARK, margin: '0 0 4px' }}>Activer la formule {PLANS[payFor].name}</h2>
+            <p style={{ fontSize: 13, color: MUTED, margin: '0 0 18px' }}>Effectuez un virement du montant ci-dessous, puis confirmez avec « J'ai payé ».</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 16 }}>
+              <span style={{ fontSize: 30, fontWeight: 800, color: PRIMARY }}>{PLANS[payFor].price}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: MUTED }}>MAD / mois</span>
+            </div>
+            <div style={{ background: BG, borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Virement à effectuer</div>
+              <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{RIB}</span></div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{BANK}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPayFor(null)} style={{ flex: 1, background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={submitPayment} disabled={payBusy} style={{ flex: 1.5, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>{payBusy ? 'Envoi…' : "J'ai payé"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Billing history */}
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>

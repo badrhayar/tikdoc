@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { subscriptionState } from '../shared.jsx';
-import { fetchDoctorPayments, declarePayment } from '../lib/api';
+import { fetchDoctorPayments, declarePayment, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -26,6 +26,7 @@ export default function DoctorBlocked() {
     setBusyId(p.id);
     try {
       await declarePayment(p.id);
+      notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: d?.plan || '', amount: p.amount });
       setPayments((list) => list.map((x) => x.id === p.id ? { ...x, status: 'declared', declared_at: new Date().toISOString() } : x));
       setState({ toast: 'Paiement signalé — en attente de confirmation par TikDoc.', toastShow: true });
     } catch (e) {
