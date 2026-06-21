@@ -38,13 +38,15 @@ export default function Landing() {
   const [cityKey, setCityKey] = useState('all');
   const [cityOpen, setCityOpen] = useState(false);
   const barRef = useRef(null);
-  // Close the menus on scroll/resize so the fixed dropdown never floats detached.
+  // Close the menus when the PAGE scrolls/resizes — but not when scrolling
+  // inside the dropdown list itself.
   useEffect(() => {
     if (!sugOpen && !cityOpen) return;
-    const close = () => { setSugOpen(false); setCityOpen(false); };
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+    const onScroll = (e) => { if (e?.target?.closest?.('[data-hero-menu]')) return; setSugOpen(false); setCityOpen(false); };
+    const onResize = () => { setSugOpen(false); setCityOpen(false); };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onResize); };
   }, [sugOpen, cityOpen]);
   const barRect = () => barRef.current?.getBoundingClientRect();
 
@@ -308,7 +310,7 @@ export default function Landing() {
                 <>
                   <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
                   {sugOpen && q && hasSug ? (
-                    <div style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: barRect()?.left ?? 0, width: barRect()?.width ?? 320, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 360, overflowY: 'auto' }}>
+                    <div data-hero-menu style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: barRect()?.left ?? 0, width: barRect()?.width ?? 320, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 360, overflowY: 'auto' }}>
                   {specMatches.length > 0 && (
                     <div>
                       <div style={sugHead}>Spécialités</div>
@@ -343,7 +345,7 @@ export default function Landing() {
 
               {/* City dropdown (fixed → above everything) */}
               {cityOpen && (
-                <div style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: isMobile ? (barRect()?.left ?? 0) : undefined, right: isMobile ? undefined : Math.max(8, (typeof window !== 'undefined' ? window.innerWidth : 0) - (barRect()?.right ?? 0)), width: isMobile ? (barRect()?.width ?? 260) : 260, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 320, overflowY: 'auto' }}>
+                <div data-hero-menu style={{ position: 'fixed', top: (barRect()?.bottom ?? 0) + 6, left: isMobile ? (barRect()?.left ?? 0) : undefined, right: isMobile ? undefined : Math.max(8, (typeof window !== 'undefined' ? window.innerWidth : 0) - (barRect()?.right ?? 0)), width: isMobile ? (barRect()?.width ?? 260) : 260, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.22)', overflow: 'hidden', zIndex: 9999, maxHeight: 320, overflowY: 'auto' }}>
                   <button onMouseDown={(e) => { e.preventDefault(); pickCity('all'); }} style={{ ...sugRow, fontWeight: 700 }}>
                     <span style={{ flex: 1, fontSize: 14.5, color: cityKey === 'all' ? PRIMARY : DARK, fontWeight: 700 }}>Toutes les villes</span>
                   </button>
