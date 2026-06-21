@@ -75,6 +75,22 @@ export const CREDENTIAL_DOCS = [
   { key: 'specialite',   label: 'Diplôme de spécialité (si spécialiste)',    required: false },
 ];
 
+// Derive a doctor's subscription state (trial countdown, blocked, expired…).
+export function subscriptionState(d) {
+  if (!d) return { canUse: true, status: 'active', daysLeft: null, blocked: false, expired: false, trial: false, active: true };
+  const blocked = !!d.blocked;
+  let status = d.subscription_status || 'active';
+  let daysLeft = null, trial = false, expired = false;
+  if (status === 'trial' && d.trial_ends_at) {
+    const ms = new Date(d.trial_ends_at).getTime() - Date.now();
+    daysLeft = Math.max(0, Math.ceil(ms / 86400000));
+    trial = true;
+    if (ms <= 0) { expired = true; status = 'expired'; }
+  }
+  if (status === 'expired') expired = true;
+  return { canUse: !blocked && !expired, status, daysLeft, blocked, expired, trial: trial && !expired, active: status === 'active' };
+}
+
 // Preset reasons an admin can pick when declining a doctor.
 export const DECLINE_REASONS = [
   'Documents illisibles ou de mauvaise qualité',

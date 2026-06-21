@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
-import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS } from '../../shared.jsx';
+import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
 import { inviteNewPatient, createWalkinAppointment } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
@@ -112,6 +112,7 @@ export default function DoctorApp() {
   // Signed-in doctor identity (falls back gracefully when not yet loaded).
   const docName  = state.appUser?.full_name || 'Mon cabinet';
   const docEmail = state.appUser?.email || '';
+  const sub = subscriptionState(state.myDoctor);
   const todayISO = moroccoNow().dateISO;
   // The motif list must mirror exactly the services the doctor defined (Settings).
   const motifOpts = (state.services?.length ? state.services.map(s => s.name).filter(Boolean) : MOTIF_OPTS);
@@ -326,6 +327,15 @@ export default function DoctorApp() {
             )}
           </div>
         </header>
+
+        {/* Free-trial / subscription status bar */}
+        {sub.trial && (
+          <div onClick={() => goNav('dabo')} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', padding:'7px 14px', fontSize:12.5, fontWeight:600, color: sub.daysLeft <= 3 ? '#9A6510' : '#0E7C52', background: sub.daysLeft <= 3 ? '#FEF6E7' : '#E7F6EE', borderBottom:`1px solid ${sub.daysLeft <= 3 ? '#F6E0AE' : '#CDE7DA'}` }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Essai gratuit — {sub.daysLeft} jour{sub.daysLeft > 1 ? 's' : ''} restant{sub.daysLeft > 1 ? 's' : ''}
+            <span style={{ textDecoration:'underline', fontWeight:700 }}>Gérer mon abonnement</span>
+          </div>
+        )}
 
         <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
           <SubScreen state={state} setState={setState} go={go} openNewAppt={openNewAppt} openAddPatient={openAddPatient} />

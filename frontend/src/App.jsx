@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { subscriptionState } from './shared.jsx';
 import PWAInstall from './components/PWAInstall';
 
 const Landing        = lazy(() => import('./pages/Landing'));
@@ -19,6 +20,7 @@ const DoctorRegister = lazy(() => import('./pages/DoctorRegister'));
 const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
 const Admin          = lazy(() => import('./pages/Admin'));
 const DoctorPending  = lazy(() => import('./pages/DoctorPending'));
+const DoctorBlocked  = lazy(() => import('./pages/DoctorBlocked'));
 
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
@@ -54,13 +56,22 @@ function AppShell() {
     return () => clearTimeout(id);
   }, [toastShow, toast]);
 
-  // A signed-in doctor whose credentials aren't approved can't enter the app.
+  // Gate a signed-in doctor: unverified → pending screen; verified but
+  // blocked / expired subscription → blocked screen.
   const md = state.myDoctor;
-  const gateDoctor = state.appUser?.role === 'doctor' && md && md.verification_status && md.verification_status !== 'approved';
+  const isDoctor = state.appUser?.role === 'doctor';
+  const notApproved = isDoctor && md && md.verification_status && md.verification_status !== 'approved';
+  const sub = isDoctor && md ? subscriptionState(md) : null;
+  const blockedDoctor = isDoctor && md && md.verification_status === 'approved' && sub && !sub.canUse;
 
   let Screen;
-  if (gateDoctor && DOCTOR_SCREENS.has(screen)) Screen = DoctorPending;
-  else Screen = DOCTOR_SCREENS.has(screen) ? DoctorApp : (SCREEN_MAP[screen] ?? Landing);
+  if (DOCTOR_SCREENS.has(screen)) {
+    if (notApproved) Screen = DoctorPending;
+    else if (blockedDoctor) Screen = DoctorBlocked;
+    else Screen = DoctorApp;
+  } else {
+    Screen = SCREEN_MAP[screen] ?? Landing;
+  }
 
   return (
     <>

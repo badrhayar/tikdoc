@@ -372,7 +372,7 @@ export async function fetchDoctorsForReview(status = null) {
   // `doctors` has two FKs to users (user_id, reviewed_by) → disambiguate the embed.
   let q = supabase
     .from('doctors')
-    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, user:users!doctors_user_id_fkey(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url)')
+    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, plan, subscription_status, blocked, trial_ends_at, user:users!doctors_user_id_fkey(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url), payments:doctor_payments(id, period, amount, status, declared_at, confirmed_at, created_at)')
     .order('submitted_at', { ascending: false });
   if (status) q = q.eq('verification_status', status);
   const { data, error } = await q;
@@ -395,6 +395,63 @@ export async function reviewDoctor(doctorId, { status, reason = null, note = nul
 /** A rejected doctor resets their own status to 'pending' (secured RPC). */
 export async function doctorResubmit() {
   const { error } = await supabase.rpc('doctor_resubmit');
+  if (error) throw error;
+  return true;
+}
+
+// ── Subscriptions & payments ──────────────────────────────────────────────────
+/** Payments for a doctor (newest first). */
+export async function fetchDoctorPayments(doctorId) {
+  const { data, error } = await supabase
+    .from('doctor_payments')
+    .select('*')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/** Doctor declares a payment as made ("J'ai payé") — secured RPC. */
+export async function declarePayment(paymentId) {
+  const { error } = await supabase.rpc('declare_payment', { p_id: paymentId });
+  if (error) throw error;
+  return true;
+}
+
+/** Admin: create a due payment for a doctor. */
+export async function adminAddPayment(doctorId, { period, amount }) {
+  const { data, error } = await supabase
+    .from('doctor_payments')
+    .insert({ doctor_id: doctorId, period, amount: Number(amount) || 0, status: 'due' })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+/** Admin: confirm a payment was received → mark paid + reactivate the doctor. */
+export async function adminConfirmPayment(paymentId, doctorId) {
+  const { error } = await supabase.from('doctor_payments')
+    .update({ status: 'paid', confirmed_at: new Date().toISOString() }).eq('id', paymentId);
+  if (error) throw error;
+  if (doctorId) {
+    await supabase.from('doctors')
+      .update({ subscription_status: 'active', blocked: false }).eq('id', doctorId);
+  }
+  return true;
+}
+
+/** Admin: block / unblock a doctor's account. */
+export async function adminSetBlocked(doctorId, blocked) {
+  const { error } = await supabase.from('doctors').update({ blocked }).eq('id', doctorId);
+  if (error) throw error;
+  return true;
+}
+
+/** Admin: set a doctor's subscription status (e.g. mark expired, reactivate). */
+export async function adminSetSubscription(doctorId, status) {
+  const patch = { subscription_status: status };
+  if (status === 'active') patch.blocked = false;
+  const { error } = await supabase.from('doctors').update(patch).eq('id', doctorId);
   if (error) throw error;
   return true;
 }

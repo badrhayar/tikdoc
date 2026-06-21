@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail } from '../lib/api';
-import { initials, CREDENTIAL_DOCS, DECLINE_REASONS } from '../shared.jsx';
+import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment } from '../lib/api';
+import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState } from '../shared.jsx';
 
 const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
 
@@ -35,8 +35,9 @@ export default function Admin() {
   // Doctor verification
   const [reviewList, setReviewList] = useState([]);
   const [reviewFilter, setReviewFilter] = useState('pending');
-  const [detail, setDetail] = useState(null);        // doctor detail modal
+  const [detailId, setDetailId] = useState(null);     // doctor detail modal (live)
   const [declineFor, setDeclineFor] = useState(null); // doctor being declined
+  const [newPay, setNewPay] = useState({ period: '', amount: 299 });
   const [declineReason, setDeclineReason] = useState(DECLINE_REASONS[0]);
   const [declineNote, setDeclineNote] = useState('');
 
@@ -64,6 +65,19 @@ export default function Admin() {
 
   const pendingCount = reviewList.filter((d) => d.verification_status === 'pending').length;
   const reviewRows = reviewList.filter((d) => reviewFilter === 'all' || d.verification_status === reviewFilter);
+  const detail = reviewList.find((d) => d.id === detailId) || null;   // live snapshot
+  // Approved doctors that are blocked or whose subscription has lapsed.
+  const expiredList = reviewList.filter((d) => d.verification_status === 'approved' && (d.blocked || subscriptionState(d).expired));
+
+  const refreshDetail = () => loadReview();
+  const blockToggle = async (doc) => { try { await adminSetBlocked(doc.id, !doc.blocked); loadReview(); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  const setSub = async (doc, status) => { try { await adminSetSubscription(doc.id, status); loadReview(); setState({ toast: status === 'active' ? 'Abonnement réactivé ✓' : 'Marqué comme expiré', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  const confirmPay = async (doc, p) => { try { await adminConfirmPayment(p.id, doc.id); loadReview(); setState({ toast: 'Paiement confirmé — compte réactivé ✓', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  const addDue = async (doc) => {
+    if (!newPay.period.trim()) { setState({ toast: 'Indiquez la période (ex. Juin 2026).', toastShow: true }); return; }
+    try { await adminAddPayment(doc.id, newPay); setNewPay({ period: '', amount: 299 }); loadReview(); setState({ toast: 'Paiement dû ajouté', toastShow: true }); }
+    catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); }
+  };
 
   const openDoc = async (path) => {
     try { window.open(await getCredentialUrl(path), '_blank'); }
@@ -74,7 +88,7 @@ export default function Admin() {
     try {
       await reviewDoctor(doc.id, { status: 'approved', reviewerId: state.appUser?.id });
       notifyVerification({ type: 'decision', status: 'approved', doctorName: doc.user?.full_name, doctorEmail: doc.user?.email });
-      setDetail(null);
+      setDetailId(null);
       setState({ toast: 'Médecin approuvé ✓', toastShow: true });
       loadReview();
     } catch (e) { setState({ toast: 'Action impossible : ' + (e?.message || ''), toastShow: true }); }
@@ -85,7 +99,7 @@ export default function Admin() {
     try {
       await reviewDoctor(doc.id, { status: 'rejected', reason: declineReason, note: declineNote || null, reviewerId: state.appUser?.id });
       notifyVerification({ type: 'decision', status: 'rejected', doctorName: doc.user?.full_name, doctorEmail: doc.user?.email, reason: declineReason, note: declineNote });
-      setDeclineFor(null); setDetail(null); setDeclineNote('');
+      setDeclineFor(null); setDetailId(null); setDeclineNote('');
       setState({ toast: 'Médecin refusé', toastShow: true });
       loadReview();
     } catch (e) { setState({ toast: 'Action impossible : ' + (e?.message || ''), toastShow: true }); }
@@ -168,10 +182,11 @@ export default function Admin() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BORDER}`, marginBottom: 24 }}>
-          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['billing', 'Facturation (RIB)']].map(([k, label]) => (
+          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>
               {label}
               {k === 'review' && pendingCount > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#E2748A', borderRadius: 99, padding: '1px 7px' }}>{pendingCount}</span>}
+              {k === 'subs' && expiredList.length > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#C28A1B', borderRadius: 99, padding: '1px 7px' }}>{expiredList.length}</span>}
             </button>
           ))}
         </div>
@@ -266,7 +281,7 @@ export default function Admin() {
                       return (
                         <tr key={doc.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                           <td style={{ padding: '12px 16px' }}>
-                            <button onClick={() => setDetail(doc)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'start' }}>
+                            <button onClick={() => setDetailId(doc.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'start' }}>
                               <div style={{ width: 34, height: 34, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(doc.user?.full_name)}</div>
                               <span style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, textDecoration: 'underline' }}>{doc.user?.full_name || '—'}</span>
                             </button>
@@ -288,10 +303,12 @@ export default function Admin() {
                 </table>
               </div>
             </div>
+          </>
+        )}
 
-            {/* Doctor detail modal */}
-            {detail && (
-              <div onClick={(e) => { if (e.target === e.currentTarget) setDetail(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '28px 14px', overflowY: 'auto' }}>
+        {/* Doctor detail modal — available from any tab */}
+        {detail && (
+              <div onClick={(e) => { if (e.target === e.currentTarget) setDetailId(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '28px 14px', overflowY: 'auto' }}>
                 <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540 }}>
                   <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>{initials(detail.user?.full_name)}</div>
@@ -299,7 +316,7 @@ export default function Admin() {
                       <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{detail.user?.full_name}</div>
                       <div style={{ fontSize: 13, color: MUTED }}>{detail.specialty} · {detail.city}</div>
                     </div>
-                    <button onClick={() => setDetail(null)} style={{ background: BG, border: `1px solid ${BORDER}`, width: 30, height: 30, borderRadius: 8, cursor: 'pointer', color: MUTED }}>✕</button>
+                    <button onClick={() => setDetailId(null)} style={{ background: BG, border: `1px solid ${BORDER}`, width: 30, height: 30, borderRadius: 8, cursor: 'pointer', color: MUTED }}>✕</button>
                   </div>
                   <div style={{ padding: '18px 22px' }}>
                     <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Informations</div>
@@ -318,6 +335,52 @@ export default function Admin() {
                         </span>
                       </button>
                     ))}
+
+                    {/* Subscription & payments (approved doctors) */}
+                    {detail.verification_status === 'approved' && (() => {
+                      const s = subscriptionState(detail);
+                      const pill = s.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Compte bloqué' }
+                        : s.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Abonnement expiré' }
+                        : s.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai — ${s.daysLeft} j restants` }
+                        : { bg: '#E7F6EE', c: '#0E7C52', t: 'Abonnement actif' };
+                      const pays = detail.payments || [];
+                      return (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '18px 0 10px' }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>Abonnement &amp; paiements</span>
+                            <span style={{ background: pill.bg, color: pill.c, borderRadius: 20, padding: '3px 11px', fontSize: 12, fontWeight: 700 }}>{pill.t}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                            <button onClick={() => blockToggle(detail)} style={{ background: detail.blocked ? '#E7F6EE' : '#FCE8EC', color: detail.blocked ? '#0E7C52' : '#C2415C', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{detail.blocked ? 'Débloquer' : 'Bloquer'}</button>
+                            {s.expired
+                              ? <button onClick={() => setSub(detail, 'active')} style={{ background: '#E7F6EE', color: '#0E7C52', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Réactiver l'abonnement</button>
+                              : <button onClick={() => setSub(detail, 'expired')} style={{ background: '#FEF6E7', color: '#C28A1B', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Marquer expiré</button>}
+                          </div>
+                          {/* Payments */}
+                          {pays.length === 0 && <div style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>Aucun paiement enregistré.</div>}
+                          {pays.map((p) => {
+                            const pp = p.status === 'paid' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Payé ✓' } : p.status === 'declared' ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Signalé par le médecin' } : { bg: '#F3F4F6', c: '#6B7B76', t: 'Dû' };
+                            return (
+                              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{p.period} · {p.amount} MAD</div>
+                                  <span style={{ display: 'inline-block', marginTop: 3, background: pp.bg, color: pp.c, borderRadius: 99, padding: '2px 9px', fontSize: 11.5, fontWeight: 700 }}>{pp.t}</span>
+                                </div>
+                                {p.status !== 'paid' && (
+                                  <button onClick={() => confirmPay(detail, p)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Confirmer reçu</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {/* Add a due payment */}
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                            <input value={newPay.period} onChange={(e) => setNewPay((v) => ({ ...v, period: e.target.value }))} placeholder="Période (ex. Juin 2026)" style={{ ...inputStyle, flex: 2, minWidth: 140 }} />
+                            <input type="number" value={newPay.amount} onChange={(e) => setNewPay((v) => ({ ...v, amount: e.target.value }))} style={{ ...inputStyle, width: 90 }} />
+                            <button onClick={() => addDue(detail)} style={{ background: DARK, color: '#fff', border: 'none', borderRadius: 9, padding: '0 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Dû</button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   {detail.verification_status === 'pending' && (
                     <div style={{ padding: '0 22px 20px', display: 'flex', gap: 10 }}>
@@ -348,7 +411,48 @@ export default function Admin() {
                 </div>
               </div>
             )}
-          </>
+
+        {tab === 'subs' && (
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: DARK }}>Abonnements expirés / comptes bloqués</h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Médecins dont l'essai/abonnement a expiré ou dont le compte est bloqué. Cliquez un nom pour gérer les paiements.</p>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+                <thead>
+                  <tr style={{ background: BG }}>
+                    {['Médecin', 'État', 'Paiement signalé', 'Action'].map((h) => (
+                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {expiredList.map((doc) => {
+                    const declared = (doc.payments || []).some((p) => p.status === 'declared');
+                    return (
+                      <tr key={doc.id} style={{ borderTop: `1px solid ${BORDER}` }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <button onClick={() => setDetailId(doc.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'start' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(doc.user?.full_name)}</div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, textDecoration: 'underline' }}>{doc.user?.full_name}</span>
+                          </button>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ background: doc.blocked ? '#FCE7EE' : '#FEF6E7', color: doc.blocked ? '#C2466A' : '#C28A1B', borderRadius: 20, padding: '3px 11px', fontSize: 12, fontWeight: 700 }}>{doc.blocked ? 'Bloqué' : 'Expiré'}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: 13, color: declared ? '#0E7C52' : MUTED, fontWeight: declared ? 700 : 400 }}>{declared ? 'Oui — à confirmer' : '—'}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <button onClick={() => setDetailId(doc.id)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Gérer</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {expiredList.length === 0 && <tr><td colSpan={4} style={{ padding: '32px 16px', textAlign: 'center', color: MUTED, fontSize: 14 }}>Aucun abonnement expiré.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {tab === 'billing' && (

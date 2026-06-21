@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { SPEC_INFO } from '../../shared.jsx';
+import { SPEC_INFO, subscriptionState } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
+import { fetchDoctorPayments, declarePayment } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -101,6 +102,23 @@ export default function Subscription({ state, setState, go }) {
   const RIB = state?.appSettings?.rib || DEFAULT_RIB;
   const BANK = state?.appSettings?.bank || DEFAULT_BANK;
 
+  // Live subscription status + real payments (declare "J'ai payé").
+  const sub = subscriptionState(state?.myDoctor);
+  const [pays, setPays] = useState([]);
+  const loadPays = () => { if (state?.myDoctor?.id) fetchDoctorPayments(state.myDoctor.id).then(setPays).catch(() => {}); };
+  useEffect(() => { loadPays(); }, [state?.myDoctor?.id]);
+  const declare = async (p) => {
+    try {
+      await declarePayment(p.id);
+      setPays((l) => l.map((x) => x.id === p.id ? { ...x, status: 'declared' } : x));
+      setState({ toast: 'Paiement signalé — en attente de confirmation TikDoc.', toastShow: true });
+    } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); }
+  };
+  const subPill = sub.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Compte bloqué' }
+    : sub.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Abonnement expiré' }
+    : sub.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai gratuit — ${sub.daysLeft} jour(s) restant(s)` }
+    : { bg: '#E7F6EE', c: '#0E7C52', t: 'Abonnement actif' };
+
   const card = (p) => {
     const isCurrent = currentKey === p.key;
     const recommended = p.key === 'pro';
@@ -135,7 +153,31 @@ export default function Subscription({ state, setState, go }) {
 
   return (
     <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>Abonnement</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 22px' }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Abonnement</h1>
+        <span style={{ background: subPill.bg, color: subPill.c, borderRadius: 20, padding: '5px 13px', fontSize: 13, fontWeight: 700 }}>{subPill.t}</span>
+      </div>
+
+      {/* Mes paiements — declare a transfer */}
+      {pays.length > 0 && (
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, margin: '0 0 4px' }}>Mes paiements</h2>
+          <p style={{ fontSize: 12.5, color: MUTED, margin: '0 0 14px' }}>Réglez par virement sur le RIB ci-dessous, puis cliquez « J'ai payé ». TikDoc confirme à réception.</p>
+          <div style={{ fontSize: 13, color: DARK, marginBottom: 14 }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{RIB}</span> · <span style={{ color: MUTED }}>{BANK}</span></div>
+          {pays.map((p) => {
+            const pp = p.status === 'paid' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Payé ✓' } : p.status === 'declared' ? { bg: '#FEF6E7', c: '#C28A1B', t: 'En attente de confirmation' } : { bg: '#F3F4F6', c: '#6B7B76', t: 'À régler' };
+            return (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 14px', marginBottom: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{p.period} · {p.amount} MAD</div>
+                  <span style={{ display: 'inline-block', marginTop: 3, background: pp.bg, color: pp.c, borderRadius: 99, padding: '2px 9px', fontSize: 11.5, fontWeight: 700 }}>{pp.t}</span>
+                </div>
+                {p.status === 'due' && <button onClick={() => declare(p)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>J'ai payé</button>}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Current plan banner */}
       <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`, borderRadius: 16, padding: isMobile ? '20px' : '26px 30px', marginBottom: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>

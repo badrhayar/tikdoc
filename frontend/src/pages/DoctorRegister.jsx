@@ -192,10 +192,21 @@ export default function DoctorRegister() {
             <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>TikDoc</span>
           </div>
 
+          {/* Free-trial banner */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg,#E9F8F0,#DBF1E6)', border: '1px solid #C3E8D8', borderRadius: 14, padding: '14px 18px', marginBottom: 22 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: '#fff', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px -4px rgba(22,160,106,0.5)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#0E7C52' }}>Commencez votre essai gratuit de 14 jours</div>
+              <div style={{ fontSize: 12.5, color: '#1F6B4D' }}>Aucun paiement à l'inscription. Profitez de toutes les fonctionnalités pendant 14 jours.</div>
+            </div>
+          </div>
+
           <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 6px' }}>
             Inscription médecin
           </h1>
-          <p style={{ fontSize: 14, color: MUTED, margin: '0 0 36px' }}>
+          <p style={{ fontSize: 14, color: MUTED, margin: '0 0 30px' }}>
             Créez votre espace professionnel sur TikDoc.
           </p>
 
