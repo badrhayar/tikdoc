@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { I18N, initials } from '../shared.jsx';
+import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -10,6 +10,12 @@ const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const BODY = '#5A6B65';
 const GRAD = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)';
+
+// Hero search dropdown styles
+const sugHead = { padding: '9px 16px 5px', fontSize: 11, fontWeight: 800, color: '#9AA8A2', textTransform: 'uppercase', letterSpacing: '0.5px' };
+const sugRow = { display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'start', background: 'none', border: 'none', borderBottom: '1px solid #F5F7F6', padding: '10px 16px', cursor: 'pointer' };
+const sugIcon = { width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+const sugTag = { fontSize: 11, fontWeight: 700, color: '#0E7C52', background: '#E7F6EE', borderRadius: 99, padding: '2px 9px', flexShrink: 0 };
 
 export default function Landing() {
   const { state, setState, go } = useApp();
@@ -25,6 +31,29 @@ export default function Landing() {
   const [hoveredLang, setHoveredLang] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // ── Hero search: autocomplete (doctors / specialties / clinics) + city ──
+  const [sugOpen, setSugOpen] = useState(false);
+  const [cityKey, setCityKey] = useState('all');
+  const [cityOpen, setCityOpen] = useState(false);
+
+  const doctorsList = state.doctors?.length ? state.doctors : DOCTORS;
+  const q = searchQ.trim().toLowerCase();
+  const specMatches = q ? SPEC_OPTS.filter((s) => s.label.toLowerCase().includes(q)).slice(0, 4) : [];
+  const docMatches = q ? doctorsList.filter((d) => (d.name || '').toLowerCase().includes(q)).slice(0, 4) : [];
+  const clinicMatches = q
+    ? [...new Set(doctorsList.map((d) => d.clinic).filter((c) => c && c.toLowerCase().includes(q)))].slice(0, 3)
+    : [];
+  const hasSug = specMatches.length || docMatches.length || clinicMatches.length;
+  const cityLabel = cityKey === 'all' ? 'Toutes les villes' : cityKey;
+
+  const closeMenus = () => { setSugOpen(false); setCityOpen(false); };
+  const goSearch = (patch) => { setState({ scQ: '', scSpec: 'all', scType: 'all', scConv: false, scCity: cityKey, ...patch }); closeMenus(); go('search'); };
+  const pickDoctor = (d) => { setState({ selDoc: d.id }); closeMenus(); go('profile'); };
+  const pickSpec = (s) => goSearch({ scSpec: s.key });
+  const pickClinic = (c) => goSearch({ scQ: c });
+  const runSearch = () => goSearch({ scQ: searchQ.trim() });
+  const pickCity = (key) => { setCityKey(key); setCityOpen(false); };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -233,20 +262,102 @@ export default function Landing() {
               {t.heroSub}
             </p>
 
-            {/* Search bar — stacks on mobile */}
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 12px 40px -16px rgba(13,43,30,0.28), 0 2px 6px -2px rgba(13,43,30,0.06)', marginBottom: 22, padding: isMobile ? 10 : 0, gap: isMobile ? 8 : 0 }}>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '0 8px' : '0 18px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0 }}>
-                <span style={{ fontSize: 17, color: PRIMARY }}>🔍</span>
-                <input type="text" placeholder={t.searchSpec} value={searchQ} onChange={(e) => setSearchQ(e.target.value)} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: DARK, background: 'transparent', padding: isMobile ? '13px 0' : '16px 0', minWidth: 0 }} />
+            {/* Search bar — autocomplete + city picker, stacks on mobile */}
+            <div style={{ position: 'relative', marginBottom: 22, zIndex: 30 }}>
+              {(sugOpen || cityOpen) && <div onClick={closeMenus} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />}
+              <div style={{ position: 'relative', zIndex: 45, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 12px 40px -16px rgba(13,43,30,0.28), 0 2px 6px -2px rgba(13,43,30,0.06)', padding: isMobile ? 10 : 0, gap: isMobile ? 8 : 0 }}>
+                {/* Specialty / doctor / clinic input */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '0 8px' : '0 18px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0, minWidth: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+                  <input
+                    type="text"
+                    placeholder={t.searchSpec}
+                    value={searchQ}
+                    onChange={(e) => { setSearchQ(e.target.value); setSugOpen(true); setCityOpen(false); }}
+                    onFocus={() => { setSugOpen(true); setCityOpen(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: DARK, background: 'transparent', padding: isMobile ? '13px 0' : '16px 0', minWidth: 0 }}
+                  />
+                </div>
+                {!isMobile && <div style={{ width: 1, height: 30, background: BORDER }} />}
+                {/* City picker */}
+                <button
+                  onClick={() => { setCityOpen((v) => !v); setSugOpen(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: isMobile ? '13px 12px' : '0 16px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0, background: 'transparent', cursor: 'pointer', width: isMobile ? '100%' : 'auto', minWidth: isMobile ? 0 : 150, justifyContent: 'space-between' }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <span style={{ fontSize: 16, color: cityKey === 'all' ? '#9AA8A2' : DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cityLabel}</span>
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+                <button onClick={runSearch} style={{ background: GRAD, color: '#fff', border: 'none', padding: isMobile ? '14px 20px' : '14px 26px', fontSize: 16, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', margin: isMobile ? 0 : 7, borderRadius: 12, minHeight: 48, boxShadow: '0 8px 18px -6px rgba(22,160,106,0.6)' }}>
+                  {t.searchBtn}
+                </button>
               </div>
-              {!isMobile && <div style={{ width: 1, height: 30, background: BORDER }} />}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: isMobile ? '0 8px' : '0 16px', border: isMobile ? `1px solid ${BORDER}` : 'none', borderRadius: isMobile ? 12 : 0 }}>
-                <span style={{ fontSize: 15, color: PRIMARY }}>📍</span>
-                <input type="text" placeholder={t.searchCity} value={searchCity} onChange={(e) => setSearchCity(e.target.value)} style={{ width: isMobile ? '100%' : 118, border: 'none', outline: 'none', fontSize: 16, color: DARK, background: 'transparent', padding: isMobile ? '13px 0' : '16px 0', minWidth: 0 }} />
-              </div>
-              <button onClick={() => go('search')} style={{ background: GRAD, color: '#fff', border: 'none', padding: isMobile ? '14px 20px' : '14px 26px', fontSize: 16, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', margin: isMobile ? 0 : 7, borderRadius: 12, minHeight: 48, boxShadow: '0 8px 18px -6px rgba(22,160,106,0.6)' }}>
-                {t.searchBtn}
-              </button>
+
+              {/* Suggestions dropdown */}
+              {sugOpen && q && hasSug ? (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.18)', overflow: 'hidden', zIndex: 50, maxHeight: 380, overflowY: 'auto' }}>
+                  {specMatches.length > 0 && (
+                    <div>
+                      <div style={sugHead}>Spécialités</div>
+                      {specMatches.map((s) => (
+                        <button key={s.key} onMouseDown={(e) => { e.preventDefault(); pickSpec(s); }} style={sugRow}>
+                          <span style={{ ...sugIcon, background: '#E7F6EE', color: '#0E7C52' }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v6a6 6 0 0 0 12 0V3" /><path d="M4 3h4M16 3h4" /><circle cx="6" cy="20" r="2" /><path d="M18 15a3 3 0 0 1-3 3H9" /></svg>
+                          </span>
+                          <span style={{ flex: 1, fontSize: 14.5, color: DARK, fontWeight: 600 }}>{s.label}</span>
+                          <span style={sugTag}>Spécialité</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {docMatches.length > 0 && (
+                    <div>
+                      <div style={sugHead}>Médecins</div>
+                      {docMatches.map((d) => (
+                        <button key={d.id} onMouseDown={(e) => { e.preventDefault(); pickDoctor(d); }} style={sugRow}>
+                          <span style={{ ...sugIcon, background: '#EAF2FC', color: '#3B6FB0', fontWeight: 800, fontSize: 12 }}>{initials(d.name)}</span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 14.5, color: DARK, fontWeight: 600 }}>{d.name}</span>
+                            <span style={{ display: 'block', fontSize: 12.5, color: '#6B7B76' }}>{SPEC_INFO[d.spec]?.label || d.spec} · {d.city}</span>
+                          </span>
+                          <span style={{ ...sugTag, background: '#EAF2FC', color: '#3B6FB0' }}>Profil</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {clinicMatches.length > 0 && (
+                    <div>
+                      <div style={sugHead}>Cliniques</div>
+                      {clinicMatches.map((c) => (
+                        <button key={c} onMouseDown={(e) => { e.preventDefault(); pickClinic(c); }} style={sugRow}>
+                          <span style={{ ...sugIcon, background: '#F3EEFB', color: '#6B57A6' }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-2M9 9v.01M9 13v.01M9 17v.01" /></svg>
+                          </span>
+                          <span style={{ flex: 1, fontSize: 14.5, color: DARK, fontWeight: 600 }}>{c}</span>
+                          <span style={{ ...sugTag, background: '#F3EEFB', color: '#6B57A6' }}>Clinique</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* City dropdown */}
+              {cityOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, left: isMobile ? 0 : 'auto', width: isMobile ? 'auto' : 260, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: '0 18px 44px rgba(13,43,30,0.18)', overflow: 'hidden', zIndex: 50, maxHeight: 320, overflowY: 'auto' }}>
+                  <button onMouseDown={(e) => { e.preventDefault(); pickCity('all'); }} style={{ ...sugRow, fontWeight: 700 }}>
+                    <span style={{ flex: 1, fontSize: 14.5, color: cityKey === 'all' ? PRIMARY : DARK, fontWeight: 700 }}>Toutes les villes</span>
+                  </button>
+                  {CITY_OPTS.map((c) => (
+                    <button key={c.key} onMouseDown={(e) => { e.preventDefault(); pickCity(c.key); }} style={sugRow}>
+                      <span style={{ flex: 1, fontSize: 14.5, color: cityKey === c.key ? PRIMARY : DARK, fontWeight: cityKey === c.key ? 700 : 500 }}>{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
