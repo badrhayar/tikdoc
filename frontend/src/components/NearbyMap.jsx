@@ -27,6 +27,7 @@ export default function NearbyMap({ doctors = [], onSelect }) {
   const mapRef = useRef(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const lastSigRef = useRef('');
 
   // Create the map once.
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function NearbyMap({ doctors = [], onSelect }) {
     map.addControl(
       new maplibregl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
+        trackUserLocation: false,
         showUserLocation: true,
       }),
       'top-right'
@@ -77,24 +78,40 @@ export default function NearbyMap({ doctors = [], onSelect }) {
         map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
       });
 
+      lastSigRef.current = signature(doctors);
       fitTo(map, doctors);
     });
 
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // Update markers when the doctor list changes.
+  // Update markers when the doctor list changes. Only re-fit the camera when the
+  // actual set of doctors changes — NOT on every render — so the user's manual
+  // zoom/pan is preserved (Search.jsx passes a fresh array each render).
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
       const src = map.getSource('doctors');
-      if (src) { src.setData(featureCollection(doctors)); fitTo(map, doctors); }
+      if (!src) return;
+      src.setData(featureCollection(doctors));
+      const sig = signature(doctors);
+      if (sig !== lastSigRef.current) { lastSigRef.current = sig; fitTo(map, doctors); }
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
   }, [doctors]);
 
   return <div ref={elRef} style={{ width: '100%', height: '100%' }} />;
+}
+
+// Stable key for the current set of doctor positions; used to decide whether a
+// camera re-fit is warranted (ignores array identity churn from re-renders).
+function signature(doctors) {
+  return (doctors || [])
+    .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
+    .map((d) => `${d.id}:${d.lat.toFixed(4)},${d.lng.toFixed(4)}`)
+    .sort()
+    .join('|');
 }
 
 function fitTo(map, doctors) {
