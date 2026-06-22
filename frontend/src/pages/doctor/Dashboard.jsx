@@ -103,8 +103,6 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg> },
     { label: 'Durée moy. consultation', value: avgDur + ' min', sub: "D'après vos services", iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0',
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
-    { label: 'Patients ce mois', value: String(monthPatients), sub: 'Distincts', iconBg: 'linear-gradient(140deg,#EFEAFB,#E3DAF6)', iconColor: '#6B57A6',
-      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg> },
   ];
 
   return (
@@ -208,7 +206,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       </div>
 
       {/* Row 3: Secondary stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 12 : 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 12 : 18 }}>
         {secondary.map((card, i) => (
           <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: 20, display: 'flex', alignItems: 'center', gap: 16, boxShadow: CARD_SHADOW }}>
             <div style={{ width: 50, height: 50, borderRadius: 14, background: card.iconBg, color: card.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6)' }}>{card.icon}</div>
