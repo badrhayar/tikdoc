@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor, doctorCoords } from '../shared.jsx';
+import DoctorLocationMap from '../components/DoctorLocationMap';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
@@ -28,6 +29,8 @@ export default function Profile() {
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
   const si  = SPEC_INFO[doc.spec] || {};
   const [avatarBg, avatarFg] = tint(doctors.indexOf(doc));
+  const docLoc = doctorCoords(doc);
+  const [showMap, setShowMap] = useState(false);
 
   // ── Booking calendar — anchored to Morocco time (Africa/Casablanca) ──
   const m = moroccoNow();                         // { year, month, day, dateISO, minutes }
@@ -232,6 +235,25 @@ export default function Profile() {
               <span style={{ fontWeight: 600 }}>{kmOf(doc)} km</span>
             </div>
           </div>
+
+          {/* Location + directions */}
+          {docLoc && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Localisation</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setShowMap((v) => !v)} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 13px', fontSize: 12.5, fontWeight: 700, color: DARK, cursor: 'pointer' }}>
+                    {showMap ? 'Masquer la carte' : 'Voir sur la carte'}
+                  </button>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${docLoc[0]},${docLoc[1]}`} target="_blank" rel="noopener noreferrer" style={{ background: GRAD, color: '#fff', borderRadius: 9, padding: '7px 13px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 6px 14px -7px rgba(22,160,106,0.7)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                    Itinéraire
+                  </a>
+                </div>
+              </div>
+              {showMap && <DoctorLocationMap lat={docLoc[0]} lng={docLoc[1]} height={220} />}
+            </div>
+          )}
 
           {/* Bio */}
           <div style={{ marginBottom: 20 }}>

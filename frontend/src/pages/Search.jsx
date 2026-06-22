@@ -46,6 +46,28 @@ export default function Search() {
 
   const pinDoc = selPin ? doctors.find((d) => d.id === selPin) : null;
 
+  // Doctors with resolved map coordinates (shared by every map instance).
+  const [mapFull, setMapFull] = useState(false);
+  const mapDoctors = list.map((d) => { const c = doctorCoords(d); return c ? { ...d, lat: c[0], lng: c[1] } : d; });
+
+  // The floating "selected doctor" card, reused on desktop + mobile maps.
+  const pinCard = pinDoc && (
+    <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 18px 44px -16px rgba(13,43,30,0.35)', display: 'flex', alignItems: 'center', gap: 12, animation: 'saFade .18s ease', zIndex: 6 }}>
+      <div style={{ width: 46, height: 46, borderRadius: 12, background: `linear-gradient(140deg, ${tint(doctors.indexOf(pinDoc))[0]}, ${tint(doctors.indexOf(pinDoc))[1]}22)`, color: tint(doctors.indexOf(pinDoc))[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
+        {initials(pinDoc.name)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{pinDoc.name}</div>
+        <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec]?.label || pinDoc.spec}</div>
+        <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD · {kmOf(pinDoc)} km</div>
+      </div>
+      <button onClick={() => { setState({ selDoc: pinDoc.id }); setMapFull(false); go('profile'); }} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}>
+        Voir le profil
+      </button>
+      <button onClick={() => setState({ selPin: null })} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, cursor: 'pointer', fontSize: 16, color: MUTED, width: 30, height: 30, flexShrink: 0 }}>×</button>
+    </div>
+  );
+
   const selectStyle = { padding: '10px 13px', fontSize: 13, border: `1px solid ${BORDER}`, borderRadius: 10, background: '#fff', color: DARK, cursor: 'pointer', outline: 'none', fontWeight: 500 };
 
   /* ── toggle type btn style ── */
@@ -193,6 +215,20 @@ export default function Search() {
 
         {/* Left: doctor list */}
         <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto' }}>
+          {/* Mobile: compact map preview above the list — tap a pin or “Agrandir” for full screen */}
+          {isMobile && mapDoctors.some((d) => typeof d.lat === 'number') && (
+            <div style={{ position: 'relative', height: 200, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 18, boxShadow: '0 6px 20px -12px rgba(13,43,30,0.3)' }}>
+              <NearbyMap doctors={mapDoctors} onSelect={(id) => { setState({ selPin: id }); setMapFull(true); }} />
+              <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 5, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)', borderRadius: 20, padding: '5px 11px', fontSize: 12, fontWeight: 700, color: DARK, boxShadow: '0 2px 8px rgba(13,43,30,0.12)' }}>
+                {list.length} sur la carte
+              </div>
+              <button onClick={() => setMapFull(true)} style={{ position: 'absolute', right: 10, bottom: 10, zIndex: 5, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', fontSize: 12.5, fontWeight: 700, color: DARK, cursor: 'pointer', boxShadow: '0 4px 12px -4px rgba(13,43,30,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                Agrandir
+              </button>
+            </div>
+          )}
+
           <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 16 }}>
             {list.length} médecin{list.length !== 1 ? 's' : ''} <span style={{ color: MUTED, fontWeight: 500 }}>disponible{list.length !== 1 ? 's' : ''}</span>
           </p>
@@ -258,30 +294,33 @@ export default function Search() {
           </div>
         </div>
 
-        {/* Right: stylized map (desktop only) */}
-        <div style={{ display: isMobile ? 'none' : 'block', position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
+        {/* Right: live map (desktop only) */}
+        {!isMobile && (
+        <div style={{ position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
           <div style={{ height: '100%', minHeight: 560, borderRadius: 20, position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
-            <NearbyMap doctors={list.map((d) => { const c = doctorCoords(d); return c ? { ...d, lat: c[0], lng: c[1] } : d; })} onSelect={(id) => setState({ selPin: id })} />
-
-            {pinDoc && (
-              <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 18px 44px -16px rgba(13,43,30,0.35)', display: 'flex', alignItems: 'center', gap: 12, animation: 'saFade .18s ease' }}>
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: `linear-gradient(140deg, ${tint(doctors.indexOf(pinDoc))[0]}, ${tint(doctors.indexOf(pinDoc))[1]}22)`, color: tint(doctors.indexOf(pinDoc))[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
-                  {initials(pinDoc.name)}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{pinDoc.name}</div>
-                  <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec]?.label || pinDoc.spec}</div>
-                  <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD · {kmOf(pinDoc)} km</div>
-                </div>
-                <button onClick={() => { setState({ selDoc: pinDoc.id }); go('profile'); }} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}>
-                  Voir le profil
-                </button>
-                <button onClick={() => setState({ selPin: null })} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, cursor: 'pointer', fontSize: 16, color: MUTED, width: 30, height: 30, flexShrink: 0 }}>×</button>
-              </div>
-            )}
+            <NearbyMap doctors={mapDoctors} onSelect={(id) => setState({ selPin: id })} />
+            {pinCard}
           </div>
         </div>
+        )}
       </div>
+
+      {/* Mobile: full-screen map overlay */}
+      {isMobile && mapFull && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff', display: 'flex', flexDirection: 'column', animation: 'saFade .18s ease' }}>
+          <div style={{ height: 56, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: `1px solid ${BORDER}` }}>
+            <span style={{ fontWeight: 800, color: DARK, fontSize: 15 }}>{list.length} médecin{list.length !== 1 ? 's' : ''} sur la carte</span>
+            <button onClick={() => setMapFull(false)} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: DARK, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              Liste
+            </button>
+          </div>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <NearbyMap doctors={mapDoctors} onSelect={(id) => setState({ selPin: id })} />
+            {pinCard}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
