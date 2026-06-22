@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { DEMO_PATIENTS } from '../../shared.jsx';
+import Icon from '../../components/Icon';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -105,8 +106,8 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
         <div style={{ position: 'relative', marginBottom: 14 }}>
           <span style={{
             position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-            fontSize: 16, color: MUTED, pointerEvents: 'none',
-          }}>🔍</span>
+            color: MUTED, pointerEvents: 'none', display: 'flex',
+          }}><Icon name="search" size={16} /></span>
           <input
             type="text"
             placeholder="Rechercher par nom, CIN, téléphone..."

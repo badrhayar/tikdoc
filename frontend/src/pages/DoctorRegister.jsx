@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS, cityCoord } from '../shared.jsx';
 import LocationPicker from '../components/LocationPicker';
+import Icon from '../components/Icon';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -324,7 +325,9 @@ export default function DoctorRegister() {
                   value={dreg.loc}
                   initialQuery={dreg.address}
                   onChange={(loc) => setDreg('loc', loc)}
-                  onResolveAddress={(text) => { if (!dreg.address) setDreg('address', text); }}
+                  onResolvePlace={({ address, city }) => {
+                    setState({ dreg: { ...dreg, ...(address !== undefined ? { address } : {}), ...(city ? { city } : {}) } });
+                  }}
                 />
               </div>
             </div>
@@ -618,17 +621,17 @@ export default function DoctorRegister() {
         {/* Benefits */}
         {[
           {
-            icon: '🗓',
+            icon: 'calendar',
             title: 'Agenda intelligent',
             desc: 'Gérez vos créneaux, blocages et disponibilités en temps réel.',
           },
           {
-            icon: '💬',
+            icon: 'chat',
             title: 'Rappels SMS automatiques',
             desc: 'Réduisez les absences grâce aux rappels envoyés automatiquement.',
           },
           {
-            icon: '📊',
+            icon: 'chart',
             title: 'Statistiques & facturation',
             desc: 'Suivez votre activité et générez vos factures en un clic.',
           },
@@ -650,14 +653,14 @@ export default function DoctorRegister() {
                 height: 44,
                 borderRadius: 12,
                 background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 20,
                 flexShrink: 0,
               }}
             >
-              {b.icon}
+              <Icon name={b.icon} size={20} />
             </div>
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>{b.title}</p>

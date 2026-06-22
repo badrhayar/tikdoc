@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { DOCTORS, BOOK_DAYS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 export default function SMS() {
   const { state, go } = useApp();
@@ -22,8 +23,8 @@ export default function SMS() {
       padding: '40px 16px',
       fontFamily: 'system-ui, sans-serif',
     }}>
-      <h2 style={{ color: '#15314A', fontWeight: 700, fontSize: 20, marginBottom: 6, textAlign: 'center' }}>
-        📱 SMS de confirmation
+      <h2 style={{ color: '#15314A', fontWeight: 700, fontSize: 20, marginBottom: 6, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Icon name="smartphone" size={20} /> SMS de confirmation
       </h2>
       <p style={{ color: '#6B7B76', fontSize: 14, marginBottom: 36, textAlign: 'center' }}>
         Exemple de SMS de confirmation reçu par le patient

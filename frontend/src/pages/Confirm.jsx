@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { DOCTORS, BOOK_DAYS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 const saPopKeyframes = `
 @keyframes saPop {
@@ -104,10 +105,10 @@ export default function Confirm() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Row icon="📅" label="Date" value={dateLabel} />
-            <Row icon="🕐" label="Heure" value={state.bookSlot || '14:00'} />
-            <Row icon="📍" label="Lieu" value={doc.clinic + ', ' + doc.city} />
-            <Row icon="📞" label="Téléphone" value="05 39 00 11 22" />
+            <Row icon="calendar" label="Date" value={dateLabel} />
+            <Row icon="clock" label="Heure" value={state.bookSlot || '14:00'} />
+            <Row icon="pin" label="Lieu" value={doc.clinic + ', ' + doc.city} />
+            <Row icon="phone" label="Téléphone" value="05 39 00 11 22" />
           </div>
         </div>
 
@@ -126,7 +127,7 @@ export default function Confirm() {
           justifyContent: 'center',
           gap: 8,
         }}>
-          <span>📱</span>
+          <Icon name="smartphone" size={15} />
           Un SMS de confirmation a été envoyé au patient
         </div>
 
@@ -164,7 +165,7 @@ export default function Confirm() {
               cursor: 'pointer',
             }}
           >
-            📆 Ajouter au calendrier
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={15} /> Ajouter au calendrier</span>
           </button>
           <button
             onClick={() => go('home')}
@@ -180,7 +181,7 @@ export default function Confirm() {
               cursor: 'pointer',
             }}
           >
-            🏠 Accueil
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="home" size={15} /> Accueil</span>
           </button>
         </div>
       </div>
@@ -191,7 +192,7 @@ export default function Confirm() {
 function Row({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-      <span style={{ fontSize: 15 }}>{icon}</span>
+      <span style={{ color: '#16A06A', display: 'flex' }}><Icon name={icon} size={16} /></span>
       <span style={{ color: '#6B7B76', minWidth: 64 }}>{label} :</span>
       <span style={{ color: '#15314A', fontWeight: 600 }}>{value}</span>
     </div>

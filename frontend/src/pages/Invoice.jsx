@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { DOCTORS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 const printStyle = `
 @media print {
@@ -77,7 +78,7 @@ export default function Invoice() {
             gap: 8,
           }}
         >
-          🖨️ Imprimer / Télécharger PDF
+          <Icon name="printer" size={16} /> Imprimer / Télécharger PDF
         </button>
       </div>
 

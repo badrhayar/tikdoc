@@ -32,7 +32,9 @@ export default class ErrorBoundary extends Component {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif', background: '#F4F8F5' }}>
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🩺</div>
+            <div style={{ color: '#16A06A', marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 3v5a4 4 0 0 0 8 0V3" /><path d="M8 15a6 6 0 0 0 12 0v-3" /><circle cx="20" cy="9" r="2" /></svg>
+            </div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#15314A', margin: '0 0 8px' }}>Une erreur est survenue</h2>
             <p style={{ fontSize: 14, color: '#6B7B76', lineHeight: 1.6, margin: '0 0 20px' }}>
               Une partie de la page n’a pas pu s’afficher. Vous pouvez recharger l’application.

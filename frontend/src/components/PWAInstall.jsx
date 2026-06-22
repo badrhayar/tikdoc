@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
+import Icon from './Icon';
 
 const TEAL = '#0F6E56';
 
@@ -130,13 +131,13 @@ export default function PWAInstall() {
             </div>
             <p style={{ fontSize: 15.5, color: '#15314A', lineHeight: 1.7, textAlign: 'center', margin: '0 0 8px' }}>
               {ar ? (
-                <>لتثبيت TikDoc: اضغط على <span style={shareChip}>📤</span> ثم «إضافة إلى الشاشة الرئيسية».</>
+                <>لتثبيت TikDoc: اضغط على <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> ثم «إضافة إلى الشاشة الرئيسية».</>
               ) : (
-                <>Pour installer TikDoc&nbsp;: appuyez sur <span style={shareChip}>📤</span> en bas de Safari, puis «&nbsp;Sur l'écran d'accueil&nbsp;».</>
+                <>Pour installer TikDoc&nbsp;: appuyez sur <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> en bas de Safari, puis «&nbsp;Sur l'écran d'accueil&nbsp;».</>
               )}
             </p>
             <div style={{ textAlign: 'center', fontSize: 12.5, color: '#6B7B76', marginBottom: 18 }}>
-              {ar ? 'زر المشاركة يوجد أسفل المتصفح ⬇️' : 'Le bouton Partager se trouve en bas de l’écran ⬇️'}
+              {ar ? 'زر المشاركة يوجد أسفل المتصفح ↓' : 'Le bouton Partager se trouve en bas de l’écran ↓'}
             </div>
             <button onClick={dismissIOS} style={{ ...installBtn, width: '100%', minHeight: 50, fontSize: 15 }}>
               {ar ? 'فهمت' : "J'ai compris"}

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor, doctorCoords } from '../shared.jsx';
 import DoctorLocationMap from '../components/DoctorLocationMap';
+import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
@@ -215,22 +216,22 @@ export default function Profile() {
           {/* Info rows */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
-              <span style={{ fontSize: 16 }}>🕐</span>
+              <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="clock" size={16} /></span>
               <span style={{ color: MUTED }}>Expérience :</span>
               <span style={{ fontWeight: 600 }}>{doc.exp} ans</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
-              <span style={{ fontSize: 16 }}>🗣</span>
+              <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="mic" size={16} /></span>
               <span style={{ color: MUTED }}>Langues :</span>
               <span style={{ fontWeight: 600 }}>{doc.langs.join(', ')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
-              <span style={{ fontSize: 16 }}>📍</span>
+              <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="pin" size={16} /></span>
               <span style={{ color: MUTED }}>Cabinet :</span>
               <span style={{ fontWeight: 600 }}>{doc.clinic}, {doc.city}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
-              <span style={{ fontSize: 16 }}>📍</span>
+              <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="target" size={16} /></span>
               <span style={{ color: MUTED }}>Distance :</span>
               <span style={{ fontWeight: 600 }}>{kmOf(doc)} km</span>
             </div>

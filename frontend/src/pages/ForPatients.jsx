@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { I18N, initials } from '../shared.jsx';
+import { I18N, initials, CITY_OPTS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -9,6 +10,15 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const BODY = '#5A6B65';
+const CITY_COUNT = CITY_OPTS.length;
+
+// Crisp map-pin icon (matches the line-icon style, renders consistently across OSes).
+const PinIcon = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
 
 export default function ForPatients() {
   const { state, setState, go } = useApp();
@@ -34,7 +44,7 @@ export default function ForPatients() {
 
   const features = [
     {
-      icon: '🗓',
+      icon: 'calendar',
       title: lang === 'ar' ? 'حجز 24/7' : lang === 'en' ? 'Online Booking 24/7' : 'Réservation 24h/24',
       desc: lang === 'ar'
         ? 'احجز موعدك في أي وقت، حتى في الليل أو عطلة نهاية الأسبوع، دون انتظار.'
@@ -43,7 +53,7 @@ export default function ForPatients() {
         : 'Réservez votre rendez-vous à toute heure, même la nuit ou le week-end, sans attente téléphonique.',
     },
     {
-      icon: '💬',
+      icon: 'chat',
       title: lang === 'ar' ? 'تذكير بالرسائل' : lang === 'en' ? 'SMS Reminders' : 'Rappels SMS',
       desc: lang === 'ar'
         ? 'تلقّ تذكيرات تلقائية بموعدك عبر الرسائل القصيرة حتى لا تفوّتك أي زيارة.'
@@ -52,7 +62,7 @@ export default function ForPatients() {
         : 'Recevez des rappels automatiques par SMS avant chaque rendez-vous pour ne rien manquer.',
     },
     {
-      icon: '📋',
+      icon: 'clipboard',
       title: lang === 'ar' ? 'ملف موحد' : lang === 'en' ? 'Centralised Medical File' : 'Dossier centralisé',
       desc: lang === 'ar'
         ? 'وثائقك الطبية، نتائج التحاليل والوصفات في مكان واحد آمن يمكنك الوصول إليه دائماً.'
@@ -61,7 +71,7 @@ export default function ForPatients() {
         : 'Tous vos documents médicaux, résultats et ordonnances regroupés dans un espace sécurisé et accessible partout.',
     },
     {
-      icon: '⭐',
+      icon: 'star',
       title: lang === 'ar' ? 'تقييمات موثوقة' : lang === 'en' ? 'Verified Reviews' : 'Avis vérifiés',
       desc: lang === 'ar'
         ? 'اطّلع على تقييمات حقيقية من مرضى تحقق منهم، لاختيار الطبيب الأنسب لك.'
@@ -216,7 +226,7 @@ export default function ForPatients() {
             background: '#D4F0E5', borderRadius: 20, padding: '5px 14px',
             fontSize: 12, fontWeight: 600, color: '#0D7A50', marginBottom: 20,
           }}>
-            <span>🩺</span>
+            <Icon name="stethoscope" size={13} />
             <span>{lang === 'ar' ? 'للمرضى' : lang === 'en' ? 'For Patients' : 'Pour les patients'}</span>
           </div>
           <h1 style={{
@@ -293,8 +303,8 @@ export default function ForPatients() {
                 background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 12px',
                 fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 16,
               }}>
-                <span>📍</span>
-                <span>{lang === 'ar' ? '12 مدينة' : lang === 'en' ? '12 cities' : '12 villes'}</span>
+                <PinIcon size={13} />
+                <span>{lang === 'ar' ? `${CITY_COUNT} مدينة` : lang === 'en' ? `${CITY_COUNT} cities` : `${CITY_COUNT} villes`}</span>
               </div>
               <h2 style={{ fontSize: isMobile ? 23 : 28, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
                 {lang === 'ar'
@@ -305,10 +315,10 @@ export default function ForPatients() {
               </h2>
               <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.6, marginBottom: 24 }}>
                 {lang === 'ar'
-                  ? 'شبكتنا تغطي 12 مدينة مغربية — الدار البيضاء، الرباط، مراكش، طنجة وأكثر.'
+                  ? `شبكتنا تغطي ${CITY_COUNT} مدينة مغربية — الدار البيضاء، الرباط، مراكش، طنجة وأكثر.`
                   : lang === 'en'
-                  ? 'Our network covers 12 Moroccan cities — Casablanca, Rabat, Marrakech, Tangier and more.'
-                  : 'Notre réseau couvre 12 villes marocaines — Casablanca, Rabat, Marrakech, Tanger et plus encore.'}
+                  ? `Our network covers ${CITY_COUNT} Moroccan cities — Casablanca, Rabat, Marrakech, Tangier and more.`
+                  : `Notre réseau couvre ${CITY_COUNT} villes marocaines — Casablanca, Rabat, Marrakech, Tanger et plus encore.`}
               </p>
               <button
                 onClick={() => go('search')}
@@ -372,7 +382,7 @@ export default function ForPatients() {
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
-                Maroc · 12 villes
+                {lang === 'ar' ? `المغرب · ${CITY_COUNT} مدينة` : lang === 'en' ? `Morocco · ${CITY_COUNT} cities` : `Maroc · ${CITY_COUNT} villes`}
               </div>
             </div>
           </div>
@@ -403,9 +413,9 @@ export default function ForPatients() {
                   width: 52, height: 52, borderRadius: 14, flexShrink: 0,
                   background: '#EAF6F0',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24,
+                  color: PRIMARY,
                 }}>
-                  {f.icon}
+                  <Icon name={f.icon} size={24} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 8, marginTop: 2 }}>

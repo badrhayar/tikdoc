@@ -261,7 +261,11 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             })}
           </div>
           <div style={{ marginTop: 10, fontSize: 11.5, color: MUTED, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <span>🟢 Réservable</span><span>⚪ Désactivé</span><span>🟡 Réservé</span>
+            {[['#16A06A', 'Réservable'], ['#C7D2CE', 'Désactivé'], ['#F59E0B', 'Réservé']].map(([c, lbl]) => (
+              <span key={lbl} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: c, flexShrink: 0 }} /> {lbl}
+              </span>
+            ))}
           </div>
         </div>
 

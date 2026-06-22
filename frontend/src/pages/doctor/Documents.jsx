@@ -18,14 +18,14 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-dig
 
 
 const MOCK_DOCUMENTS = [
-  { id: 1, icon: '📄', name: 'ordonnance_benali_14juin.pdf', patient: 'Amina Benali', date: '14/06/2026', size: '128 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 2, icon: '🖼', name: 'radio_thorax_elfassi.jpg', patient: 'Youssef El Fassi', date: '13/06/2026', size: '2.4 Mo', status: 'Lu', statusColor: '#3B82F6' },
-  { id: 3, icon: '📄', name: 'analyse_sang_alaoui.pdf', patient: 'Fatima Zahra Alaoui', date: '12/06/2026', size: '340 Ko', status: 'Reçu', statusColor: '#F59E0B' },
-  { id: 4, icon: '📄', name: 'compte_rendu_chraibi.pdf', patient: 'Omar Chraibi', date: '11/06/2026', size: '215 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 5, icon: '🖼', name: 'echo_abdominale_tazi.png', patient: 'Leila Tazi', date: '10/06/2026', size: '1.8 Mo', status: 'Lu', statusColor: '#3B82F6' },
-  { id: 6, icon: '📄', name: 'ordonnance_benali_08juin.pdf', patient: 'Amina Benali', date: '08/06/2026', size: '98 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 7, icon: '📄', name: 'resultats_nfs_elfassi.pdf', patient: 'Youssef El Fassi', date: '07/06/2026', size: '180 Ko', status: 'Reçu', statusColor: '#F59E0B' },
-  { id: 8, icon: '🖼', name: 'fond_oeil_alaoui.jpg', patient: 'Fatima Zahra Alaoui', date: '05/06/2026', size: '3.1 Mo', status: 'Lu', statusColor: '#3B82F6' },
+  { id: 1, icon: 'file', name: 'ordonnance_benali_14juin.pdf', patient: 'Amina Benali', date: '14/06/2026', size: '128 Ko', status: 'Envoyé', statusColor: PRIMARY },
+  { id: 2, icon: 'image', name: 'radio_thorax_elfassi.jpg', patient: 'Youssef El Fassi', date: '13/06/2026', size: '2.4 Mo', status: 'Lu', statusColor: '#3B82F6' },
+  { id: 3, icon: 'file', name: 'analyse_sang_alaoui.pdf', patient: 'Fatima Zahra Alaoui', date: '12/06/2026', size: '340 Ko', status: 'Reçu', statusColor: '#F59E0B' },
+  { id: 4, icon: 'file', name: 'compte_rendu_chraibi.pdf', patient: 'Omar Chraibi', date: '11/06/2026', size: '215 Ko', status: 'Envoyé', statusColor: PRIMARY },
+  { id: 5, icon: 'image', name: 'echo_abdominale_tazi.png', patient: 'Leila Tazi', date: '10/06/2026', size: '1.8 Mo', status: 'Lu', statusColor: '#3B82F6' },
+  { id: 6, icon: 'file', name: 'ordonnance_benali_08juin.pdf', patient: 'Amina Benali', date: '08/06/2026', size: '98 Ko', status: 'Envoyé', statusColor: PRIMARY },
+  { id: 7, icon: 'file', name: 'resultats_nfs_elfassi.pdf', patient: 'Youssef El Fassi', date: '07/06/2026', size: '180 Ko', status: 'Reçu', statusColor: '#F59E0B' },
+  { id: 8, icon: 'image', name: 'fond_oeil_alaoui.jpg', patient: 'Fatima Zahra Alaoui', date: '05/06/2026', size: '3.1 Mo', status: 'Lu', statusColor: '#3B82F6' },
 ];
 
 const DOC_TYPES = ['Ordonnance', "Résultats d'analyses", 'Compte-rendu', 'Autre'];

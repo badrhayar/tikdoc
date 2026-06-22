@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { I18N, initials } from '../shared.jsx';
+import { I18N, initials, CITY_OPTS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -33,28 +34,28 @@ export default function About() {
   ];
 
   const stats = [
-    { num: '1 200+', label: lang === 'ar' ? 'طبيب' : 'Médecins partenaires', icon: '🩺' },
-    { num: '85 000+', label: lang === 'ar' ? 'مريض' : 'Patients accompagnés', icon: '👥' },
-    { num: '12', label: lang === 'ar' ? 'مدينة' : 'Villes au Maroc', icon: '🏙️' },
+    { num: '1 200+', label: lang === 'ar' ? 'طبيب' : 'Médecins partenaires', icon: 'stethoscope' },
+    { num: '85 000+', label: lang === 'ar' ? 'مريض' : 'Patients accompagnés', icon: 'users' },
+    { num: `${CITY_OPTS.length}`, label: lang === 'ar' ? 'مدينة' : 'Villes au Maroc', icon: 'buildings' },
   ];
 
   const features = [
     {
-      icon: '🎯',
+      icon: 'target',
       title: lang === 'ar' ? 'مهمتنا' : 'Notre Mission',
       desc: lang === 'ar'
         ? 'تبسيط الوصول إلى الرعاية الصحية عبر الرقمنة، مع الحفاظ على الجودة والقرب من المريض.'
         : "Simplifier l'accès aux soins de santé au Maroc grâce au numérique, tout en maintenant la qualité et la proximité.",
     },
     {
-      icon: '🛡',
+      icon: 'shield',
       title: lang === 'ar' ? 'الثقة والأمان' : 'Confiance & Sécurité',
       desc: lang === 'ar'
         ? 'بياناتك الصحية محمية وفق أعلى معايير الأمان الرقمي. نتعامل مع أطباء موثقين ومرخصين.'
         : 'Vos données de santé sont protégées selon les plus hauts standards de sécurité. Nous collaborons uniquement avec des médecins vérifiés.',
     },
     {
-      icon: '❤️',
+      icon: 'heart',
       title: lang === 'ar' ? 'القرب من المريض' : 'Proximité Patient',
       desc: lang === 'ar'
         ? 'نؤمن بأن كل مريض يستحق رعاية سريعة وقريبة منه، في أي وقت وأي مكان.'
@@ -206,7 +207,7 @@ export default function About() {
             background: '#D4F0E5', borderRadius: 20, padding: '5px 14px',
             fontSize: 12, fontWeight: 600, color: '#0D7A50', marginBottom: 20,
           }}>
-            <span>🌿</span>
+            <Icon name="leaf" size={13} />
             <span>{lang === 'ar' ? 'من نحن' : lang === 'en' ? 'About TikDoc' : 'À propos de TikDoc'}</span>
           </div>
           <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 800, color: DARK, lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.4px' }}>
@@ -238,7 +239,7 @@ export default function About() {
                 borderRadius: 16,
               }}
             >
-              <div style={{ fontSize: 36, marginBottom: 12 }}>{s.icon}</div>
+              <div style={{ color: PRIMARY, marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon name={s.icon} size={34} /></div>
               <div style={{ fontSize: 38, fontWeight: 900, color: PRIMARY, letterSpacing: '-1px', marginBottom: 6 }}>
                 {s.num}
               </div>
@@ -267,9 +268,9 @@ export default function About() {
                 <div style={{
                   width: 56, height: 56, borderRadius: 14,
                   background: '#EAF6F0', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 26, marginBottom: 20,
+                  justifyContent: 'center', color: PRIMARY, marginBottom: 20,
                 }}>
-                  {f.icon}
+                  <Icon name={f.icon} size={26} />
                 </div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 10 }}>
                   {f.title}

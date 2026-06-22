@@ -4,7 +4,7 @@ import LocationPicker from '../../components/LocationPicker';
 import { saveDoctorServices, updateDoctorFields, uploadAvatar } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
-const villes = CITY_OPTS.map((c) => c.label);
+const villes = CITY_OPTS.map((c) => (typeof c === 'string' ? c : c.label));
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -147,6 +147,7 @@ function formFromProfile(appUser, myDoctor) {
     telephone: appUser?.phone || '',
     email: appUser?.email || '',
     bio: myDoctor?.bio || '',
+    adresse: myDoctor?.clinic_address || '',
     loc: (myDoctor?.lat != null && myDoctor?.lng != null) ? { lat: myDoctor.lat, lng: myDoctor.lng } : null,
   };
 }
@@ -195,19 +196,20 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   async function saveAll() {
-    // Persist services + bio + city so patients see them and the profile is real.
+    // Persist services + bio + city + clinic address + coordinates.
     if (isSupabaseConfigured && myDoctor?.id) {
       try {
         const saved = await saveDoctorServices(myDoctor.id, services);
-        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null });
-        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null }, toast: 'Modifications enregistrées ✓', toastShow: true });
-        return;
+        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null, clinic_address: form.adresse || null, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null });
+        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, clinic_address: form.adresse, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null }, toast: 'Modifications enregistrées ✓', toastShow: true });
+        return true;
       } catch (e) {
         setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
-        return;
+        return false;
       }
     }
     setState({ toast: 'Modifications enregistrées ✓', toastShow: true });
+    return true;
   }
 
   const [insurances, setInsurances] = useState({
@@ -319,12 +321,23 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
             </div>
           </Card>
 
-          {/* Clinic location — drives the doctor's pin on the patient map */}
+          {/* Clinic location — drives the doctor's pin on the patient map.
+              Address ⇆ pin stay in sync, the city updates itself, and the
+              built-in button saves location + address + city in one click. */}
           <Card title="Localisation du cabinet">
             <LocationPicker
               city={form.ville}
               value={form.loc}
+              initialQuery={form.adresse}
               onChange={(loc) => updateForm('loc', loc)}
+              onResolvePlace={({ address, city }) => {
+                setForm((prev) => ({
+                  ...prev,
+                  ...(address !== undefined ? { adresse: address } : {}),
+                  ...(city ? { ville: city } : {}),
+                }));
+              }}
+              onSave={saveAll}
             />
           </Card>
 

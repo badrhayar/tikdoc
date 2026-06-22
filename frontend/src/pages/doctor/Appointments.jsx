@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
+import Icon from '../../components/Icon';
 import { updateAppointmentStatus, STATUS_FR } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -109,8 +110,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
         <div style={{ position: 'relative', marginBottom: 14 }}>
           <span style={{
             position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-            fontSize: 16, color: MUTED, pointerEvents: 'none',
-          }}>🔍</span>
+            color: MUTED, pointerEvents: 'none', display: 'flex',
+          }}><Icon name="search" size={16} /></span>
           <input
             type="text"
             placeholder="Rechercher un patient, un motif..."

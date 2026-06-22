@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../shared.jsx';
+import Icon from '../components/Icon';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -378,7 +379,7 @@ export default function Landing() {
             <div className="sa-float" style={{ height: '100%', borderRadius: 28, background: GRAD, position: 'relative', overflow: 'hidden', boxShadow: '0 30px 70px -28px rgba(11,106,70,0.7)' }}>
               <div style={{ position: 'absolute', top: -50, right: -50, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.10)' }} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                <div style={{ fontSize: isMobile ? 52 : 72, marginBottom: 10, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2))' }}>🩺</div>
+                <div style={{ marginBottom: 10, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2))' }}><Icon name="stethoscope" size={isMobile ? 52 : 72} strokeWidth={1.6} /></div>
                 <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 19, fontWeight: 800, opacity: 0.95 }}>TikDoc</div>
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{tr('Votre santé, notre priorité', 'Your health, our priority', 'صحتك أولويتنا')}</div>
               </div>
@@ -387,7 +388,7 @@ export default function Landing() {
             {!isMobile && (
               <>
                 <div style={{ position: 'absolute', top: 26, [rtl ? 'right' : 'left']: -28, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.7)', borderRadius: 16, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 11, boxShadow: '0 16px 40px -14px rgba(13,43,30,0.3)' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 11, background: '#E7F6EE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>✅</div>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: '#E7F6EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PRIMARY }}><Icon name="checkCircle" size={20} /></div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: DARK }}>{tr('RDV confirmé', 'Booking confirmed', 'تم تأكيد الموعد')}</div>
                     <div style={{ fontSize: 11.5, color: MUTED }}>{tr('Aujourd’hui · 14:00', 'Today · 2:00 PM', 'اليوم · 14:00')}</div>
@@ -434,13 +435,13 @@ export default function Landing() {
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isPhone ? 16 : 26 }}>
             {[
-              { icon: '🔍', title: t.s1t, sub: t.s1s, num: '01' },
-              { icon: '📅', title: t.s2t, sub: t.s2s, num: '02' },
-              { icon: '✅', title: t.s3t, sub: t.s3s, num: '03' },
+              { icon: 'search', title: t.s1t, sub: t.s1s, num: '01' },
+              { icon: 'calendar', title: t.s2t, sub: t.s2s, num: '02' },
+              { icon: 'checkCircle', title: t.s3t, sub: t.s3s, num: '03' },
             ].map((step, i) => (
               <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 20, padding: isPhone ? '26px 22px' : '34px 30px', position: 'relative', overflow: 'hidden', boxShadow: '0 2px 10px -4px rgba(13,43,30,0.08)' }}>
                 <div style={{ position: 'absolute', top: 14, [rtl ? 'left' : 'right']: 22, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 46, fontWeight: 800, color: '#EEF5F1', lineHeight: 1 }}>{step.num}</div>
-                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(140deg, #E7F6EE, #D5EFE1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 20, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.7)' }}>{step.icon}</div>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(140deg, #E7F6EE, #D5EFE1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PRIMARY, marginBottom: 20, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.7)' }}><Icon name={step.icon} size={26} /></div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: DARK, marginBottom: 9 }}>{step.title}</h3>
                 <p style={{ fontSize: 14.5, color: BODY, lineHeight: 1.62, margin: 0 }}>{step.sub}</p>
               </div>

@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
+import Icon from '../components/Icon';
 import { createReview, getOrCreateConversation, sendMessage, uploadAvatar } from '../lib/api';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
@@ -26,7 +27,7 @@ const BORDER_STRONG = '#D5E5DD';
 const HEADER_BG = '#EDF5F0';
 const CARD_SHADOW = '0 2px 12px rgba(21,49,74,0.08)';
 const TINTS = [['#E7F6EE','#138257'],['#E8F1FC','#3B6FB0'],['#FEF3DC','#C28A1B'],['#FCE7EE','#C2466A'],['#EFEAFB','#6B57A6'],['#E4F2F4','#1B7E86']];
-const DOC_ICONS = { Ordonnance:'📋', Résultat:'🔬', 'Compte-rendu':'🏥', Facture:'💰', Radiographie:'🩻', Certificat:'📄', Échographie:'🔊' };
+const DOC_ICONS = { Ordonnance:'clipboard', Résultat:'flask', 'Compte-rendu':'hospital', Facture:'wallet', Radiographie:'activity', Certificat:'file', Échographie:'volume' };
 
 const PAST_APPTS = [
   { doctor:'Dr. Karim Benali', spec:'Cardiologie', when:'02 Mai 2024', ci:1 },
@@ -39,9 +40,9 @@ const FAV_DOCS = [
 ];
 
 const NOTIFS = [
-  { icon:'📅', title:'Rappel rendez-vous', text:'Dr. Marmioui demain à 14:00', ago:'il y a 2 h', ci:0 },
-  { icon:'✅', title:'Confirmation',       text:'Rdv confirmé le 15 Mai à 14:00', ago:'il y a 1 jour', ci:3 },
-  { icon:'ℹ️', title:'Annulation possible', text:'Annulation possible jusqu\'au 14 Mai 13:00', ago:'il y a 1 jour', ci:5 },
+  { icon:'calendar', title:'Rappel rendez-vous', text:'Dr. Marmioui demain à 14:00', ago:'il y a 2 h', ci:0 },
+  { icon:'checkCircle', title:'Confirmation',       text:'Rdv confirmé le 15 Mai à 14:00', ago:'il y a 1 jour', ci:3 },
+  { icon:'info', title:'Annulation possible', text:'Annulation possible jusqu\'au 14 Mai 13:00', ago:'il y a 1 jour', ci:5 },
 ];
 
 const PATIENT_MSGS = [
@@ -209,12 +210,12 @@ export default function PatientAccount() {
             {nextAppt ? (
               <>
                 <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{nextAppt.doctorName} · {SPEC_LABEL(nextAppt.spec)}</div>
-                <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}>🗓 {fmtDate(nextAppt.datetime)} · {fmtTime(nextAppt.datetime)}{nextAppt.clinic ? ` — ${nextAppt.clinic}, ${nextAppt.city}` : ''}</div>
+                <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(nextAppt.datetime)} · {fmtTime(nextAppt.datetime)}{nextAppt.clinic ? ` — ${nextAppt.clinic}, ${nextAppt.city}` : ''}</div>
               </>
             ) : (
               <>
                 <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>Aucun rendez-vous à venir</div>
-                <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}>🗓 Réservez votre prochaine consultation en quelques clics.</div>
+                <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> Réservez votre prochaine consultation en quelques clics.</div>
               </>
             )}
           </div>
@@ -267,7 +268,7 @@ export default function PatientAccount() {
                 const [bg, fg] = tint(n.ci);
                 return (
                   <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start' }}>
-                    <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>{n.icon}</span>
+                    <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Icon name={n.icon} size={16} /></span>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{n.title}</div>
                       <div style={{ fontSize:12, color:MUT, lineHeight:1.4 }}>{n.text}</div>
@@ -304,8 +305,8 @@ export default function PatientAccount() {
                       </div>
                       <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{STATUS_FR[a.status] || a.status}</span>
                     </div>
-                    <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}>🗓 {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
-                    {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}>📍 {a.clinic}, {a.city}</div>}
+                    <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
+                    {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, fontSize:11.5, color:G }}>
                       ✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.
                     </div>
@@ -377,8 +378,8 @@ export default function PatientAccount() {
                   const [tBg, tFg] = tint(i % 6);
                   return (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:11, border:`1px solid ${BORDER}`, borderRadius:12, padding:'11px 13px' }}>
-                      <span style={{ width:36, height:36, borderRadius:10, background:tBg, color:tFg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                        {DOC_ICONS[d.type] || '📄'}
+                      <span style={{ width:36, height:36, borderRadius:10, background:tBg, color:tFg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <Icon name={DOC_ICONS[d.type] || 'file'} size={18} />
                       </span>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', direction:'ltr' }}>{d.name}</div>
@@ -405,7 +406,7 @@ export default function PatientAccount() {
                       {DOC_TYPE_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                     <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, border:'1px dashed #C9D6D1', borderRadius:9, background:'#F8FBF9', padding:'8px 11px' }}>
-                      <span style={{ color:G }}>📎</span>
+                      <span style={{ color:G, display:'flex' }}><Icon name="paperclip" size={14} /></span>
                       <input value={pNewDoc?.name || ''} onChange={e => setState({ pNewDoc: { ...pNewDoc, name: e.target.value } })} placeholder="fichier.pdf" style={{ flex:1, minWidth:0, border:'none', outline:'none', background:'none', fontSize:12.5, direction:'ltr' }} />
                     </div>
                   </div>
