@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { subscriptionState } from './shared.jsx';
 import PWAInstall from './components/PWAInstall';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Landing        = lazy(() => import('./pages/Landing'));
 const Search         = lazy(() => import('./pages/Search'));
@@ -76,7 +77,9 @@ function AppShell() {
   return (
     <>
       <Suspense fallback={null}>
-        <Screen />
+        <ErrorBoundary resetKey={screen}>
+          <Screen />
+        </ErrorBoundary>
       </Suspense>
 
       <PWAInstall />

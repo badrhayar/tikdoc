@@ -37,13 +37,23 @@ export default function LocationPicker({ city, value, initialQuery = '', onChang
     if (mapRef.current || !elRef.current) return;
     const hasVal = value && typeof value.lat === 'number';
     const start = hasVal ? [value.lng, value.lat] : cityLngLat(city);
-    const map = new maplibregl.Map({
-      container: elRef.current,
-      style: STYLE,
-      center: start,
-      zoom: hasVal ? 15 : (CITY_COORDS[city] ? 11.5 : 4.8),
-    });
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: elRef.current,
+        style: STYLE,
+        center: start,
+        zoom: hasVal ? 15 : (CITY_COORDS[city] ? 11.5 : 4.8),
+      });
+    } catch (err) {
+      console.warn('LocationPicker: init failed', err);
+      return;
+    }
     mapRef.current = map;
+    map.on('error', (e) => console.warn('LocationPicker:', e?.error?.message || e));
+    const canvas = map.getCanvas();
+    const onCtxLost = (ev) => { ev.preventDefault(); };
+    canvas.addEventListener('webglcontextlost', onCtxLost, false);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
     const marker = new maplibregl.Marker({ draggable: true, color: '#16A06A' }).setLngLat(start).addTo(map);
@@ -52,7 +62,11 @@ export default function LocationPicker({ city, value, initialQuery = '', onChang
     marker.on('dragend', () => emit(marker.getLngLat()));
     map.on('click', (e) => { marker.setLngLat(e.lngLat); emit(e.lngLat); });
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      canvas.removeEventListener('webglcontextlost', onCtxLost);
+      try { map.remove(); } catch (e) { /* ignore */ }
+      mapRef.current = null;
+    };
   }, []);
 
   // When the city changes and no pin was set yet, recenter to the city.

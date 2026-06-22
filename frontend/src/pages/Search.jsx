@@ -216,7 +216,7 @@ export default function Search() {
         {/* Left: doctor list */}
         <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto' }}>
           {/* Mobile: compact map preview above the list — tap a pin or “Agrandir” for full screen */}
-          {isMobile && mapDoctors.some((d) => typeof d.lat === 'number') && (
+          {isMobile && !mapFull && mapDoctors.some((d) => typeof d.lat === 'number') && (
             <div style={{ position: 'relative', height: 200, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 18, boxShadow: '0 6px 20px -12px rgba(13,43,30,0.3)' }}>
               <NearbyMap doctors={mapDoctors} onSelect={(id) => { setState({ selPin: id }); setMapFull(true); }} />
               <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 5, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)', borderRadius: 20, padding: '5px 11px', fontSize: 12, fontWeight: 700, color: DARK, boxShadow: '0 2px 8px rgba(13,43,30,0.12)' }}>

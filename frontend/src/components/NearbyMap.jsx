@@ -32,14 +32,25 @@ export default function NearbyMap({ doctors = [], onSelect }) {
   // Create the map once.
   useEffect(() => {
     if (mapRef.current || !elRef.current) return;
-    const map = new maplibregl.Map({
-      container: elRef.current,
-      style: STYLE,
-      center: MOROCCO_CENTER,
-      zoom: 4.6,
-      attributionControl: { compact: true },
-    });
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: elRef.current,
+        style: STYLE,
+        center: MOROCCO_CENTER,
+        zoom: 4.6,
+        attributionControl: { compact: true },
+      });
+    } catch (err) {
+      console.warn('NearbyMap: init failed', err);
+      return;
+    }
     mapRef.current = map;
+    // Swallow async map errors (tile/style/WebGL) so they never bubble up.
+    map.on('error', (e) => console.warn('NearbyMap:', e?.error?.message || e));
+    const canvas = map.getCanvas();
+    const onCtxLost = (ev) => { ev.preventDefault(); };
+    canvas.addEventListener('webglcontextlost', onCtxLost, false);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.addControl(
       new maplibregl.GeolocateControl({
@@ -51,6 +62,7 @@ export default function NearbyMap({ doctors = [], onSelect }) {
     );
 
     map.on('load', () => {
+      try {
       map.addSource('doctors', { type: 'geojson', data: featureCollection(doctors), cluster: true, clusterRadius: 46, clusterMaxZoom: 13 });
 
       map.addLayer({ id: 'clusters', type: 'circle', source: 'doctors', filter: ['has', 'point_count'],
@@ -80,9 +92,14 @@ export default function NearbyMap({ doctors = [], onSelect }) {
 
       lastSigRef.current = signature(doctors);
       fitTo(map, doctors);
+      } catch (err) { console.warn('NearbyMap: layer setup failed', err); }
     });
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      canvas.removeEventListener('webglcontextlost', onCtxLost);
+      try { map.remove(); } catch (e) { /* ignore */ }
+      mapRef.current = null;
+    };
   }, []);
 
   // Update markers when the doctor list changes. Only re-fit the camera when the
@@ -92,11 +109,13 @@ export default function NearbyMap({ doctors = [], onSelect }) {
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
-      const src = map.getSource('doctors');
-      if (!src) return;
-      src.setData(featureCollection(doctors));
-      const sig = signature(doctors);
-      if (sig !== lastSigRef.current) { lastSigRef.current = sig; fitTo(map, doctors); }
+      try {
+        const src = map.getSource('doctors');
+        if (!src) return;
+        src.setData(featureCollection(doctors));
+        const sig = signature(doctors);
+        if (sig !== lastSigRef.current) { lastSigRef.current = sig; fitTo(map, doctors); }
+      } catch (e) { /* ignore transient style/WebGL errors */ }
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
   }, [doctors]);
