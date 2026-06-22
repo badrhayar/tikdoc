@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel, doctorCoords } from '../shared.jsx';
+import NearbyMap from '../components/NearbyMap';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -259,41 +260,8 @@ export default function Search() {
 
         {/* Right: stylized map (desktop only) */}
         <div style={{ display: isMobile ? 'none' : 'block', position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
-          <div style={{ height: '100%', minHeight: 560, borderRadius: 20, background: 'linear-gradient(135deg, #c8dfc8 0%, #d8ecd4 40%, #b8d4b8 100%)', position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-            <div style={{ position: 'absolute', top: '30%', left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.4)', borderRadius: 2 }} />
-            <div style={{ position: 'absolute', top: '60%', left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
-            <div style={{ position: 'absolute', left: '35%', top: 0, bottom: 0, width: 3, background: 'rgba(255,255,255,0.4)', borderRadius: 2 }} />
-            <div style={{ position: 'absolute', left: '65%', top: 0, bottom: 0, width: 2, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
-
-            <div style={{ position: 'absolute', top: 14, left: 16, fontSize: 12, fontWeight: 600, color: DARK, background: 'rgba(255,255,255,0.85)', padding: '5px 11px', borderRadius: 20, backdropFilter: 'blur(4px)' }}>
-              Votre position
-            </div>
-
-            <div style={{ position: 'absolute', left: '45%', top: '55%', transform: 'translate(-50%, -50%)' }}>
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#2563EB', border: '3px solid #fff', boxShadow: '0 0 0 4px rgba(37,99,235,0.25)' }} />
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#2563EB', textAlign: 'center', marginTop: 2, background: 'rgba(255,255,255,0.9)', borderRadius: 8, padding: '1px 5px' }}>Vous</div>
-            </div>
-
-            {doctors.map((d) => {
-              const isSelected = selPin === d.id;
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => setState({ selPin: d.id })}
-                  style={{
-                    position: 'absolute', left: d.x + '%', top: d.y + '%', transform: 'translate(-50%, -50%)',
-                    background: isSelected ? GRAD : '#fff', color: isSelected ? '#fff' : DARK,
-                    border: `1.5px solid ${isSelected ? 'transparent' : '#fff'}`, borderRadius: 20, padding: '5px 11px',
-                    fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                    boxShadow: isSelected ? '0 8px 18px -5px rgba(22,160,106,0.6)' : '0 2px 8px rgba(13,43,30,0.18)',
-                    whiteSpace: 'nowrap', zIndex: isSelected ? 10 : 5, transition: 'all 0.15s',
-                  }}
-                >
-                  {d.price} MAD
-                </button>
-              );
-            })}
+          <div style={{ height: '100%', minHeight: 560, borderRadius: 20, position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
+            <NearbyMap doctors={list.map((d) => { const c = doctorCoords(d); return c ? { ...d, lat: c[0], lng: c[1] } : d; })} onSelect={(id) => setState({ selPin: id })} />
 
             {pinDoc && (
               <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 18px 44px -16px rgba(13,43,30,0.35)', display: 'flex', alignItems: 'center', gap: 12, animation: 'saFade .18s ease' }}>
@@ -302,7 +270,7 @@ export default function Search() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{pinDoc.name}</div>
-                  <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec].label}</div>
+                  <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec]?.label || pinDoc.spec}</div>
                   <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD · {kmOf(pinDoc)} km</div>
                 </div>
                 <button onClick={() => { setState({ selDoc: pinDoc.id }); go('profile'); }} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}>

@@ -30,6 +30,8 @@ function mapDoctor(row) {
     prayerIds: row.prayer_ids || [],
     services: Array.isArray(row.services) ? row.services : [],
     avatar: row.avatar_url || '',
+    lat: row.lat ?? null,
+    lng: row.lng ?? null,
   };
 }
 
@@ -230,6 +232,8 @@ export async function createDoctorProfile(appUserId, p) {
       bio: p.bio || null,
       cnom: p.cnom || null,
       verification_status: 'pending',
+      lat: p.lat ?? null,
+      lng: p.lng ?? null,
     })
     .select()
     .single();

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS } from '../shared.jsx';
+import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS, cityCoord } from '../shared.jsx';
+import LocationPicker from '../components/LocationPicker';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
@@ -19,7 +20,7 @@ export default function DoctorRegister() {
 
   const dreg = state.dreg || {
     name: '', spec: 'generaliste', inpe: '', ordre: '',
-    city: 'Casablanca', address: '', phone: '', email: '', fee: '300', pass: '',
+    city: 'Casablanca', address: '', phone: '', email: '', fee: '300', pass: '', loc: null,
   };
 
   const [busy, setBusy] = useState(false);
@@ -52,7 +53,11 @@ export default function DoctorRegister() {
         setNeedConfirm(true);   // email confirmation required → finish profile after first login
         return;
       }
+      let dlat, dlng;
+      if (dreg.loc && typeof dreg.loc.lat === 'number') { dlat = dreg.loc.lat; dlng = dreg.loc.lng; }
+      else { [dlat, dlng] = cityCoord(dreg.city); }
       const doctorRow = await createDoctorProfile(res.appUser.id, {
+        lat: dlat, lng: dlng,
         specialty: dreg.spec,
         city: dreg.city,
         clinicAddress: dreg.address,
@@ -312,6 +317,16 @@ export default function DoctorRegister() {
                 onChange={(e) => setDreg('address', e.target.value)}
                 style={inputStyle}
               />
+              <div style={{ marginTop: 12 }}>
+                <label style={labelStyle}>Localisation du cabinet sur la carte</label>
+                <LocationPicker
+                  city={dreg.city}
+                  value={dreg.loc}
+                  initialQuery={dreg.address}
+                  onChange={(loc) => setDreg('loc', loc)}
+                  onResolveAddress={(text) => { if (!dreg.address) setDreg('address', text); }}
+                />
+              </div>
             </div>
 
             {/* Email */}

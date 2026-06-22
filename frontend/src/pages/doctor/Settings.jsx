@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SPEC_INFO, CITY_OPTS } from '../../shared.jsx';
+import LocationPicker from '../../components/LocationPicker';
 import { saveDoctorServices, updateDoctorFields, uploadAvatar } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
@@ -146,6 +147,7 @@ function formFromProfile(appUser, myDoctor) {
     telephone: appUser?.phone || '',
     email: appUser?.email || '',
     bio: myDoctor?.bio || '',
+    loc: (myDoctor?.lat != null && myDoctor?.lng != null) ? { lat: myDoctor.lat, lng: myDoctor.lng } : null,
   };
 }
 
@@ -197,8 +199,8 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     if (isSupabaseConfigured && myDoctor?.id) {
       try {
         const saved = await saveDoctorServices(myDoctor.id, services);
-        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null });
-        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville }, toast: 'Modifications enregistrées ✓', toastShow: true });
+        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null });
+        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null }, toast: 'Modifications enregistrées ✓', toastShow: true });
         return;
       } catch (e) {
         setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
@@ -315,6 +317,15 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
               <InputField label="Téléphone cabinet" value={form.telephone} onChange={v => updateForm('telephone', v)} type="tel" />
               <InputField label="Email professionnel" value={form.email} onChange={v => updateForm('email', v)} type="email" />
             </div>
+          </Card>
+
+          {/* Clinic location — drives the doctor's pin on the patient map */}
+          <Card title="Localisation du cabinet">
+            <LocationPicker
+              city={form.ville}
+              value={form.loc}
+              onChange={(loc) => updateForm('loc', loc)}
+            />
           </Card>
 
           {/* Biography Card — shown on the doctor's public profile */}

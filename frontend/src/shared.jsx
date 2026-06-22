@@ -15,6 +15,44 @@ export const initials = (name) => {
   return ((p[0]||'')[0]||'').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
 };
 
+// Approx. coordinates (lat, lng) of major Moroccan cities — used to place
+// doctors on the map and to seed coordinates at registration.
+export const CITY_COORDS = {
+  'Casablanca':[33.5731,-7.5898],'Rabat':[34.0209,-6.8416],'Fès':[34.0331,-5.0003],
+  'Marrakech':[31.6295,-7.9811],'Tanger':[35.7595,-5.8340],'Salé':[34.0531,-6.7985],
+  'Meknès':[33.8935,-5.5473],'Oujda':[34.6814,-1.9086],'Kénitra':[34.2610,-6.5802],
+  'Agadir':[30.4278,-9.5981],'Tétouan':[35.5785,-5.3684],'Témara':[33.9287,-6.9067],
+  'Safi':[32.2994,-9.2372],'Mohammedia':[33.6863,-7.3828],'Khouribga':[32.8811,-6.9063],
+  'El Jadida':[33.2316,-8.5007],'Béni Mellal':[32.3373,-6.3498],'Aït Melloul':[30.3342,-9.4990],
+  'Nador':[35.1681,-2.9335],'Taza':[34.2100,-4.0100],'Settat':[33.0010,-7.6166],
+  'Berrechid':[33.2655,-7.5870],'Khémisset':[33.8242,-6.0658],'Inezgane':[30.3530,-9.5366],
+  'Larache':[35.1932,-6.1557],'Guelmim':[28.9870,-10.0574],'Khénifra':[32.9394,-5.6685],
+  'Berkane':[34.9170,-2.3200],'Taourirt':[34.4073,-2.8978],'Errachidia':[31.9314,-4.4244],
+  'Essaouira':[31.5085,-9.7595],'Tiznit':[29.6974,-9.7316],'Ouarzazate':[30.9335,-6.9370],
+  'Al Hoceïma':[35.2517,-3.9372],'Laâyoune':[27.1253,-13.1625],'Dakhla':[23.6848,-15.9580],
+  'Taroudant':[30.4703,-8.8770],'Chefchaouen':[35.1688,-5.2636],'Sefrou':[33.8305,-4.8370],
+  'Midelt':[32.6852,-4.7350],'Tinghir':[31.5147,-5.5326],'Ouazzane':[34.7937,-5.5847],
+  'Tiflet':[33.8950,-6.3070],'Sidi Slimane':[34.2658,-5.9266],'Sidi Kacem':[34.2210,-5.7070],
+  'Youssoufia':[32.2462,-8.5290],'Guercif':[34.2270,-3.3530],'Fquih Ben Salah':[32.5020,-6.6890],
+  'Oued Zem':[32.8620,-6.5730],'Martil':[35.6170,-5.2730],'Fnideq':[35.8490,-5.3580],
+};
+
+// City centroid + small jitter so multiple doctors don't stack exactly.
+export function cityCoord(city) {
+  const c = CITY_COORDS[city] || CITY_COORDS['Casablanca'];
+  return [c[0] + (Math.random() - 0.5) * 0.03, c[1] + (Math.random() - 0.5) * 0.03];
+}
+
+// [lat,lng] for a doctor: real coords if present, else a STABLE position derived
+// from their city + id (so demo/mock doctors also appear on the map).
+export function doctorCoords(d) {
+  if (typeof d.lat === 'number' && typeof d.lng === 'number') return [d.lat, d.lng];
+  const c = CITY_COORDS[d.city];
+  if (!c) return null;
+  const n = String(d.id).split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+  return [c[0] + (((n % 100) / 100) - 0.5) * 0.04, c[1] + ((((n * 7) % 100) / 100) - 0.5) * 0.04];
+}
+
 // Detailed actes for the original specialties (richer profile tags).
 const SPEC_DETAILED = {
   generaliste: { label:'Médecin généraliste', tags:['Consultation générale','Suivi','Vaccination','Certificat médical'] },
