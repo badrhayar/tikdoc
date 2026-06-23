@@ -205,12 +205,12 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
         </div>
       </div>
 
-      {/* Row 3: Secondary stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 12 : 18 }}>
+      {/* Row 3: Secondary stat cards — stacked on mobile, side-by-side on desktop */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: isMobile ? 12 : 18 }}>
         {secondary.map((card, i) => (
-          <div key={i} className="sa-lift" style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: 20, display: 'flex', alignItems: 'center', gap: 16, boxShadow: CARD_SHADOW }}>
+          <div key={i} className="sa-lift" style={{ minWidth: 0, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, padding: isMobile ? 16 : 20, display: 'flex', alignItems: 'center', gap: 14, boxShadow: CARD_SHADOW }}>
             <div style={{ width: 50, height: 50, borderRadius: 14, background: card.iconBg, color: card.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6)' }}>{card.icon}</div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 4, fontWeight: 500 }}>{card.label}</div>
               <div className="sa-num" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 25, fontWeight: 800, color: DARK, lineHeight: 1, letterSpacing: '-0.7px' }}>{card.value}</div>
               <div style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>{card.sub}</div>
