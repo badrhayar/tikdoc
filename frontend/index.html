@@ -36,9 +36,45 @@
     />
 
     <title>TikDoc — Prenez rendez-vous avec un médecin</title>
+
+    <!-- Early self-heal: runs even if the main bundle fails to load. If a stale
+         service worker serves an outdated shell whose JS/CSS assets 404, clear
+         the SW + caches and reload ONCE so the fresh deploy can load. -->
+    <script>
+      (function () {
+        function heal(reason) {
+          try {
+            if (sessionStorage.getItem('tikdoc_healed')) return;
+            sessionStorage.setItem('tikdoc_healed', '1');
+            var reload = function () { try { location.reload(); } catch (e) {} };
+            var jobs = [];
+            if ('serviceWorker' in navigator) {
+              jobs.push(navigator.serviceWorker.getRegistrations()
+                .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+                .catch(function () {}));
+            }
+            if (window.caches) {
+              jobs.push(caches.keys()
+                .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+                .catch(function () {}));
+            }
+            Promise.all(jobs).then(reload, reload);
+          } catch (e) {}
+        }
+        window.addEventListener('error', function (e) {
+          var t = e && e.target; var url = t && (t.src || t.href);
+          if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && url && url.indexOf('/assets/') !== -1) heal('asset:' + url);
+        }, true);
+        window.__tikdocHeal = heal;
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;color:#0F6E56;font-size:18px;font-weight:700;letter-spacing:-0.3px;">
+        TikDoc…
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

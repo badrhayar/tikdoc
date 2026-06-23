@@ -2,16 +2,16 @@
    TikDoc service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tikdoc-v2";
+const CACHE_VERSION = "tikdoc-v3";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 // App shell — the files we can name up front. Hashed JS/CSS bundles can't be
 // listed here (their names change every build), so they're cached at runtime
 // the first time they're requested (cache-first below).
+// NOTE: index.html is deliberately NOT pre-cached. Caching the HTML is what
+// caused stale shells that referenced deleted asset hashes → blank screens.
 const APP_SHELL = [
-  "/",
-  "/index.html",
   "/manifest.json",
   "/favicon.svg",
   "/icons/icon-72.png",
@@ -155,12 +155,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // SPA navigations → network-first, fall back to cached shell, then offline page
+  // SPA navigations → ALWAYS network-first. On failure show the offline page.
+  // We never serve a cached index.html: a stale shell can reference asset hashes
+  // that no longer exist on the server, which 404 and blank the app.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match("/index.html").then((r) => r || offlineResponse())
-      )
+      fetch(request).catch(() => offlineResponse())
     );
     return;
   }
