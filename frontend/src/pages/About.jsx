@@ -76,7 +76,7 @@ export default function About() {
             <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 8 }} />
             {!isMobile && (
               <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
-                Tik<span style={{ color: PRIMARY }}>Doc</span>
+                Tabib<span style={{ color: PRIMARY }}>o</span>
               </span>
             )}
           </button>

@@ -45,7 +45,7 @@ export default function DoctorBlocked() {
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 18, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 20 }}>
           <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
         </div>
 
         <div style={{ width: 58, height: 58, borderRadius: '50%', background: '#FEF6E7', color: '#C28A1B', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>

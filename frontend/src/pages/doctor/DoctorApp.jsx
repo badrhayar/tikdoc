@@ -273,7 +273,7 @@ export default function DoctorApp() {
           : { position:'sticky', top:0, height:'100vh' }) }}>
         <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap: 5, padding:'22px 22px 18px', cursor:'pointer' }}>
           <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:31, height:31, borderRadius:9, objectFit:'contain', boxShadow:'0 4px 12px -3px rgba(22,160,106,0.5)' }} />
-          <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tik<span style={{ color:G }}>Doc</span></span>
+          <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tabib<span style={{ color:G }}>o</span></span>
         </div>
         <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>
           {NAV_GROUPS.map((group, gi) => (

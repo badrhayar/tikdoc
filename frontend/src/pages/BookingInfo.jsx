@@ -121,7 +121,7 @@ export default function BookingInfo() {
         >
           <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 7 }} />
           <span style={{ fontSize: 19, fontWeight: 700, color: DARK }}>
-            Tik<span style={{ color: PRIMARY }}>Doc</span>
+            Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>
         </button>
         {patient ? (

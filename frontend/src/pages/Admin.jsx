@@ -170,7 +170,7 @@ export default function Admin() {
       <header style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 14px' : '0 26px', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 18, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 18, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#C2466A', background: '#FCE7EE', borderRadius: 99, padding: '3px 9px' }}>ADMIN</span>
         </div>
         <button onClick={() => authSignOut()} style={{ display: 'flex', alignItems: 'center', gap: 7, background: BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 600, color: DARK, cursor: 'pointer' }}>

@@ -100,8 +100,9 @@ export default function Invoice() {
             alignItems: 'flex-start',
             justifyContent: 'space-between',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img loading="lazy" src="/tabibo-logo.png" alt="Tabibo" style={{ height: 40 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 40, height: 40, borderRadius: 9 }} />
+              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 26, color: '#15314A', letterSpacing: '-0.5px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{

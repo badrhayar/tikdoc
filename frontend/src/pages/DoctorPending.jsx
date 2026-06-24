@@ -44,7 +44,7 @@ export default function DoctorPending() {
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 18, padding: 36, maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 22 }}>
           <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
         </div>
 
         <div style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: rejected ? '#FCE7EE' : '#FEF6E7', color: rejected ? '#C2466A' : '#C28A1B' }}>

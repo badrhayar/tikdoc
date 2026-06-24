@@ -215,7 +215,7 @@ export function renewalInfo(d) {
 export function paymentRef(doctorId, period) {
   const id = String(doctorId || '').replace(/-/g, '').slice(-5).toUpperCase() || 'XXXXX';
   const ym = (period || '').replace(/[^0-9]/g, '').slice(-6) || new Date().toISOString().slice(0, 7).replace('-', '');
-  return `TIK-${id}-${ym}`;
+  return `TAB-${id}-${ym}`;
 }
 
 // Preset reasons an admin can pick when declining a doctor.

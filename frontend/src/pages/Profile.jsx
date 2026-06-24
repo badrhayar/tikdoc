@@ -130,7 +130,7 @@ export default function Profile() {
         >
           <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 31, height: 31, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
-            Tik<span style={{ color: PRIMARY }}>Doc</span>
+            Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>
         </button>
         {patient ? (

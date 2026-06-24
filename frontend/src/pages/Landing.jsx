@@ -106,7 +106,7 @@ export default function Landing() {
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
-              Tik<span style={{ color: PRIMARY }}>Doc</span>
+              Tabib<span style={{ color: PRIMARY }}>o</span>
             </span>
           </button>
 
@@ -215,7 +215,7 @@ export default function Landing() {
             animation: 'saFade .18s ease',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 19, fontWeight: 800, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
+              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 19, fontWeight: 800, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
               <button onClick={() => setMenuOpen(false)} aria-label="Fermer" style={{ width: 44, height: 44, borderRadius: 11, background: BG, border: `1px solid ${BORDER}`, cursor: 'pointer', fontSize: 20, color: MUTED }}>×</button>
             </div>
 
@@ -483,7 +483,7 @@ export default function Landing() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
                 <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 26, height: 26, borderRadius: 7 }} />
                 <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', fontWeight: 800, fontSize: 18 }}>
-                  Tik<span style={{ color: PRIMARY }}>Doc</span>
+                  Tabib<span style={{ color: PRIMARY }}>o</span>
                 </span>
               </div>
               <p style={{ fontSize: 13.5, lineHeight: 1.65, margin: 0, maxWidth: 280 }}>

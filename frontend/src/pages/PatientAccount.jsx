@@ -213,7 +213,7 @@ export default function PatientAccount() {
         <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 12px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?8:16 }}>
           <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer', flexShrink:0 }}>
             <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:28, height:28, objectFit:'contain' }} />
-            <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tik<span style={{ color:G }}>Doc</span></span>
+            <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tabib<span style={{ color:G }}>o</span></span>
           </div>
           <div style={{ flex:1, minWidth:8 }} />
           <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight:44, display:'flex', alignItems:'center', gap:6 }}>
