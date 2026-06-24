@@ -1,6 +1,6 @@
-# TikDoc · Supabase backend
+# Tabibo · Supabase backend
 
-SQL migrations and setup for the TikDoc database.
+SQL migrations and setup for the Tabibo database.
 
 ## Migrations (run in order)
 

@@ -91,7 +91,7 @@ export default function ForPatients() {
             onClick={() => go('home')}
             style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
-            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 8 }} />
             {!isMobile && (
               <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
                 Tik<span style={{ color: PRIMARY }}>Doc</span>
@@ -441,8 +441,8 @@ export default function ForPatients() {
             {lang === 'ar'
               ? 'انضم إلى أكثر من 85,000 مريض يثقون في تيك دوك.'
               : lang === 'en'
-              ? 'Join over 85,000 patients who trust TikDoc.'
-              : 'Rejoignez plus de 85 000 patients qui font confiance à TikDoc.'}
+              ? 'Join over 85,000 patients who trust Tabibo.'
+              : 'Rejoignez plus de 85 000 patients qui font confiance à Tabibo.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
             <button
@@ -474,8 +474,8 @@ export default function ForPatients() {
       {/* Footer */}
       <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', fontSize: 13 }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
-          <span>© 2024 TikDoc. Tous droits réservés.</span>
+          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
+          <span>© 2024 Tabibo. Tous droits réservés.</span>
         </div>
       </footer>
 

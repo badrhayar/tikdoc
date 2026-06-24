@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation } from '../../lib/api';
+import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -51,7 +51,7 @@ export default function Chat({ state, setState }) {
       setConvs(mapped);
       if (autoOpen) setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
       return mapped;
-    } catch (e) { console.warn('[TikDoc] fetchConversations failed', e); return []; }
+    } catch (e) { console.warn('[Tabibo] fetchConversations failed', e); return []; }
   };
   useEffect(() => { loadConvs(); }, [isDoctor]);
 
@@ -83,15 +83,34 @@ export default function Chat({ state, setState }) {
     } finally { setCreating(false); }
   };
 
-  // Load messages for the active conversation.
+  // Load messages for the active conversation, then live-stream new ones.
   useEffect(() => {
     if (!activeId) { setMsgs([]); return; }
+    let unsub = () => {};
     (async () => {
       try {
         const list = await fetchMessages(activeId);
         setMsgs(list.map((m) => ({ id: m.id, mine: m.sender_id === appUser?.id, type: 'text', text: m.content, time: fmtTime(m.sent_at) })));
-      } catch (e) { console.warn('[TikDoc] fetchMessages failed', e); }
+      } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
+      // Append messages as they arrive (from either party), de-duplicating our
+      // own optimistic bubbles and any row we already hold.
+      unsub = subscribeToConversation(activeId, (m) => {
+        setMsgs((cur) => {
+          if (cur.some((x) => x.id === m.id)) return cur;
+          const mine = m.sender_id === appUser?.id;
+          if (mine) {
+            const i = cur.findIndex((x) => String(x.id).startsWith('tmp_') && x.text === m.content);
+            if (i >= 0) {
+              const copy = [...cur];
+              copy[i] = { ...copy[i], id: m.id, time: fmtTime(m.sent_at) };
+              return copy;
+            }
+          }
+          return [...cur, { id: m.id, mine, type: 'text', text: m.content, time: fmtTime(m.sent_at) }];
+        });
+      });
     })();
+    return () => unsub();
   }, [activeId, appUser?.id]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length, activeId]);

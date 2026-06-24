@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
@@ -33,7 +33,7 @@ const PROTECTED_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
   'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'admin', 'paccount',
 ]);
-const restoreScreen = () => { try { return sessionStorage.getItem('tikdoc_screen') || 'home'; } catch { return 'home'; } };
+const restoreScreen = () => { try { return sessionStorage.getItem('tabibo_screen') || 'home'; } catch { return 'home'; } };
 
 const initialState = {
   screen: restoreScreen(),
@@ -188,7 +188,7 @@ export function AppProvider({ children }) {
           const docs = await fetchDoctors();
           if (active && docs.length) { dispatch({ doctors: docs }); return; }
         } catch (e) {
-          console.warn('[TikDoc] Supabase fetchDoctors failed — falling back to mock data.', e);
+          console.warn('[Tabibo] Supabase fetchDoctors failed — falling back to mock data.', e);
         }
       }
       if (active) dispatch({ doctors: MOCK_DOCTORS });
@@ -203,13 +203,6 @@ export function AppProvider({ children }) {
   }, []);
 
   // Fetch patients on mount (keep the seeded demo roster if the endpoint is absent).
-  useEffect(() => {
-    fetch('/api/patients')
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data) && data.length) dispatch({ patients: data }); })
-      .catch(() => {});
-  }, []);
-
   // ── Auth: load the signed-in profile + their appointments ──────────────────
   const loadUser = async (session) => {
     if (!session) {
@@ -237,19 +230,21 @@ export function AppProvider({ children }) {
           patch.myDoctor = md;
           // Use the doctor's saved services as the app-wide source of truth.
           if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
+          // Load the real patient roster (replaces demo data).
+          try { if (md?.id) patch.patients = await fetchMyPatients(md.id); } catch (_) {}
         } catch (e) { /* ignore */ }
       }
       dispatch(patch);
       return u;
     } catch (e) {
-      console.warn('[TikDoc] Failed to load user profile.', e);
+      console.warn('[Tabibo] Failed to load user profile.', e);
       return null;
     }
   };
 
   // Persist the current screen so a refresh keeps the user where they were.
   useEffect(() => {
-    try { sessionStorage.setItem('tikdoc_screen', state.screen); } catch (e) { /* ignore */ }
+    try { sessionStorage.setItem('tabibo_screen', state.screen); } catch (e) { /* ignore */ }
   }, [state.screen]);
 
   // Bootstrap session on mount + subscribe to auth changes.
@@ -285,7 +280,11 @@ export function AppProvider({ children }) {
     try {
       const appts = await fetchMyAppointments();
       const patch = { myAppointments: appts };
-      if (state.appUser?.role === 'doctor') patch.consultations = appts.map(apptToConsultation);
+      if (state.appUser?.role === 'doctor') {
+        patch.consultations = appts.map(apptToConsultation);
+        // New bookings auto-add patients to the roster — refresh it.
+        try { if (state.myDoctor?.id) patch.patients = await fetchMyPatients(state.myDoctor.id); } catch (_) {}
+      }
       dispatch(patch);
     } catch (e) { /* ignore */ }
   };

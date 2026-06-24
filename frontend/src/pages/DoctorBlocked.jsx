@@ -14,7 +14,7 @@ export default function DoctorBlocked() {
   const d = state?.myDoctor;
   const sub = subscriptionState(d);
   const rib = state?.appSettings?.rib || '230 810 0000000000000000 12';
-  const bank = state?.appSettings?.bank || 'Attijariwafa Bank — TikDoc SAS';
+  const bank = state?.appSettings?.bank || 'Attijariwafa Bank — Tabibo SAS';
 
   const [payments, setPayments] = useState([]);
   const [busyId, setBusyId] = useState(null);
@@ -28,7 +28,7 @@ export default function DoctorBlocked() {
       await declarePayment(p.id);
       notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: d?.plan || '', amount: p.amount });
       setPayments((list) => list.map((x) => x.id === p.id ? { ...x, status: 'declared', declared_at: new Date().toISOString() } : x));
-      setState({ toast: 'Paiement signalé — en attente de confirmation par TikDoc.', toastShow: true });
+      setState({ toast: 'Paiement signalé — en attente de confirmation par Tabibo.', toastShow: true });
     } catch (e) {
       setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
     } finally { setBusyId(null); }
@@ -37,14 +37,14 @@ export default function DoctorBlocked() {
   const dues = payments.filter((p) => p.status !== 'paid');
   const title = sub.blocked ? 'Compte suspendu' : "Abonnement expiré";
   const sub1 = sub.blocked
-    ? "Votre compte a été temporairement suspendu par l'administration TikDoc."
+    ? "Votre compte a été temporairement suspendu par l'administration Tabibo."
     : "Votre période d'essai / abonnement est arrivée à échéance. Réglez votre abonnement pour réactiver votre espace.";
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px' }}>
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 18, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 20 }}>
-          <img src="/icons/icon-192.png" alt="TikDoc" style={{ width: 30, height: 30, borderRadius: 8 }} />
+          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
         </div>
 
@@ -61,12 +61,12 @@ export default function DoctorBlocked() {
           <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{rib}</span></div>
           <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{bank}</div>
           <div style={{ marginTop: 8, fontSize: 13, color: DARK }}><strong>Référence à mentionner :</strong> <span style={{ fontFamily: 'monospace', color: PRIMARY, fontWeight: 700 }}>{paymentRef(d?.id, new Date().toISOString().slice(0, 7))}</span></div>
-          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 8 }}>Après le virement, cliquez sur « J'ai payé » ci-dessous. Votre compte est réactivé dès que TikDoc confirme la réception.</div>
+          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 8 }}>Après le virement, cliquez sur « J'ai payé » ci-dessous. Votre compte est réactivé dès que Tabibo confirme la réception.</div>
         </div>
 
         {/* Dues */}
         <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Paiements à régler</div>
-        {dues.length === 0 && <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Aucun paiement en attente. Si vous venez de régler, patientez la confirmation de TikDoc.</div>}
+        {dues.length === 0 && <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Aucun paiement en attente. Si vous venez de régler, patientez la confirmation de Tabibo.</div>}
         {dues.map((p) => (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 14px', marginBottom: 10 }}>
             <div style={{ flex: 1 }}>

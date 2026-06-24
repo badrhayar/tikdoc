@@ -28,7 +28,7 @@ export async function fetchPrayerTimes(city, dateISO) {
     cache.set(key, out);
     return out;
   } catch (e) {
-    console.warn('[TikDoc] prayer times unavailable', e);
+    console.warn('[Tabibo] prayer times unavailable', e);
     cache.set(key, null);
     return null;
   }

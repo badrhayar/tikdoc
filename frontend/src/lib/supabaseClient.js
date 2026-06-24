@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   // Surface a clear message during development instead of a cryptic network error.
   console.warn(
-    '[TikDoc] Missing Supabase env vars. Copy frontend/.env.example to frontend/.env ' +
+    '[Tabibo] Missing Supabase env vars. Copy frontend/.env.example to frontend/.env ' +
     'and fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
   );
 }

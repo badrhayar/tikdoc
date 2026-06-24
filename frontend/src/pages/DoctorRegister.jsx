@@ -182,7 +182,7 @@ export default function DoctorRegister() {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>TikDoc</span>
+            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
           </div>
 
           {/* Free-trial banner */}
@@ -200,7 +200,7 @@ export default function DoctorRegister() {
             Inscription médecin
           </h1>
           <p style={{ fontSize: 14, color: MUTED, margin: '0 0 30px' }}>
-            Créez votre espace professionnel sur TikDoc.
+            Créez votre espace professionnel sur Tabibo.
           </p>
 
           {/* Section 1: Identité professionnelle */}
@@ -560,7 +560,7 @@ export default function DoctorRegister() {
           }}
         />
 
-        {/* TikDoc logo card */}
+        {/* Tabibo logo card */}
         <div
           style={{
             background: '#fff',
@@ -588,7 +588,7 @@ export default function DoctorRegister() {
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>TikDoc</span>
+          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
           <span
             style={{
               fontSize: 11,
@@ -615,7 +615,7 @@ export default function DoctorRegister() {
             maxWidth: 280,
           }}
         >
-          Développez votre cabinet avec TikDoc
+          Développez votre cabinet avec Tabibo
         </h2>
 
         {/* Benefits */}

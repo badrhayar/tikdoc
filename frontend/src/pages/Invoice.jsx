@@ -101,7 +101,7 @@ export default function Invoice() {
             justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img loading="lazy" src="/tikdoc-logo.png" alt="TikDoc" style={{ height: 40 }} />
+              <img loading="lazy" src="/tabibo-logo.png" alt="Tabibo" style={{ height: 40 }} />
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{
@@ -238,7 +238,7 @@ export default function Invoice() {
               color: '#6B7B76',
               lineHeight: 1.6,
             }}>
-              Cette facture est générée automatiquement par la plateforme TikDoc. Elle fait foi de paiement pour la prestation médicale décrite ci-dessus. Conformément à la réglementation marocaine en vigueur, le praticien est responsable de la conservation des originaux. Pour toute réclamation, contactez support@tikdoc.ma.
+              Cette facture est générée automatiquement par la plateforme Tabibo. Elle fait foi de paiement pour la prestation médicale décrite ci-dessus. Conformément à la réglementation marocaine en vigueur, le praticien est responsable de la conservation des originaux. Pour toute réclamation, contactez support@tabibo.ma.
             </p>
           </div>
         </div>

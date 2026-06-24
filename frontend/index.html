@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- SEO / sharing -->
-    <meta name="description" content="TikDoc — Prenez rendez-vous avec votre médecin au Maroc" />
+    <meta name="description" content="Tabibo — Prenez rendez-vous avec votre médecin au Maroc" />
 
     <!-- PWA: manifest + Android status bar color -->
     <link rel="manifest" href="/manifest.json" />
@@ -17,7 +17,7 @@
     <!-- iOS: Safari partially ignores the web manifest, so these are required -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="TikDoc" />
+    <meta name="apple-mobile-web-app-title" content="Tabibo" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
@@ -35,7 +35,7 @@
       rel="stylesheet"
     />
 
-    <title>TikDoc — Prenez rendez-vous avec un médecin</title>
+    <title>Tabibo — Prenez rendez-vous avec un médecin</title>
 
     <!-- Early self-heal: runs even if the main bundle fails to load. If a stale
          service worker serves an outdated shell whose JS/CSS assets 404, clear
@@ -44,8 +44,8 @@
       (function () {
         function heal(reason) {
           try {
-            if (sessionStorage.getItem('tikdoc_healed')) return;
-            sessionStorage.setItem('tikdoc_healed', '1');
+            if (sessionStorage.getItem('tabibo_healed')) return;
+            sessionStorage.setItem('tabibo_healed', '1');
             var reload = function () { try { location.reload(); } catch (e) {} };
             var jobs = [];
             if ('serviceWorker' in navigator) {
@@ -65,14 +65,14 @@
           var t = e && e.target; var url = t && (t.src || t.href);
           if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && url && url.indexOf('/assets/') !== -1) heal('asset:' + url);
         }, true);
-        window.__tikdocHeal = heal;
+        window.__tabiboHeal = heal;
       })();
     </script>
   </head>
   <body>
     <div id="root">
       <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;color:#0F6E56;font-size:18px;font-weight:700;letter-spacing:-0.3px;">
-        TikDoc…
+        Tabibo…
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>

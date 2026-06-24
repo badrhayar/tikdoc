@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
-import { inviteNewPatient, createWalkinAppointment } from '../../lib/api';
+import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 // Whole years between a birth date (YYYY-MM-DD) and today; null if unset/invalid.
@@ -104,8 +104,36 @@ export default function DoctorApp() {
 
   const [popAvatar, setPopAvatar] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const [unreadNotif, setUnreadNotif] = useState(0);
   const { isMobile } = useViewport();
   const goNav = (sc) => { setNavOpen(false); go(sc); };
+
+  // ── Realtime inbox: live message + booking alerts ──────────────────────────
+  const appUserId = state.appUser?.id;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  useEffect(() => {
+    if (!appUserId) return undefined;
+    return subscribeToInbox({
+      onMessage: (m) => {
+        if (m.sender_id === appUserId || screenRef.current === 'dchat') return;
+        setUnreadChat((n) => n + 1);
+        setState({ toast: 'Nouveau message reçu', toastShow: true });
+      },
+      onAppointment: () => {
+        if (screenRef.current !== 'dnotif') setUnreadNotif((n) => n + 1);
+        setState({ toast: 'Nouveau rendez-vous réservé', toastShow: true });
+        reloadAppointments?.();
+      },
+    });
+  }, [appUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear a badge once the doctor opens the matching screen.
+  useEffect(() => {
+    if (screen === 'dchat') setUnreadChat(0);
+    if (screen === 'dnotif') setUnreadNotif(0);
+  }, [screen]);
 
   const closePops = () => { setPopAvatar(false); };
 
@@ -197,13 +225,25 @@ export default function DoctorApp() {
 
   const openAddPatient = () => setState({ addPatientOpen:true, patientAdded:false });
   const closeAddPatient = () => setState({ addPatientOpen:false });
-  const submitAddPatient = () => {
+  const submitAddPatient = async () => {
     const np = state.newPatient;
     if (!np.name) return;
-    // Normalise into the directory shape (age computed from the birth date).
-    const newP = buildPatient({ name: np.name, cin: np.cin, phone: np.phone, sex: np.sex, dob: np.dob });
+    const blank = { name:'',cin:'',phone:'',email:'',dob:'',sex:'Femme',address:'',city:'Casablanca',blood:'',allergies:'',chronic:'',insurance:'CNSS',notes:'' };
     inviteNewPatient({ name: np.name, phone: np.phone, email: np.email }).catch(() => {});
-    setState({ patients: [newP, ...(patients || [])], addPatientOpen:false, patientAdded:true, newPatient:{ name:'',cin:'',phone:'',email:'',dob:'',sex:'Femme',address:'',city:'Casablanca',blood:'',allergies:'',chronic:'',insurance:'CNSS',notes:'' } });
+    // Persist to the doctor's real roster when connected; fall back to local for demo mode.
+    if (isSupabaseConfigured && state.myDoctor?.id) {
+      try {
+        const saved = await createPatient(state.myDoctor.id, np);
+        setState({ patients: [saved, ...(patients || [])], addPatientOpen:false, patientAdded:true, newPatient: blank });
+        setTimeout(() => setState({ patientAdded:false }), 3000);
+        return;
+      } catch (e) {
+        setState({ toast: 'Ajout du patient échoué : ' + (e?.message || 'erreur'), toastShow: true });
+        return;
+      }
+    }
+    const newP = buildPatient({ name: np.name, cin: np.cin, phone: np.phone, sex: np.sex, dob: np.dob });
+    setState({ patients: [newP, ...(patients || [])], addPatientOpen:false, patientAdded:true, newPatient: blank });
     setTimeout(() => setState({ patientAdded:false }), 3000);
   };
 
@@ -232,7 +272,7 @@ export default function DoctorApp() {
           ? { position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(13,43,30,0.3)' : 'none' }
           : { position:'sticky', top:0, height:'100vh' }) }}>
         <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap: 5, padding:'22px 22px 18px', cursor:'pointer' }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width:31, height:31, borderRadius:9, objectFit:'contain', boxShadow:'0 4px 12px -3px rgba(22,160,106,0.5)' }} />
+          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:31, height:31, borderRadius:9, objectFit:'contain', boxShadow:'0 4px 12px -3px rgba(22,160,106,0.5)' }} />
           <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tik<span style={{ color:G }}>Doc</span></span>
         </div>
         <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>
@@ -294,13 +334,17 @@ export default function DoctorApp() {
           {/* Bell → full Notifications page */}
           <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dnotif' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dnotif' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#E2748A', border:'1.5px solid #fff' }} />
+            {unreadNotif > 0 && <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#E2748A', border:'1.5px solid #fff' }} />}
           </button>
 
           {/* Chat → full Messages page */}
           <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dchat' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dchat' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:G, border:'1.5px solid #fff' }} />
+            {unreadChat > 0 && (
+              <span style={{ position:'absolute', top:2, right:2, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', border:'1.5px solid #fff', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
+                {unreadChat > 9 ? '9+' : unreadChat}
+              </span>
+            )}
           </button>
 
           {/* Avatar */}

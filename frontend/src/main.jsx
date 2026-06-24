@@ -11,10 +11,10 @@ import App from './App.jsx'
 // fresh deploy load normally.
 function selfHeal(reason) {
   try {
-    if (sessionStorage.getItem('tikdoc_healed')) return; // only once per session → no reload loop
-    sessionStorage.setItem('tikdoc_healed', '1');
+    if (sessionStorage.getItem('tabibo_healed')) return; // only once per session → no reload loop
+    sessionStorage.setItem('tabibo_healed', '1');
     // eslint-disable-next-line no-console
-    console.warn('TikDoc self-heal:', reason);
+    console.warn('Tabibo self-heal:', reason);
     const done = () => { try { window.location.reload(); } catch (_) {} };
     const tasks = [];
     if ('serviceWorker' in navigator) {
@@ -68,13 +68,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
           const sw = reg.installing;
           if (!sw) return;
           sw.addEventListener('statechange', () => {
-            if (sw.state === 'activated' && navigator.serviceWorker.controller && !sessionStorage.getItem('tikdoc_swreloaded')) {
-              sessionStorage.setItem('tikdoc_swreloaded', '1');
+            if (sw.state === 'activated' && navigator.serviceWorker.controller && !sessionStorage.getItem('tabibo_swreloaded')) {
+              sessionStorage.setItem('tabibo_swreloaded', '1');
               window.location.reload();
             }
           });
         });
-        console.log('TikDoc SW registered', reg);
+        console.log('Tabibo SW registered', reg);
       })
       .catch((err) => console.log('SW registration failed', err));
   });

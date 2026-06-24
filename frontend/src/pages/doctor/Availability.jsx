@@ -111,7 +111,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         // today's real prayer times
         const pt = await fetchPrayerTimes(doc.city || 'Casablanca', todayISO);
         if (active && pt) setPrayerTimes({ ...PRAYER_FALLBACK, ...pt });
-      } catch (e) { console.warn('[TikDoc] Availability load failed', e); }
+      } catch (e) { console.warn('[Tabibo] Availability load failed', e); }
     })();
     return () => { active = false; };
   }, []);

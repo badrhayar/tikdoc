@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, sendMessage, uploadAvatar } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar } from '../lib/api';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -45,12 +45,6 @@ const NOTIFS = [
   { icon:'info', title:'Annulation possible', text:'Annulation possible jusqu\'au 14 Mai 13:00', ago:'il y a 1 jour', ci:5 },
 ];
 
-const PATIENT_MSGS = [
-  { id:1, from:'Dr. Leila Marmioui', avatar:'LM', ci:0, text:'Bonjour, vos résultats sont bons. Continuez le traitement.', time:'09:12', unread:false },
-  { id:2, from:'Dr. Leila Marmioui', avatar:'LM', ci:0, text:'N\'oubliez pas votre rendez-vous de contrôle dans 3 mois.', time:'hier', unread:true },
-  { id:3, from:'Secrétaire TikDoc', avatar:'ST', ci:3, text:'Votre rendez-vous du 17 Mai est confirmé à 14h00.', time:'lun.', unread:false },
-];
-
 export default function PatientAccount() {
   const { state, setState, go, authSignOut } = useApp();
   const { isMobile } = useViewport();
@@ -76,6 +70,52 @@ export default function PatientAccount() {
   useEffect(() => {
     if (!msgDoctorId && visitedDocs[0]) setMsgDoctorId(visitedDocs[0].id);
   }, [visitedDocs.length]);
+
+  // ── Live conversation thread with the selected doctor ──────────────────────
+  const [convId, setConvId] = useState(null);
+  const [thread, setThread] = useState([]);
+  const threadEndRef = useRef(null);
+  const appUserId = state.appUser?.id;
+  const docNameById = (id) => visitedDocs.find((d) => d.id === id)?.name || 'Médecin';
+
+  // Resolve the existing conversation for the selected doctor (no insert).
+  useEffect(() => {
+    let alive = true;
+    if (!appUserId || !msgDoctorId) { setConvId(null); return; }
+    (async () => {
+      try {
+        const conv = await findConversation(appUserId, msgDoctorId);
+        if (alive) setConvId(conv?.id ?? null);
+      } catch (e) { console.warn('[Tabibo] findConversation failed', e); }
+    })();
+    return () => { alive = false; };
+  }, [appUserId, msgDoctorId]);
+
+  // Load history + live-stream new messages for the active conversation.
+  useEffect(() => {
+    if (!convId) { setThread([]); return; }
+    let unsub = () => {};
+    (async () => {
+      try {
+        const list = await fetchMessages(convId);
+        setThread(list.map((m) => ({ id: m.id, mine: m.sender_id === appUserId, text: m.content, time: fmtTime(m.sent_at) })));
+      } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
+      unsub = subscribeToConversation(convId, (m) => {
+        setThread((cur) => {
+          if (cur.some((x) => x.id === m.id)) return cur;
+          const mine = m.sender_id === appUserId;
+          if (mine) {
+            const i = cur.findIndex((x) => String(x.id).startsWith('tmp_') && x.text === m.content);
+            if (i >= 0) { const copy = [...cur]; copy[i] = { ...copy[i], id: m.id, time: fmtTime(m.sent_at) }; return copy; }
+          }
+          return [...cur, { id: m.id, mine, text: m.content, time: fmtTime(m.sent_at) }];
+        });
+      });
+    })();
+    return () => unsub();
+  }, [convId, appUserId]);
+
+  useEffect(() => { threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [thread.length]);
 
   // Real appointments for the signed-in patient (loaded into global state).
   const appts = state.myAppointments || [];
@@ -136,17 +176,19 @@ export default function PatientAccount() {
   const sendMsg = async () => {
     const text = patientMsgInput.trim();
     if (!text) return;
-    setPatientMsgInput('');
     const docId = msgDoctorId || (state.myAppointments || [])[0]?.doctorId;
     if (!state.appUser || !docId) {
       setState({ toast: 'Réservez un rendez-vous pour discuter avec un médecin.', toastShow: true });
       return;
     }
+    setPatientMsgInput('');
+    setThread((m) => [...m, { id: 'tmp_' + Date.now(), mine: true, text, time: 'maintenant' }]);
     try {
       const conv = await getOrCreateConversation(state.appUser.id, docId);
+      if (conv?.id && conv.id !== convId) setConvId(conv.id);   // start streaming a brand-new thread
       await sendMessage(conv.id, state.appUser.id, text);
-      setState({ toast: 'Message envoyé à votre médecin ✓', toastShow: true });
     } catch (e) {
+      setThread((m) => m.filter((x) => !(String(x.id).startsWith('tmp_') && x.text === text)));
       setState({ toast: 'Envoi impossible : ' + (e?.message || 'erreur'), toastShow: true });
     }
   };
@@ -170,7 +212,7 @@ export default function PatientAccount() {
       <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}`, position:'sticky', top:0, zIndex:30 }}>
         <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 12px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?8:16 }}>
           <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer', flexShrink:0 }}>
-            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width:28, height:28, objectFit:'contain' }} />
+            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:28, height:28, objectFit:'contain' }} />
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tik<span style={{ color:G }}>Doc</span></span>
           </div>
           <div style={{ flex:1, minWidth:8 }} />
@@ -480,31 +522,25 @@ export default function PatientAccount() {
             <button onClick={openMessagerie} style={{ background:'none', border:'none', fontSize:13, color:G, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, padding:'6px 0' }}>Ouvrir la messagerie</button>
           </div>
 
-          {/* Message list */}
-          <div style={{ borderRadius:11, overflow:'hidden', border:`1px solid ${BORDER_STRONG}`, marginBottom:14 }}>
-            {PATIENT_MSGS.map((msg, i) => {
-              const [tBg, tFg] = TINTS[msg.ci % TINTS.length];
-              return (
-                <div key={msg.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom: i < PATIENT_MSGS.length - 1 ? `1px solid ${BORDER}` : 'none', background: i % 2 === 0 ? '#fff' : ROW_ALT }}>
-                  {/* Initials circle */}
-                  <div style={{ width:36, height:36, borderRadius:'50%', background:tBg, color:tFg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>
-                    {msg.avatar}
-                  </div>
-                  {/* Content */}
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:DARK, marginBottom:2 }}>{msg.from}</div>
-                    <div style={{ fontSize:12.5, color:MUT, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{msg.text}</div>
-                  </div>
-                  {/* Time + unread dot */}
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5, flexShrink:0 }}>
-                    <span style={{ fontSize:11, color:MUT }}>{msg.time}</span>
-                    {msg.unread && (
-                      <span style={{ width:8, height:8, borderRadius:'50%', background:'#3B6FB0', display:'block' }} />
-                    )}
+          {/* Live conversation thread */}
+          <div style={{ borderRadius:11, border:`1px solid ${BORDER_STRONG}`, marginBottom:14, background:BG, height:280, overflowY:'auto', padding:'14px 12px', display:'flex', flexDirection:'column', gap:8 }}>
+            {thread.length === 0 ? (
+              <div style={{ margin:'auto', textAlign:'center', color:MUT, fontSize:12.5, padding:'0 20px', lineHeight:1.5 }}>
+                {visitedDocs.length > 0
+                  ? `Aucun message avec ${docNameById(msgDoctorId)}. Écrivez ci-dessous pour démarrer la conversation.`
+                  : 'Vos échanges avec vos médecins apparaîtront ici.'}
+              </div>
+            ) : (
+              thread.map((m) => (
+                <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth:'78%', padding:'8px 12px', borderRadius:14, fontSize:13, lineHeight:1.45, background: m.mine ? G : '#fff', color: m.mine ? '#fff' : DARK, border: m.mine ? 'none' : `1px solid ${BORDER_STRONG}`, borderBottomRightRadius: m.mine ? 4 : 14, borderBottomLeftRadius: m.mine ? 14 : 4 }}>
+                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{m.text}</div>
+                    <div style={{ fontSize:10, marginTop:3, textAlign:'right', color: m.mine ? 'rgba(255,255,255,.8)' : MUT }}>{m.time}</div>
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
+            <div ref={threadEndRef} />
           </div>
 
           {/* Choose which already-visited doctor to message — or an info notice */}

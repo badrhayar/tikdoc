@@ -167,7 +167,7 @@ export const DOC_TYPE_OPTS = [
 ];
 
 // ── Doctor credentialing (verification) ─────────────────────────────────────
-// Documents a doctor must submit to be accepted on TikDoc (Morocco).
+// Documents a doctor must submit to be accepted on Tabibo (Morocco).
 export const CREDENTIAL_DOCS = [
   { key: 'cin',          label: "Carte Nationale d'Identité (recto-verso)", required: true },
   { key: 'diplome',      label: 'Diplôme de Docteur en Médecine',           required: true },

@@ -73,7 +73,7 @@ export default function About() {
             onClick={() => go('home')}
             style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
-            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 8 }} />
             {!isMobile && (
               <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
                 Tik<span style={{ color: PRIMARY }}>Doc</span>
@@ -208,7 +208,7 @@ export default function About() {
             fontSize: 12, fontWeight: 600, color: '#0D7A50', marginBottom: 20,
           }}>
             <Icon name="leaf" size={13} />
-            <span>{lang === 'ar' ? 'من نحن' : lang === 'en' ? 'About TikDoc' : 'À propos de TikDoc'}</span>
+            <span>{lang === 'ar' ? 'من نحن' : lang === 'en' ? 'About Tabibo' : 'À propos de Tabibo'}</span>
           </div>
           <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 800, color: DARK, lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.4px' }}>
             {lang === 'ar'
@@ -221,8 +221,8 @@ export default function About() {
             {lang === 'ar'
               ? 'تيك دوك منصة رقمية مغربية تربط المرضى بالأطباء بشكل سهل وسريع وآمن، في أي وقت وأي مكان.'
               : lang === 'en'
-              ? 'TikDoc is a Moroccan digital platform connecting patients with doctors — easily, quickly, and securely, any time, anywhere.'
-              : 'TikDoc est une plateforme numérique marocaine qui connecte les patients aux médecins de manière simple, rapide et sécurisée, à toute heure et partout au Maroc.'}
+              ? 'Tabibo is a Moroccan digital platform connecting patients with doctors — easily, quickly, and securely, any time, anywhere.'
+              : 'Tabibo est une plateforme numérique marocaine qui connecte les patients aux médecins de manière simple, rapide et sécurisée, à toute heure et partout au Maroc.'}
           </p>
         </div>
       </section>
@@ -288,7 +288,7 @@ export default function About() {
       <section style={{ padding: '64px 24px', background: DARK }}>
         <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 14, letterSpacing: '-0.3px' }}>
-            {lang === 'ar' ? 'انضم إلى تيك دوك اليوم' : lang === 'en' ? 'Join TikDoc today' : 'Rejoignez TikDoc dès aujourd\'hui'}
+            {lang === 'ar' ? 'انضم إلى تيك دوك اليوم' : lang === 'en' ? 'Join Tabibo today' : 'Rejoignez Tabibo dès aujourd\'hui'}
           </h2>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 32, lineHeight: 1.6 }}>
             {lang === 'ar'
@@ -314,8 +314,8 @@ export default function About() {
       {/* Footer */}
       <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', fontSize: 13 }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
-          <span>© 2024 TikDoc. Tous droits réservés.</span>
+          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
+          <span>© 2024 Tabibo. Tous droits réservés.</span>
         </div>
       </footer>
 

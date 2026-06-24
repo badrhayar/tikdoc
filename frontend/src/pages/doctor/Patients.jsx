@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { DEMO_PATIENTS } from '../../shared.jsx';
+import { updatePatient } from '../../lib/api';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import Icon from '../../components/Icon';
 
 const PRIMARY = '#16A06A';
@@ -27,7 +29,8 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const { isMobile } = useViewport();
   const [activeFilter, setActiveFilter] = useState('Tous');
   const [patientSearch, setPatientSearch] = useState('');
-  const patientList = state.patients?.length ? state.patients : DEMO_PATIENTS;
+  // Real roster when connected; demo data only when Supabase isn't configured.
+  const patientList = state.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS);
   const [viewPatient, setViewPatient] = useState(null);   // detail modal
   const [menuId, setMenuId] = useState(null);             // open "…" menu row
 
@@ -37,13 +40,16 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const activeCount = patientList.filter(p => p.statut === 'Actif').length;
   const STATS = [
     { label: 'Total patients',   value: totalCount,  Icon: IconUsers, color: '#EFF6FF' },
-    { label: 'Nouveaux ce mois', value: 12,          Icon: IconNew,   color: '#F0FDF4' },
+    { label: 'Nouveaux',         value: patientList.filter(p => (p.visits || 0) === 0).length, Icon: IconNew, color: '#F0FDF4' },
     { label: 'Actifs',           value: activeCount, Icon: IconCheck, color: '#FDF4FF' },
   ];
 
   const toggleArchive = (id) => {
-    setState({ patients: patientList.map(p => p.id === id ? { ...p, statut: p.statut === 'Archivé' ? 'Actif' : 'Archivé' } : p) });
+    const cur = patientList.find(p => p.id === id);
+    const next = cur && cur.statut === 'Archivé' ? 'Actif' : 'Archivé';
+    setState({ patients: patientList.map(p => p.id === id ? { ...p, statut: next } : p) });
     setMenuId(null);
+    if (isSupabaseConfigured) updatePatient(id, { statut: next }).catch(() => {});
   };
 
   const filtered = patientList.filter(p => {

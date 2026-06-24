@@ -92,7 +92,7 @@ export default function DoctorLogin() {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>TikDoc</span>
+            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
           </div>
 
           <h1 style={{ fontSize: 26, fontWeight: 700, color: DARK, margin: '0 0 8px' }}>Bienvenue !</h1>
@@ -289,7 +289,7 @@ export default function DoctorLogin() {
             lineHeight: 1.3,
           }}
         >
-          Votre espace médecin TikDoc
+          Votre espace médecin Tabibo
         </h2>
         <p
           style={{

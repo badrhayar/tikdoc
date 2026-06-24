@@ -12,7 +12,7 @@ const MUTED = '#6B7B76';
 
 // Fallback collection account if the admin hasn't set one yet.
 const DEFAULT_RIB = '230 810 0000000000000000 12';
-const DEFAULT_BANK = 'Attijariwafa Bank — TikDoc SAS';
+const DEFAULT_BANK = 'Attijariwafa Bank — Tabibo SAS';
 
 const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const FR_MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
@@ -118,7 +118,7 @@ export default function Subscription({ state, setState, go }) {
     try {
       await declarePayment(p.id);
       setPays((l) => l.map((x) => x.id === p.id ? { ...x, status: 'declared' } : x));
-      setState({ toast: 'Paiement signalé — en attente de confirmation TikDoc.', toastShow: true });
+      setState({ toast: 'Paiement signalé — en attente de confirmation Tabibo.', toastShow: true });
     } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); }
   };
   const pendingPay = pays.find((p) => p.status === 'declared');
@@ -186,7 +186,7 @@ export default function Subscription({ state, setState, go }) {
       {pays.length > 0 && (
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, marginBottom: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, margin: '0 0 4px' }}>Mes paiements</h2>
-          <p style={{ fontSize: 12.5, color: MUTED, margin: '0 0 14px' }}>Réglez par virement sur le RIB ci-dessous, puis cliquez « J'ai payé ». TikDoc confirme à réception.</p>
+          <p style={{ fontSize: 12.5, color: MUTED, margin: '0 0 14px' }}>Réglez par virement sur le RIB ci-dessous, puis cliquez « J'ai payé ». Tabibo confirme à réception.</p>
           <div style={{ fontSize: 13, color: DARK, marginBottom: 14 }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{RIB}</span> · <span style={{ color: MUTED }}>{BANK}</span></div>
           {pays.map((p) => {
             const pp = p.status === 'paid' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Payé ✓' } : p.status === 'declared' ? { bg: '#FEF6E7', c: '#C28A1B', t: 'En attente de confirmation' } : { bg: '#F3F4F6', c: '#6B7B76', t: 'À régler' };
@@ -330,7 +330,7 @@ export default function Subscription({ state, setState, go }) {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: PRIMARY, letterSpacing: -0.5 }}>TikDoc</div>
+                <div style={{ fontSize: 26, fontWeight: 800, color: PRIMARY, letterSpacing: -0.5 }}>Tabibo</div>
                 <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Plateforme médicale digitale</div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -345,9 +345,9 @@ export default function Subscription({ state, setState, go }) {
             <div style={{ display: 'flex', gap: 32, marginBottom: 30, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Émetteur</div>
-                <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>TikDoc SAS</div>
+                <div style={{ fontWeight: 700, color: DARK, fontSize: 15 }}>Tabibo SAS</div>
                 <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>Casablanca, Maroc</div>
-                <div style={{ color: MUTED, fontSize: 13 }}>contact@tikdoc.ma</div>
+                <div style={{ color: MUTED, fontSize: 13 }}>contact@tabibo.ma</div>
                 <div style={{ color: MUTED, fontSize: 13, marginTop: 8 }}><strong style={{ color: DARK }}>RIB :</strong> {RIB}</div>
                 <div style={{ color: MUTED, fontSize: 12 }}>{BANK}</div>
               </div>
@@ -372,7 +372,7 @@ export default function Subscription({ state, setState, go }) {
               </thead>
               <tbody>
                 <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                  <td style={{ padding: '14px', fontSize: 14, color: DARK }}>Abonnement TikDoc {currentPlan.name} — {selectedInvoice.monthLabel}</td>
+                  <td style={{ padding: '14px', fontSize: 14, color: DARK }}>Abonnement Tabibo {currentPlan.name} — {selectedInvoice.monthLabel}</td>
                   <td style={{ padding: '14px', fontSize: 14, color: DARK, textAlign: 'right' }}>1</td>
                   <td style={{ padding: '14px', fontSize: 14, color: DARK, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>
                   <td style={{ padding: '14px', fontSize: 14, color: DARK, fontWeight: 600, textAlign: 'right' }}>{selectedInvoice.amount} MAD</td>

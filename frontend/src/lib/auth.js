@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TikDoc auth helpers — thin wrappers over Supabase Auth.
+// Tabibo auth helpers — thin wrappers over Supabase Auth.
 // Profile rows in public.users are created automatically by the
 // `handle_new_user` trigger from the metadata passed to signUp().
 // ─────────────────────────────────────────────────────────────────────────────

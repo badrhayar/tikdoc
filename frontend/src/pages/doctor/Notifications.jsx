@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchReminderLog, fetchReminderSettings, saveReminderSettings } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -6,39 +7,32 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
-const smsData = [
-  { patient: 'Fatima Zahra Benali', phone: '+212 6 12 34 56 78', message: 'Rappel: RDV demain à 09:00 avec Dr. Benali. Répondez OUI pour confirmer.', sentAt: '13/06/2026 08:00', status: 'Livré' },
-  { patient: 'Mohammed Alami', phone: '+212 6 23 45 67 89', message: 'Votre rendez-vous du 14/06 à 10:30 est confirmé. Merci de votre confiance.', sentAt: '13/06/2026 08:05', status: 'Livré' },
-  { patient: 'Khadija Tazi', phone: '+212 6 34 56 78 90', message: 'Rappel: RDV demain à 11:00 avec Dr. Benali. Répondez OUI pour confirmer.', sentAt: '13/06/2026 08:10', status: 'Livré' },
-  { patient: 'Youssef El Idrissi', phone: '+212 6 45 67 89 01', message: 'Suivi post-consultation: Comment vous sentez-vous ? Contactez-nous si besoin.', sentAt: '12/06/2026 14:00', status: 'Livré' },
-  { patient: 'Amina Cherkaoui', phone: '+212 6 56 78 90 12', message: 'Rappel: RDV dans 2 jours le 15/06 à 09:30. Répondez OUI pour confirmer.', sentAt: '12/06/2026 10:00', status: 'En attente' },
-  { patient: 'Hassan Moussaoui', phone: '+212 6 67 89 01 23', message: 'Votre rendez-vous du 12/06 à 14:00 est confirmé. Merci de votre confiance.', sentAt: '11/06/2026 09:00', status: 'Livré' },
-  { patient: 'Nadia Berrada', phone: '+212 6 78 90 12 34', message: 'Rappel: RDV demain à 16:00 avec Dr. Benali. Répondez OUI pour confirmer.', sentAt: '11/06/2026 08:00', status: 'Échoué' },
-  { patient: 'Omar Lamrani', phone: '+212 6 89 01 23 45', message: 'Suivi post-consultation: N\'hésitez pas à nous contacter pour tout besoin.', sentAt: '10/06/2026 15:00', status: 'Livré' },
-  { patient: 'Salma Kettani', phone: '+212 6 90 12 34 56', message: 'Rappel: RDV demain à 10:00 avec Dr. Benali. Répondez OUI pour confirmer.', sentAt: '10/06/2026 08:00', status: 'Livré' },
-  { patient: 'Rachid Bensouda', phone: '+212 6 01 23 45 67', message: 'Votre rendez-vous du 10/06 à 11:30 est confirmé. Merci de votre confiance.', sentAt: '09/06/2026 09:30', status: 'Livré' },
-];
-
+// Toggle definitions — `key` maps to a column in public.reminder_settings.
 const automatedRules = [
-  { id: 1, title: 'Rappel J-1', description: 'Envoie un SMS 24h avant le rendez-vous', defaultOn: true },
-  { id: 2, title: 'Rappel J-2', description: 'Envoie un SMS 48h avant le rendez-vous', defaultOn: true },
-  { id: 3, title: 'Confirmation de RDV', description: 'Envoie un SMS de confirmation après la prise de rendez-vous', defaultOn: true },
-  { id: 4, title: 'Suivi post-consultation', description: 'Envoie un SMS de suivi 3 jours après la consultation', defaultOn: false },
+  { key: 'j1', title: 'Rappel J-1', description: 'Envoie un message WhatsApp 24h avant le rendez-vous' },
+  { key: 'j2', title: 'Rappel J-2', description: 'Envoie un message WhatsApp 48h avant le rendez-vous' },
+  { key: 'confirmation', title: 'Confirmation de RDV', description: 'Envoie une confirmation après la prise de rendez-vous' },
+  { key: 'followup', title: 'Suivi post-consultation', description: 'Envoie un suivi 3 jours après la consultation' },
 ];
 
 const smsTemplates = [
-  { id: 1, name: 'Rappel J-1', preview: 'Rappel: RDV demain à {heure} avec {docteur}. Répondez OUI pour confirmer.', chars: 72 },
-  { id: 2, name: 'Rappel J-2', preview: 'Rappel: RDV dans 2 jours le {date} à {heure}. Répondez OUI pour confirmer.', chars: 76 },
-  { id: 3, name: 'Confirmation RDV', preview: 'Votre rendez-vous du {date} à {heure} est confirmé. Merci de votre confiance.', chars: 79 },
-  { id: 4, name: 'Suivi post-consultation', preview: 'Suivi: Comment vous sentez-vous après votre consultation ? Contactez-nous si besoin.', chars: 85 },
-  { id: 5, name: 'Annulation RDV', preview: 'Votre rendez-vous du {date} a été annulé. Contactez-nous pour reprogrammer.', chars: 76 },
+  { id: 1, name: 'Rappel J-1', preview: 'Bonjour {patient}, rappel de votre rendez-vous le {date} à {heure} avec {médecin}. Répondez ANNULER pour annuler. — Tabibo', chars: 110 },
+  { id: 2, name: 'Rappel J-2', preview: 'Bonjour {patient}, votre rendez-vous est prévu le {date} à {heure} avec {médecin}. — Tabibo', chars: 92 },
+  { id: 3, name: 'Confirmation RDV', preview: 'Votre rendez-vous du {date} à {heure} est confirmé. Merci de votre confiance. — Tabibo', chars: 86 },
+  { id: 4, name: 'Suivi post-consultation', preview: 'Suivi: Comment vous sentez-vous après votre consultation ? Contactez-nous si besoin. — Tabibo', chars: 93 },
 ];
 
+// Map the reminder_log status enum to a French badge label.
+const STATUS_LABEL = { delivered: 'Livré', sent: 'Envoyé', queued: 'En attente', failed: 'Échoué' };
+const TEMPLATE_LABEL = { j1: 'Rappel J-1', j2: 'Rappel J-2', confirmation: 'Confirmation', followup: 'Suivi', test: 'Test' };
+
 const statusStyle = (status) => {
-  if (status === 'Livré') return { color: '#16A06A', backgroundColor: '#E8F8F1', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
-  if (status === 'Échoué') return { color: '#EF4444', backgroundColor: '#FEE2E2', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
+  if (status === 'delivered' || status === 'sent') return { color: '#16A06A', backgroundColor: '#E8F8F1', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
+  if (status === 'failed') return { color: '#EF4444', backgroundColor: '#FEE2E2', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
   return { color: '#F59E0B', backgroundColor: '#FEF3C7', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
 };
+
+const fmtDateTime = (iso) => { try { return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
 
 function Toggle({ on, onToggle }) {
   return (
@@ -68,16 +62,55 @@ import { useViewport } from '../../hooks/useViewport';
 export default function Notifications({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
   const [activeTab, setActiveTab] = useState(0);
-  const [toggles, setToggles] = useState(() => Object.fromEntries(automatedRules.map(r => [r.id, r.defaultOn])));
+  const [toggles, setToggles] = useState({ j1: true, j2: false, confirmation: true, followup: false });
+  const [log, setLog] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const tabs = ['SMS Envoyés', 'Rappels automatiques', 'Modèles SMS'];
+  const doctorId = state?.myDoctor?.id;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const [rows, settings] = await Promise.all([fetchReminderLog(doctorId), fetchReminderSettings(doctorId)]);
+        if (!alive) return;
+        setLog(rows);
+        setToggles(settings);
+      } catch (e) { console.warn('[Tabibo] reminders load failed', e); }
+      finally { if (alive) setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [doctorId]);
+
+  // Optimistic toggle that persists to reminder_settings.
+  const onToggle = async (key) => {
+    const next = { ...toggles, [key]: !toggles[key] };
+    setToggles(next);
+    try { await saveReminderSettings(doctorId, next); }
+    catch (e) { setToggles(toggles); setState?.({ toast: 'Échec de l’enregistrement : ' + (e?.message || 'erreur'), toastShow: true }); }
+  };
+
+  // Stats derived from the real delivery log.
+  const now = new Date();
+  const thisMonth = log.filter((r) => { const d = new Date(r.created_at); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
+  const ok = log.filter((r) => r.status === 'sent' || r.status === 'delivered').length;
+  const deliveryRate = log.length ? Math.round((ok / log.length) * 1000) / 10 : 0;
+  const confirmations = log.filter((r) => r.template === 'confirmation' && (r.status === 'sent' || r.status === 'delivered')).length;
+  const stats = [
+    { label: 'Messages ce mois', value: String(thisMonth.length) },
+    { label: 'Taux de livraison', value: log.length ? `${deliveryRate}%` : '—' },
+    { label: 'Confirmations', value: String(confirmations) },
+  ];
+
+  const tabs = ['Messages envoyés', 'Rappels automatiques', 'Modèles'];
 
   return (
     <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Notifications & SMS</h1>
-        <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Gérez vos communications avec vos patients</p>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Rappels & Notifications</h1>
+        <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Rappels de rendez-vous automatiques par WhatsApp</p>
       </div>
 
       {/* Tab Bar */}
@@ -105,11 +138,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
         <div>
           {/* Stats Row */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? 10 : 16, marginBottom: 28 }}>
-            {[
-              { label: 'SMS ce mois', value: '124' },
-              { label: 'Taux de livraison', value: '98.4%' },
-              { label: 'Confirmations', value: '89' },
-            ].map((stat, i) => (
+            {stats.map((stat, i) => (
               <div key={i} style={{
                 flex: isMobile ? '1 1 100%' : 1, backgroundColor: '#fff', border: `1px solid ${BORDER}`,
                 borderRadius: 12, padding: '16px 20px', minWidth: isMobile ? 0 : 140,
@@ -125,7 +154,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
             <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: BG }}>
-                  {['Patient', 'Téléphone', 'Message', 'Envoyé le', 'Statut'].map((col) => (
+                  {['Patient', 'Téléphone', 'Type', 'Envoyé le', 'Statut'].map((col) => (
                     <th key={col} style={{
                       padding: '12px 16px', textAlign: 'left', fontSize: 12,
                       fontWeight: 600, color: MUTED, textTransform: 'uppercase',
@@ -137,18 +166,21 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
                 </tr>
               </thead>
               <tbody>
-                {smsData.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: i < smsData.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
-                    <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 500, color: DARK }}>{row.patient}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED }}>{row.phone}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, color: DARK, maxWidth: 260 }}>
-                      <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {row.message}
-                      </span>
+                {log.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '40px 16px', textAlign: 'center', fontSize: 13.5, color: MUTED }}>
+                      {loading ? 'Chargement…' : 'Aucun message envoyé pour le moment. Les rappels apparaîtront ici dès qu’ils seront envoyés.'}
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>{row.sentAt}</td>
+                  </tr>
+                )}
+                {log.map((row, i) => (
+                  <tr key={row.id} style={{ borderBottom: i < log.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
+                    <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 500, color: DARK }}>{row.patient_name || '—'}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>{row.phone || '—'}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, color: DARK }}>{TEMPLATE_LABEL[row.template] || row.template || '—'}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>{fmtDateTime(row.sent_at || row.created_at)}</td>
                     <td style={{ padding: '14px 16px' }}>
-                      <span style={statusStyle(row.status)}>{row.status}</span>
+                      <span style={statusStyle(row.status)} title={row.error || ''}>{STATUS_LABEL[row.status] || row.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -162,7 +194,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
       {activeTab === 1 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {automatedRules.map((rule) => (
-            <div key={rule.id} style={{
+            <div key={rule.key} style={{
               backgroundColor: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`,
               padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
@@ -171,22 +203,16 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
                   <span style={{ fontSize: 15, fontWeight: 600, color: DARK }}>{rule.title}</span>
                   <span style={{
                     fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                    backgroundColor: toggles[rule.id] ? '#E8F8F1' : '#F3F4F6',
-                    color: toggles[rule.id] ? PRIMARY : MUTED,
+                    backgroundColor: toggles[rule.key] ? '#E8F8F1' : '#F3F4F6',
+                    color: toggles[rule.key] ? PRIMARY : MUTED,
                   }}>
-                    {toggles[rule.id] ? 'Actif' : 'Inactif'}
+                    {toggles[rule.key] ? 'Actif' : 'Inactif'}
                   </span>
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: 13, color: MUTED }}>{rule.description}</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <button style={{
-                  background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
-                  padding: '6px 16px', fontSize: 13, color: DARK, cursor: 'pointer', fontWeight: 500,
-                }}>
-                  Modifier
-                </button>
-                <Toggle on={toggles[rule.id]} onToggle={() => setToggles(t => ({ ...t, [rule.id]: !t[rule.id] }))} />
+                <Toggle on={toggles[rule.key]} onToggle={() => onToggle(rule.key)} />
               </div>
             </div>
           ))}

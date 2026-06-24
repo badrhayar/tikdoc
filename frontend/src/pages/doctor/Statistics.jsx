@@ -22,7 +22,7 @@ const MINI_STATS = [
   { icon: <svg {...I}><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 6.9-1z"/></svg>, label: 'Note moyenne', value: '4.8/5' },
   { icon: <svg {...I}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, label: 'Avis reçus', value: '34' },
   { icon: <svg {...I}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0 0 20.5 15"/></svg>, label: 'Taux de retour', value: '78%' },
-  { icon: <svg {...I}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>, label: 'Score TikDoc', value: '94/100' },
+  { icon: <svg {...I}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>, label: 'Score Tabibo', value: '94/100' },
   { icon: <svg {...I}><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>, label: 'Téléconsultations', value: '17%' },
 ];
 

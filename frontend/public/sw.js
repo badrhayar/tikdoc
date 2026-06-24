@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   TikDoc service worker
+   Tabibo service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tikdoc-v3";
+const CACHE_VERSION = "tabibo-v3";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -30,7 +30,7 @@ const OFFLINE_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>TikDoc — Hors ligne</title>
+<title>Tabibo — Hors ligne</title>
 <style>
   html,body{height:100%;margin:0}
   body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fff;color:#15314A;
@@ -45,7 +45,7 @@ const OFFLINE_HTML = `<!doctype html>
 </style>
 </head>
 <body>
-  <div class="brand">TikDoc</div>
+  <div class="brand">Tabibo</div>
   <div class="icon">📡</div>
   <p>Vous êtes hors ligne. Veuillez vérifier votre connexion internet.</p>
   <p class="ar">أنت غير متصل بالإنترنت. يرجى التحقق من اتصالك.</p>

@@ -39,13 +39,13 @@ export default function PWAInstall() {
   useEffect(() => {
     const onBIP = (e) => {
       e.preventDefault();
-      if (isStandalone() || dismissedRecently('tikdoc_install_dismissed', 7)) return;
+      if (isStandalone() || dismissedRecently('tabibo_install_dismissed', 7)) return;
       setDeferred(e);
       setShowAndroid(true);
     };
     const onInstalled = () => {
       setShowAndroid(false); setShowIOS(false); setDeferred(null);
-      console.log('TikDoc installed');
+      console.log('Tabibo installed');
     };
     window.addEventListener('beforeinstallprompt', onBIP);
     window.addEventListener('appinstalled', onInstalled);
@@ -58,7 +58,7 @@ export default function PWAInstall() {
   // iOS Safari: no install API → show an "Add to Home Screen" sheet after 3s.
   useEffect(() => {
     if (!isIOSSafari() || isStandalone()) return;
-    if (dismissedRecently('tikdoc_ios_prompt_dismissed', 30)) return;
+    if (dismissedRecently('tabibo_ios_prompt_dismissed', 30)) return;
     const t = setTimeout(() => setShowIOS(true), 3000);
     return () => clearTimeout(t);
   }, []);
@@ -70,8 +70,8 @@ export default function PWAInstall() {
     setDeferred(null);
     setShowAndroid(false);
   };
-  const dismissAndroid = () => { markDismissed('tikdoc_install_dismissed'); setShowAndroid(false); };
-  const dismissIOS = () => { markDismissed('tikdoc_ios_prompt_dismissed'); setShowIOS(false); };
+  const dismissAndroid = () => { markDismissed('tabibo_install_dismissed'); setShowAndroid(false); };
+  const dismissIOS = () => { markDismissed('tabibo_ios_prompt_dismissed'); setShowIOS(false); };
 
   const installBtn = {
     background: TEAL, color: '#fff', border: 'none', borderRadius: 10,
@@ -99,9 +99,9 @@ export default function PWAInstall() {
             fontFamily: ar ? "'Noto Sans Arabic', sans-serif" : 'Inter, sans-serif',
           }}
         >
-          <img src="/icons/icon-192.png" alt="TikDoc" width={32} height={32} style={{ borderRadius: 8, flexShrink: 0 }} />
+          <img src="/icons/icon-192.png" alt="Tabibo" width={32} height={32} style={{ borderRadius: 8, flexShrink: 0 }} />
           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#15314A', lineHeight: 1.35 }}>
-            {ar ? 'ثبّت TikDoc على شاشتك الرئيسية' : "Installez TikDoc sur votre écran d'accueil"}
+            {ar ? 'ثبّت Tabibo على شاشتك الرئيسية' : "Installez Tabibo sur votre écran d'accueil"}
           </span>
           <button onClick={installAndroid} style={installBtn}>{ar ? 'تثبيت' : 'Installer'}</button>
           <button onClick={dismissAndroid} aria-label={ar ? 'إغلاق' : 'Fermer'} style={{ background: '#F4F6F5', border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 18, color: '#6B7B76', cursor: 'pointer', flexShrink: 0 }}>×</button>
@@ -126,14 +126,14 @@ export default function PWAInstall() {
           >
             <div style={{ width: 40, height: 4, borderRadius: 99, background: '#E0E6E3', margin: '0 auto 16px' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center', marginBottom: 14 }}>
-              <img src="/icons/icon-192.png" width={40} height={40} style={{ borderRadius: 10 }} alt="TikDoc" />
-              <span style={{ fontSize: 19, fontWeight: 800, color: TEAL }}>TikDoc</span>
+              <img src="/icons/icon-192.png" width={40} height={40} style={{ borderRadius: 10 }} alt="Tabibo" />
+              <span style={{ fontSize: 19, fontWeight: 800, color: TEAL }}>Tabibo</span>
             </div>
             <p style={{ fontSize: 15.5, color: '#15314A', lineHeight: 1.7, textAlign: 'center', margin: '0 0 8px' }}>
               {ar ? (
-                <>لتثبيت TikDoc: اضغط على <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> ثم «إضافة إلى الشاشة الرئيسية».</>
+                <>لتثبيت Tabibo: اضغط على <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> ثم «إضافة إلى الشاشة الرئيسية».</>
               ) : (
-                <>Pour installer TikDoc&nbsp;: appuyez sur <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> en bas de Safari, puis «&nbsp;Sur l'écran d'accueil&nbsp;».</>
+                <>Pour installer Tabibo&nbsp;: appuyez sur <span style={shareChip}><Icon name="upload" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /></span> en bas de Safari, puis «&nbsp;Sur l'écran d'accueil&nbsp;».</>
               )}
             </p>
             <div style={{ textAlign: 'center', fontSize: 12.5, color: '#6B7B76', marginBottom: 18 }}>

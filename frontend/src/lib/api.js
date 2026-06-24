@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TikDoc data-access layer
+// Tabibo data-access layer
 // Thin wrappers around Supabase queries. Each function returns plain objects
 // shaped the way the existing UI expects (see shared.jsx DOCTORS), so screens
 // can switch from mock data to Supabase with minimal changes.
@@ -93,6 +93,18 @@ export async function fetchAvailability(doctorId) {
  * patient_id matches the signed-in user, so pass the current app user id.
  * @returns the inserted appointment row
  */
+/**
+ * Fire-and-forget WhatsApp confirmation for a freshly booked appointment.
+ * Never throws — booking UX must not depend on it. The Edge Function itself
+ * skips the send when the doctor disabled the "confirmation" toggle.
+ */
+export function sendBookingConfirmation(appointmentId) {
+  if (!appointmentId) return;
+  supabase.functions
+    .invoke('send-reminder', { body: { type: 'send', appointment_id: appointmentId, template: 'confirmation' } })
+    .catch((e) => console.warn('[Tabibo] confirmation send skipped', e));
+}
+
 export async function createAppointment({ patientId, doctorId, datetime, reason, notes }) {
   const { data, error } = await supabase
     .from('appointments')
@@ -107,6 +119,7 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
     .select()
     .single();
   if (error) throw error;
+  sendBookingConfirmation(data.id);
   return data;
 }
 
@@ -131,6 +144,7 @@ export async function createWalkinAppointment({ doctorId, datetime, reason, note
     .select()
     .single();
   if (error) throw error;
+  sendBookingConfirmation(data.id);
   return data;
 }
 export async function fetchMyAppointments() {
@@ -476,7 +490,7 @@ export async function notifyVerification(payload) {
     if (error) throw error;
     return data;
   } catch (e) {
-    console.warn('[TikDoc] notify-verification unavailable', e);
+    console.warn('[Tabibo] notify-verification unavailable', e);
     return { ok: false, pending: true };
   }
 }
@@ -589,7 +603,7 @@ export async function inviteNewPatient({ name, phone, email, appt = null }) {
     if (error) throw error;
     return data;
   } catch (e) {
-    console.warn('[TikDoc] invite-patient not available yet — patient added locally only.', e);
+    console.warn('[Tabibo] invite-patient not available yet — patient added locally only.', e);
     return { ok: false, pending: true };
   }
 }
@@ -657,6 +671,19 @@ export async function getDocumentUrl(path) {
 }
 
 // ── Chat: conversations + messages ────────────────────────────────────────────
+/** The existing conversation between a patient and a doctor, or null (no insert). */
+export async function findConversation(patientId, doctorId) {
+  if (!patientId || !doctorId) return null;
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('patient_id', patientId)
+    .eq('doctor_id', doctorId)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 export async function getOrCreateConversation(patientId, doctorId) {
   const existing = await supabase
     .from('conversations')
@@ -716,4 +743,194 @@ export async function sendMessage(conversationId, senderId, content) {
     .single();
   if (error) throw error;
   return data;
+}
+
+// ── Realtime ──────────────────────────────────────────────────────────────────
+// Postgres-change streams. They respect RLS, so each subscriber only receives
+// rows it is allowed to SELECT (a doctor gets their conversations/appointments,
+// a patient gets theirs). Every helper returns an unsubscribe function.
+
+/** Live-stream new messages of a single conversation. */
+export function subscribeToConversation(conversationId, onMessage) {
+  if (!conversationId) return () => {};
+  const channel = supabase
+    .channel(`conv:${conversationId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+      (payload) => onMessage(payload.new),
+    )
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+/** Live inbox for the signed-in user: new messages and/or new appointments. */
+export function subscribeToInbox({ onMessage, onAppointment } = {}) {
+  const channel = supabase.channel('inbox');
+  if (onMessage) {
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onMessage(p.new));
+  }
+  if (onAppointment) {
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (p) => onAppointment(p.new));
+  }
+  channel.subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// ── Reminders (WhatsApp) ──────────────────────────────────────────────────────
+const DEFAULT_REMINDER_SETTINGS = { j1: true, j2: false, confirmation: true, followup: false };
+
+/** A doctor's reminder automation toggles (falls back to defaults). */
+export async function fetchReminderSettings(doctorId) {
+  if (!doctorId) return { ...DEFAULT_REMINDER_SETTINGS };
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('j1, j2, confirmation, followup')
+    .eq('doctor_id', doctorId)
+    .maybeSingle();
+  if (error) throw error;
+  return { ...DEFAULT_REMINDER_SETTINGS, ...(data || {}) };
+}
+
+/** Persist the reminder toggles (upsert on doctor_id). */
+export async function saveReminderSettings(doctorId, settings) {
+  if (!doctorId) return;
+  const row = { doctor_id: doctorId, ...DEFAULT_REMINDER_SETTINGS, ...settings, updated_at: new Date().toISOString() };
+  const { error } = await supabase.from('reminder_settings').upsert(row, { onConflict: 'doctor_id' });
+  if (error) throw error;
+}
+
+/** Delivery log rows for the reminders dashboard (most recent first). */
+export async function fetchReminderLog(doctorId, limit = 100) {
+  if (!doctorId) return [];
+  const { data, error } = await supabase
+    .from('reminder_log')
+    .select('id, patient_name, phone, channel, template, body, status, error, created_at, sent_at')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+/** Fire a test WhatsApp message to verify the provider configuration. */
+export async function sendReminderTest(phone) {
+  const { data, error } = await supabase.functions.invoke('send-reminder', { body: { type: 'test', to: phone } });
+  if (error) throw error;
+  return data;
+}
+
+// ── Doctor patient roster ─────────────────────────────────────────────────────
+const PATIENT_COLORS = ['#16A06A', '#2563EB', '#9333EA', '#EA580C', '#DB2777', '#0891B2', '#854D0E', '#0E7C52'];
+
+function patientInitials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+}
+function patientColor(name = '') {
+  let h = 0;
+  for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PATIENT_COLORS[h % PATIENT_COLORS.length];
+}
+function ageFromDob(dob) {
+  if (!dob) return '—';
+  const d = new Date(dob); if (isNaN(d)) return '—';
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a >= 0 && a < 130 ? a : '—';
+}
+function fmtDateShort(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts); if (isNaN(d)) return '—';
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+function normSex(s) {
+  const v = String(s || '').toLowerCase();
+  if (v.startsWith('f')) return 'F';
+  if (v.startsWith('m') || v.startsWith('h')) return 'M';
+  return s || '';
+}
+
+/** Map a doctor_patient_directory row to the shape the UI expects. */
+export function mapPatient(row) {
+  return {
+    id: row.id,
+    userId: row.user_id || null,
+    name: row.name || '',
+    cin: row.cin || '',
+    phone: row.phone || '',
+    email: row.email || '',
+    dob: row.dob || '',
+    age: ageFromDob(row.dob),
+    sex: normSex(row.sex),
+    address: row.address || '',
+    city: row.city || '',
+    blood: row.blood || '',
+    allergies: row.allergies || '',
+    chronic: row.chronic || '',
+    insurance: row.insurance || '',
+    notes: row.notes || '',
+    statut: row.status || 'Actif',
+    initials: patientInitials(row.name),
+    color: patientColor(row.name),
+    visits: row.visits || 0,
+    lastVisit: fmtDateShort(row.last_visit),
+    nextAppt: fmtDateShort(row.next_appt),
+  };
+}
+
+/** A doctor's full patient roster (with visit stats). */
+export async function fetchMyPatients(doctorId) {
+  if (!doctorId) return [];
+  const { data, error } = await supabase
+    .from('doctor_patient_directory')
+    .select('*')
+    .eq('doctor_id', doctorId)
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapPatient);
+}
+
+/** Add a patient to the doctor's roster. */
+export async function createPatient(doctorId, p) {
+  const { data, error } = await supabase
+    .from('doctor_patients')
+    .insert({
+      doctor_id: doctorId,
+      name: p.name,
+      cin: p.cin || null,
+      phone: p.phone || null,
+      email: p.email || null,
+      dob: p.dob || null,
+      sex: p.sex || null,
+      address: p.address || null,
+      city: p.city || null,
+      blood: p.blood || null,
+      allergies: p.allergies || null,
+      chronic: p.chronic || null,
+      insurance: p.insurance || null,
+      notes: p.notes || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapPatient(data);
+}
+
+/** Update roster fields (e.g. archive: { statut: 'Archivé' }). */
+export async function updatePatient(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() };
+  if ('statut' in patch) { patch.status = patch.statut; delete patch.statut; }
+  const { error } = await supabase.from('doctor_patients').update(patch).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+/** Remove a patient from the roster. */
+export async function deletePatient(id) {
+  const { error } = await supabase.from('doctor_patients').delete().eq('id', id);
+  if (error) throw error;
+  return true;
 }

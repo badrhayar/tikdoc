@@ -104,7 +104,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: `0 ${padX}px`, height: isPhone ? 60 : 70, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 28 }}>
           {/* Logo */}
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
+            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
             <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
               Tik<span style={{ color: PRIMARY }}>Doc</span>
             </span>
@@ -380,7 +380,7 @@ export default function Landing() {
               <div style={{ position: 'absolute', top: -50, right: -50, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.10)' }} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                 <div style={{ marginBottom: 10, filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2))' }}><Icon name="stethoscope" size={isMobile ? 52 : 72} strokeWidth={1.6} /></div>
-                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 19, fontWeight: 800, opacity: 0.95 }}>TikDoc</div>
+                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 19, fontWeight: 800, opacity: 0.95 }}>Tabibo</div>
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{tr('Votre santé, notre priorité', 'Your health, our priority', 'صحتك أولويتنا')}</div>
               </div>
             </div>
@@ -481,7 +481,7 @@ export default function Landing() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.4fr 1fr 1fr 1fr', gap: isPhone ? 24 : 40, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
             <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
-                <img loading="lazy" src="/icons/icon-192.png" alt="TikDoc" style={{ width: 26, height: 26, borderRadius: 7 }} />
+                <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 26, height: 26, borderRadius: 7 }} />
                 <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', fontWeight: 800, fontSize: 18 }}>
                   Tik<span style={{ color: PRIMARY }}>Doc</span>
                 </span>
@@ -505,7 +505,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <div style={{ paddingTop: 20, textAlign: 'center', fontSize: 13 }}>© 2024 TikDoc. {tr('Tous droits réservés.', 'All rights reserved.', 'جميع الحقوق محفوظة.')}</div>
+          <div style={{ paddingTop: 20, textAlign: 'center', fontSize: 13 }}>© 2024 Tabibo. {tr('Tous droits réservés.', 'All rights reserved.', 'جميع الحقوق محفوظة.')}</div>
         </div>
       </footer>
 

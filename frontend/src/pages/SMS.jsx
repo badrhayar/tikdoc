@@ -10,7 +10,7 @@ export default function SMS() {
   const slot = state.bookSlot || '14:00';
 
   const smsText =
-    `Bonjour,\n\nVotre rendez-vous avec ${doc.name} est confirmé pour le ${dateLabel} à ${slot}.\n\nLieu : ${doc.clinic}, ${doc.city}\n\nPour annuler ou modifier, répondez ANNULER à ce message.\n\n— TikDoc`;
+    `Bonjour,\n\nVotre rendez-vous avec ${doc.name} est confirmé pour le ${dateLabel} à ${slot}.\n\nLieu : ${doc.clinic}, ${doc.city}\n\nPour annuler ou modifier, répondez ANNULER à ce message.\n\n— Tabibo`;
 
   return (
     <div style={{
@@ -137,7 +137,7 @@ export default function SMS() {
               flexShrink: 0,
             }}>TD</div>
             <div>
-              <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>TikDoc</div>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Tabibo</div>
               <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Service SMS</div>
             </div>
           </div>

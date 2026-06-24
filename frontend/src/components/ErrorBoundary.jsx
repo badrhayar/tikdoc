@@ -18,7 +18,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     // eslint-disable-next-line no-console
-    console.error('TikDoc UI error:', error, info?.componentStack);
+    console.error('Tabibo UI error:', error, info?.componentStack);
   }
 
   componentDidUpdate(prevProps) {

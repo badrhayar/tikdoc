@@ -113,7 +113,7 @@ export default function Admin() {
       <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', padding: 24 }}>
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, maxWidth: 380, textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 8 }}>Accès réservé</div>
-          <p style={{ fontSize: 14, color: MUTED, margin: '0 0 18px' }}>Cette console est réservée aux administrateurs TikDoc.</p>
+          <p style={{ fontSize: 14, color: MUTED, margin: '0 0 18px' }}>Cette console est réservée aux administrateurs Tabibo.</p>
           <button onClick={() => go('home')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 22px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Retour à l'accueil</button>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function Admin() {
       {/* Top bar */}
       <header style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 14px' : '0 26px', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/icons/icon-192.png" alt="TikDoc" style={{ width: 30, height: 30, borderRadius: 8 }} />
+          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 18, color: DARK }}>Tik<span style={{ color: PRIMARY }}>Doc</span></span>
           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#C2466A', background: '#FCE7EE', borderRadius: 99, padding: '3px 9px' }}>ADMIN</span>
         </div>
@@ -481,7 +481,7 @@ export default function Admin() {
             <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>RIB (24 chiffres)</label>
             <input value={rib} onChange={(e) => setRib(e.target.value)} placeholder="230 810 0000000000000000 12" style={{ ...inputStyle, marginBottom: 16, fontFamily: 'monospace' }} />
             <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>Banque / titulaire</label>
-            <input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Attijariwafa Bank — TikDoc SAS" style={{ ...inputStyle, marginBottom: 22 }} />
+            <input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Attijariwafa Bank — Tabibo SAS" style={{ ...inputStyle, marginBottom: 22 }} />
             <button onClick={saveRib} disabled={busy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 22px', fontWeight: 700, fontSize: 14, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Enregistrement…' : 'Enregistrer le RIB'}</button>
 
             {/* Email tester */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { uploadDocument, listDocuments, getDocumentUrl } from '../../lib/api';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import { DEMO_PATIENTS } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
@@ -46,10 +47,10 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
 
   const appUser = state?.appUser;
   // Same patient roster as the Patients directory (includes any just added).
-  const patientOpts = (state?.patients?.length ? state.patients : DEMO_PATIENTS).map(p => ({ id: p.id, name: p.name }));
+  const patientOpts = (state?.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS)).map(p => ({ id: p.id, name: p.name }));
 
   const refresh = async () => {
-    try { setDocs(await listDocuments()); } catch (e) { console.warn('[TikDoc] listDocuments failed', e); }
+    try { setDocs(await listDocuments()); } catch (e) { console.warn('[Tabibo] listDocuments failed', e); }
   };
   useEffect(() => { refresh(); }, []);
 
