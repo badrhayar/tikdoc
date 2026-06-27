@@ -54,12 +54,12 @@ export default function ForPatients() {
     },
     {
       icon: 'chat',
-      title: lang === 'ar' ? 'تذكير بالرسائل' : lang === 'en' ? 'SMS Reminders' : 'Rappels SMS',
+      title: lang === 'ar' ? 'تذكير عبر واتساب' : lang === 'en' ? 'WhatsApp Reminders' : 'Rappels WhatsApp',
       desc: lang === 'ar'
-        ? 'تلقّ تذكيرات تلقائية بموعدك عبر الرسائل القصيرة حتى لا تفوّتك أي زيارة.'
+        ? 'تلقّ تذكيرات تلقائية بموعدك عبر واتساب حتى لا تفوّتك أي زيارة.'
         : lang === 'en'
-        ? 'Receive automatic SMS reminders before each appointment so you never miss a visit.'
-        : 'Recevez des rappels automatiques par SMS avant chaque rendez-vous pour ne rien manquer.',
+        ? 'Receive automatic WhatsApp reminders before each appointment so you never miss a visit.'
+        : 'Recevez des rappels automatiques par WhatsApp avant chaque rendez-vous pour ne rien manquer.',
     },
     {
       icon: 'clipboard',

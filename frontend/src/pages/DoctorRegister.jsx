@@ -627,7 +627,7 @@ export default function DoctorRegister() {
           },
           {
             icon: 'chat',
-            title: 'Rappels SMS automatiques',
+            title: 'Rappels WhatsApp automatiques',
             desc: 'Réduisez les absences grâce aux rappels envoyés automatiquement.',
           },
           {

@@ -4,6 +4,7 @@ import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
 import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox } from '../../lib/api';
+import PhoneField from '../../components/PhoneField';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 // Whole years between a birth date (YYYY-MM-DD) and today; null if unset/invalid.
@@ -408,7 +409,7 @@ export default function DoctorApp() {
                       {naSuggests.map((sg, i) => {
                         const [bg, fg] = tint(i);
                         return (
-                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: String(sg.phone || '').replace(/^\+?212\s*/, '').trim(), cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sg.sex || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
+                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: sg.phone && sg.phone !== '—' ? sg.phone : '', cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sg.sex || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
                             <span style={{ width:30, height:30, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0 }}>{initials(sg.name)}</span>
                             <span style={{ flex:1, minWidth:0 }}>
                               <span style={{ display:'block', fontSize:13, fontWeight:700, color:DARK }}>{sg.name}</span>
@@ -434,10 +435,7 @@ export default function DoctorApp() {
                 <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:14, marginBottom:18 }}>
                   <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Téléphone</label>
-                    <div style={{ display:'flex', alignItems:'center', border:'1px solid #DCE5E0', borderRadius:9, background:'#F8FBF9', overflow:'hidden' }}>
-                      <span style={{ padding:'11px 9px', fontSize:13.5, color:MUT, background:'#EEF3F1', borderRight:'1px solid #DCE5E0', flexShrink:0 }}>+212</span>
-                      <input value={newAppt.phone || ''} onChange={e => setNA('phone', e.target.value)} placeholder="6 12 34 56 78" style={{ flex:1, minWidth:0, padding:11, border:'none', fontSize:13.5, outline:'none', background:'none', direction:'ltr' }} />
-                    </div>
+                    <PhoneField value={newAppt.phone || ''} onChange={v => setNA('phone', v)} />
                   </div>
                   <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>CIN <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
@@ -531,10 +529,7 @@ export default function DoctorApp() {
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18 }}>
                   <div>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Téléphone</label>
-                    <div style={{ display:'flex', alignItems:'center', border:'1px solid #DCE5E0', borderRadius:9, background:'#F8FBF9', overflow:'hidden' }}>
-                      <span style={{ padding:'11px 9px', fontSize:13.5, color:MUT, background:'#EEF3F1', borderRight:'1px solid #DCE5E0' }}>+212</span>
-                      <input value={newPatient.phone || ''} onChange={e => setNP('phone', e.target.value)} placeholder="6 12 34 56 78" style={{ flex:1, minWidth:0, padding:11, border:'none', fontSize:13.5, outline:'none', background:'none', direction:'ltr' }} />
-                    </div>
+                    <PhoneField value={newPatient.phone || ''} onChange={v => setNP('phone', v)} />
                   </div>
                   <div>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Email</label>

@@ -31,7 +31,7 @@ const PLANS = {
     key: 'pro', name: 'Pro', price: 299, tagline: 'Pour un cabinet individuel',
     features: [
       'Rendez-vous illimités',
-      'Agenda & rappels SMS (500/mois)',
+      'Agenda & rappels WhatsApp (500/mois)',
       'Messagerie patients',
       'Documents médicaux',
       'Statistiques & revenus',
@@ -42,7 +42,7 @@ const PLANS = {
     key: 'premium', name: 'Premium', price: 499, tagline: 'Pour les cabinets multi-praticiens',
     features: [
       'Tout ce qui est inclus dans Pro',
-      'SMS illimités',
+      'Rappels WhatsApp illimités',
       'Tableau de bord multi-cabinet',
       'Comptes secrétaires multiples',
       'Intégrations API',

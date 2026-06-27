@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile } from '../lib/api';
+import PhoneField from '../components/PhoneField';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -143,6 +144,25 @@ export default function PatientAccount() {
 
   const firstName = patient?.name?.split(' ')[0] || 'Patient';
 
+  // Editable profile (name, phone, CIN, sex, dob) backed by the real account row.
+  const [pf, setPf] = useState(null);
+  const [pfSaving, setPfSaving] = useState(false);
+  useEffect(() => {
+    const u = state.appUser;
+    if (u && !pf) setPf({ full_name: u.full_name || '', cin_or_inpe: u.cin_or_inpe || '', phone: u.phone || '', email: u.email || '', sex: u.sex || '', dob: u.dob || '' });
+  }, [state.appUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setPF = (k, v) => setPf((p) => ({ ...p, [k]: v }));
+  const saveProfile = async () => {
+    if (!state.appUser?.id || !pf) return;
+    setPfSaving(true);
+    try {
+      const saved = await updateMyProfile(state.appUser.id, pf);
+      setState({ appUser: { ...state.appUser, ...(saved || {}) }, toast: 'Profil mis à jour ✓', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Échec de la mise à jour : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setPfSaving(false); }
+  };
+
   // Profile photo
   const photoRef = useRef(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -278,12 +298,32 @@ export default function PatientAccount() {
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
             <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
             <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
-              {[['Nom complet','name'],['CIN','cin'],['Téléphone','phone'],['Email','email']].map(([label, field]) => (
-                <div key={field}>
-                  <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
-                  <input defaultValue={patient?.[field] || ''} style={{ width:'100%', padding:'11px 13px', border:`1px solid #DCE5E0`, borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
-                </div>
-              ))}
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Nom complet</label>
+                <input value={pf?.full_name || ''} onChange={e => setPF('full_name', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>CIN</label>
+                <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Téléphone</label>
+                <PhoneField value={pf?.phone || ''} onChange={v => setPF('phone', v)} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Email</label>
+                <input value={pf?.email || ''} disabled style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#EEF3F1', color:MUT, outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Sexe</label>
+                <select value={pf?.sex || ''} onChange={e => setPF('sex', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
+                  <option value="">—</option><option value="Femme">Femme</option><option value="Homme">Homme</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Date de naissance</label>
+                <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+              </div>
             </div>
             <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
             <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
@@ -294,8 +334,8 @@ export default function PatientAccount() {
                 </div>
               ))}
             </div>
-            <button style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:'pointer', padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
-              Enregistrer les modifications
+            <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
+              {pfSaving ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
 

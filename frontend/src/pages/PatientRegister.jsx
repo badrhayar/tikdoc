@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { GOOGLE_SVG } from '../shared.jsx';
+import PhoneField from '../components/PhoneField';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -35,6 +36,8 @@ export default function PatientRegister() {
         fullName: reg.name,
         phone: reg.phone,
         cinOrInpe: reg.cin,
+        sex: reg.sex,
+        dob: reg.dob,
         role: 'patient',
       });
       if (res.session) {
@@ -143,35 +146,23 @@ export default function PatientRegister() {
             </div>
             <div>
               <label style={labelStyle}>Téléphone</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                <span
-                  style={{
-                    padding: '11px 10px',
-                    background: INPUT_BG,
-                    border: `1.5px solid ${INPUT_BORDER}`,
-                    borderRight: 'none',
-                    borderRadius: '10px 0 0 10px',
-                    fontSize: 13,
-                    color: MUTED,
-                    whiteSpace: 'nowrap',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  +212
-                </span>
-                <input
-                  type="tel"
-                  placeholder="6 12 34 56 78"
-                  value={reg.phone}
-                  onChange={(e) => setReg('phone', e.target.value)}
-                  style={{
-                    ...inputStyle,
-                    borderRadius: '0 10px 10px 0',
-                    borderLeft: 'none',
-                    flex: 1,
-                  }}
-                />
-              </div>
+              <PhoneField value={reg.phone} onChange={(v) => setReg('phone', v)} borderColor={INPUT_BORDER} bg={INPUT_BG} />
+            </div>
+          </div>
+
+          {/* Sexe + Date de naissance */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelStyle}>Sexe</label>
+              <select value={reg.sex || ''} onChange={(e) => setReg('sex', e.target.value)} style={inputStyle}>
+                <option value="">—</option>
+                <option value="Femme">Femme</option>
+                <option value="Homme">Homme</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Date de naissance</label>
+              <input type="date" value={reg.dob || ''} onChange={(e) => setReg('dob', e.target.value)} style={inputStyle} />
             </div>
           </div>
 

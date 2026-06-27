@@ -128,7 +128,7 @@ export default function Confirm() {
           gap: 8,
         }}>
           <Icon name="smartphone" size={15} />
-          Un SMS de confirmation a été envoyé au patient
+          Une confirmation WhatsApp a été envoyée au patient
         </div>
 
         {/* Invoice button */}

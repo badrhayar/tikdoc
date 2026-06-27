@@ -10,12 +10,12 @@ import { supabase } from './supabaseClient';
  * picked up by the DB trigger to populate public.users.
  * @returns { user, session }  — session is null if email confirmation is on.
  */
-export async function signUp({ email, password, fullName, phone, role = 'patient', cinOrInpe }) {
+export async function signUp({ email, password, fullName, phone, role = 'patient', cinOrInpe, sex, dob }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName, phone: phone || null, role, cin_or_inpe: cinOrInpe || null },
+      data: { full_name: fullName, phone: phone || null, role, cin_or_inpe: cinOrInpe || null, sex: sex || null, dob: dob || null },
     },
   });
   if (error) throw error;

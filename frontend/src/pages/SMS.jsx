@@ -24,10 +24,10 @@ export default function SMS() {
       fontFamily: 'system-ui, sans-serif',
     }}>
       <h2 style={{ color: '#15314A', fontWeight: 700, fontSize: 20, marginBottom: 6, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <Icon name="smartphone" size={20} /> SMS de confirmation
+        <Icon name="smartphone" size={20} /> Confirmation WhatsApp
       </h2>
       <p style={{ color: '#6B7B76', fontSize: 14, marginBottom: 36, textAlign: 'center' }}>
-        Exemple de SMS de confirmation reçu par le patient
+        Exemple de confirmation WhatsApp reçue par le patient
       </p>
 
       {/* Phone frame */}
@@ -138,7 +138,7 @@ export default function SMS() {
             }}>TD</div>
             <div>
               <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Tabibo</div>
-              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Service SMS</div>
+              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Service WhatsApp</div>
             </div>
           </div>
 

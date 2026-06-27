@@ -258,6 +258,20 @@ export async function createDoctorProfile(appUserId, p) {
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 
 /** Resolve the current app user's profile row (public.users) from the session. */
+/** Update the signed-in user's own profile (name, phone, cin, sex, dob). */
+export async function updateMyProfile(userId, fields) {
+  if (!userId) return null;
+  const patch = {};
+  if ('full_name' in fields) patch.full_name = fields.full_name;
+  if ('phone' in fields) patch.phone = fields.phone;
+  if ('cin_or_inpe' in fields) patch.cin_or_inpe = fields.cin_or_inpe;
+  if ('sex' in fields) patch.sex = fields.sex || null;
+  if ('dob' in fields) patch.dob = fields.dob || null;
+  const { data, error } = await supabase.from('users').update(patch).eq('id', userId).select().maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function getCurrentAppUser() {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) return null;

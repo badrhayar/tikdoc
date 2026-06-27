@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import PhoneField from '../components/PhoneField';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
 import { createAppointment } from '../lib/api';
@@ -48,13 +49,12 @@ export default function BookingInfo() {
   // so strip any country-code / leading zero to get the local part.
   useEffect(() => {
     if (!appUser) return;
-    const localPhone = String(appUser.phone || '').replace(/^\+?212\s*/, '').replace(/^0/, '').trim();
     setState({
       info: {
         ...info,
         name:  info.name  || appUser.full_name   || '',
         cin:   info.cin   || appUser.cin_or_inpe || '',
-        phone: info.phone || localPhone,
+        phone: info.phone || appUser.phone        || '',
         email: info.email || appUser.email       || '',
       },
     });
@@ -215,16 +215,7 @@ export default function BookingInfo() {
           <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>Téléphone</label>
-              <div style={{ display: 'flex', border: `1.5px solid ${BORDER}`, borderRadius: 9, overflow: 'hidden', background: '#fff' }}>
-                <span style={{ display: 'flex', alignItems: 'center', padding: '10px 10px', background: BG, fontSize: 13, color: MUTED, borderRight: `1px solid ${BORDER}`, whiteSpace: 'nowrap', fontWeight: 600 }}>+212</span>
-                <input
-                  type="tel"
-                  placeholder="6 12 34 56 78"
-                  value={info.phone || ''}
-                  onChange={(e) => setInfo('phone', e.target.value)}
-                  style={{ ...inputStyle, border: 'none', borderRadius: 0, flex: 1 }}
-                />
-              </div>
+              <PhoneField value={info.phone || ''} onChange={(v) => setInfo('phone', v)} borderColor={BORDER} bg="#fff" />
             </div>
             <div>
               <label style={labelStyle}>Email</label>
