@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
@@ -41,6 +42,24 @@ export default function BookingInfo() {
 
   const setInfo = (field, value) =>
     setState({ info: { ...info, [field]: value } });
+
+  // Pre-fill the form from the signed-in patient's profile (without clobbering
+  // anything the user already typed). The phone is shown after a fixed "+212",
+  // so strip any country-code / leading zero to get the local part.
+  useEffect(() => {
+    if (!appUser) return;
+    const localPhone = String(appUser.phone || '').replace(/^\+?212\s*/, '').replace(/^0/, '').trim();
+    setState({
+      info: {
+        ...info,
+        name:  info.name  || appUser.full_name   || '',
+        cin:   info.cin   || appUser.cin_or_inpe || '',
+        phone: info.phone || localPhone,
+        email: info.email || appUser.email       || '',
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appUser?.id]);
 
   const handleConfirm = async () => {
     // When connected to Supabase, persist the appointment for the signed-in patient.
