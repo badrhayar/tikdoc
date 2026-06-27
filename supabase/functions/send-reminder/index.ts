@@ -28,7 +28,9 @@ const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
 const WA_TEMPLATE = Deno.env.get("WHATSAPP_TEMPLATE_REMINDER") ?? "tabibo_reminder";
 const WA_LANG = Deno.env.get("WHATSAPP_LANG") ?? "fr";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Prefer an explicitly-provided key (new API-key system: a `sb_secret_…` key),
+// falling back to the auto-injected legacy service-role key.
+const SERVICE_KEY = Deno.env.get("SB_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
