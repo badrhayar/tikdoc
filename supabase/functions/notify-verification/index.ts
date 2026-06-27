@@ -146,6 +146,31 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── appointment events → email the doctor ───────────────────────────────
+    if (p.type === "appointment" && p.appointment_id) {
+      const { data: a } = await admin
+        .from("appointments")
+        .select("datetime, patient_name, patient:users(full_name), doctor:doctors(user:users!doctors_user_id_fkey(full_name, email))")
+        .eq("id", p.appointment_id).maybeSingle();
+      const av: any = a;
+      const doctorEmail = av?.doctor?.user?.email;
+      if (!av || !doctorEmail) return new Response(JSON.stringify({ ok: true, skipped: "no doctor email" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      const doctorName = av.doctor?.user?.full_name ?? "";
+      const patientName = av.patient?.full_name ?? av.patient_name ?? "Un patient";
+      const when = new Date(av.datetime).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
+      const isCancel = p.event === "cancelled_by_patient";
+      const title = isCancel ? "Rendez-vous annulé par le patient" : "Nouveau rendez-vous";
+      const body = isCancel
+        ? `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> a annulé son rendez-vous prévu le :</p>
+           <p style="background:#FCE7EE;color:#C2466A;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600">${when}</p>
+           <p>Le créneau est de nouveau disponible dans votre agenda.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`
+        : `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> vient de réserver un rendez-vous :</p>
+           <p style="background:#E7F6EE;color:#138257;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600">${when}</p>
+           <p>Connectez-vous à votre espace Tabibo pour le confirmer.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`;
+      await sendEmail(doctorEmail, `${title} — Tabibo`, shell(title, body));
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ ok: false, error: "unknown type" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     console.error(e);

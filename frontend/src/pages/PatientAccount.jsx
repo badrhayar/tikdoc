@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyDoctorEmail } from '../lib/api';
 import PhoneField from '../components/PhoneField';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
@@ -152,6 +152,19 @@ export default function PatientAccount() {
     if (u && !pf) setPf({ full_name: u.full_name || '', cin_or_inpe: u.cin_or_inpe || '', phone: u.phone || '', email: u.email || '', sex: u.sex || '', dob: u.dob || '' });
   }, [state.appUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setPF = (k, v) => setPf((p) => ({ ...p, [k]: v }));
+
+  // Patient cancels their own appointment → notifies the doctor (email) + self (WhatsApp).
+  const cancelMyAppt = async (id) => {
+    if (typeof window !== 'undefined' && !window.confirm('Annuler ce rendez-vous ?')) return;
+    try {
+      await updateAppointmentStatus(id, 'cancelled');
+      setState({ myAppointments: (state.myAppointments || []).map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a)), toast: 'Rendez-vous annulé', toastShow: true });
+      sendApptWhatsApp(id, 'cancelled');
+      notifyDoctorEmail(id, 'cancelled_by_patient');
+    } catch (e) {
+      setState({ toast: 'Annulation impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
   const saveProfile = async () => {
     if (!state.appUser?.id || !pf) return;
     setPfSaving(true);
@@ -389,8 +402,13 @@ export default function PatientAccount() {
                     </div>
                     <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
                     {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
-                    <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, fontSize:11.5, color:G }}>
-                      ✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginTop:4 }}>
+                      <span style={{ fontSize:11.5, color:G }}>✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.</span>
+                      {a.status !== 'cancelled' && a.status !== 'completed' && (
+                        <button onClick={() => cancelMyAppt(a.id)} style={{ flexShrink:0, background:'#FCE7EE', color:'#C2466A', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                          Annuler
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

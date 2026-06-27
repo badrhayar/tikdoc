@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, STATUS_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, sendApptWhatsApp, STATUS_FR } from '../../lib/api';
+import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -45,8 +46,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     return {
       id: a.id,
       rawStatus: a.status,
+      datetime: a.datetime,
       patient: a.patientName || 'Patient',
-      phone: a.patientPhone ? `+212 ${a.patientPhone}` : '—',
+      phone: a.patientPhone ? (String(a.patientPhone).startsWith('+') ? a.patientPhone : `+212 ${a.patientPhone}`) : '—',
       initials: initials(a.patientName || 'P'),
       color: PALETTE[i % PALETTE.length],
       date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
@@ -64,17 +66,42 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       const patch = { manualAppts: (state.manualAppts || []).map(a => a.id === id ? { ...a, status } : a) };
       if (frConsultStatus) patch.manualConsults = (state.manualConsults || []).map(c => c.id === id ? { ...c, status: frConsultStatus } : c);
       setState(patch);
-      return;
+      return false; // mock row → no real patient to notify
     }
     try {
       await updateAppointmentStatus(id, status);
       setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status } : a) });
+      return true;
     } catch (e) {
       setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
+      return false;
     }
   };
-  const cancelAppt  = (id) => setStatus(id, 'cancelled', 'Annulé');
-  const confirmAppt = (id) => setStatus(id, 'confirmed');
+  // Status changes also notify the patient by WhatsApp (only on a real DB update).
+  const cancelAppt   = async (id) => { if (await setStatus(id, 'cancelled', 'Annulé')) sendApptWhatsApp(id, 'cancelled'); };
+  const confirmAppt  = async (id) => { if (await setStatus(id, 'confirmed')) sendApptWhatsApp(id, 'confirmed'); };
+  const completeAppt = (id) => setStatus(id, 'completed', 'Terminé');
+  const noShowAppt   = (id) => setStatus(id, 'no_show', 'Absent');
+
+  // ── Reschedule (doctor changes date/time → patient gets a WhatsApp) ──────────
+  const [resched, setResched] = useState(null); // { id, date, time }
+  const openResched = (appt) => {
+    const d = new Date(appt.datetime || Date.now());
+    const pad = (n) => String(n).padStart(2, '0');
+    setResched({ id: appt.id, date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` });
+  };
+  const saveResched = async () => {
+    const r = resched; if (!r) return;
+    try {
+      const iso = moroccoToUTCISO(r.date, r.time);
+      await updateAppointment(r.id, { datetime: iso });
+      setState({ myAppointments: (state.myAppointments || []).map(a => a.id === r.id ? { ...a, datetime: iso } : a), toast: 'Rendez-vous reporté ✓', toastShow: true });
+      setResched(null);
+      sendApptWhatsApp(r.id, 'rescheduled');
+    } catch (e) {
+      setState({ toast: 'Report impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
 
   const filtered = rows.filter(appt => {
     const matchTab = activeTab === 'Tous' || appt.statut === activeTab;
@@ -230,6 +257,21 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                           color: '#991B1B', fontWeight: 700,
                           opacity: appt.rawStatus === 'cancelled' ? 0.4 : 1,
                         }}>✕</button>
+                        <button title="Reporter" onClick={() => openResched(appt)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                          background: '#EEF3FB', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 14,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2C5BA6',
+                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                        }}>⟳</button>
+                        <button title="Terminer" onClick={() => completeAppt(appt.id)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                          background: '#E8F1FC', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 13,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', fontWeight: 800,
+                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                        }}>✓✓</button>
+                        <button title="Absent" onClick={() => noShowAppt(appt.id)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                          background: '#F3F4F6', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 14,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700,
+                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                        }}>∅</button>
                       </div>
                     </td>
                   </tr>
@@ -266,6 +308,30 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           </div>
         </div>
       </div>
+
+      {/* Reschedule modal */}
+      {resched && (
+        <div onClick={() => setResched(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 90 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, padding: 22, boxShadow: '0 24px 60px rgba(21,49,74,.3)' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 800, color: DARK }}>Reporter le rendez-vous</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 12.5, color: MUTED }}>Le patient sera prévenu par WhatsApp du nouveau créneau.</p>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Date</label>
+                <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Heure</label>
+                <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setResched(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={saveResched} style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Reporter</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

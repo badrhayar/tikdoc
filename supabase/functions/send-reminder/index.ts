@@ -25,8 +25,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
 const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
-const WA_TEMPLATE = Deno.env.get("WHATSAPP_TEMPLATE_REMINDER") ?? "tabibo_reminder";
 const WA_LANG = Deno.env.get("WHATSAPP_LANG") ?? "fr";
+// One template per event type. All share the same 4 body params
+// (patient · date · heure · médecin), so they're interchangeable.
+const TPL = {
+  reminder:  Deno.env.get("WHATSAPP_TEMPLATE_REMINDER")  ?? "tabibo_reminder",
+  confirmed: Deno.env.get("WHATSAPP_TEMPLATE_CONFIRMED") ?? "tabibo_confirmed",
+  cancelled: Deno.env.get("WHATSAPP_TEMPLATE_CANCELLED") ?? "tabibo_cancelled",
+};
+function templateFor(label: string): string {
+  if (label === "confirmed" || label === "rescheduled") return TPL.confirmed;
+  if (label === "cancelled") return TPL.cancelled;
+  return TPL.reminder; // confirmation, j1, j2, followup, test
+}
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Prefer an explicitly-provided key (new API-key system: a `sb_secret_…` key),
 // falling back to the auto-injected legacy service-role key.
@@ -51,8 +62,8 @@ function normalizePhone(raw: string): string {
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Casablanca" });
 const timeFmt = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
 
-// Send an approved WhatsApp template with 4 body parameters.
-async function sendTemplate(to: string, params: string[]) {
+// Send an approved WhatsApp template (named) with 4 body parameters.
+async function sendTemplate(to: string, params: string[], tplName: string) {
   const res = await fetch(`https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
@@ -61,7 +72,7 @@ async function sendTemplate(to: string, params: string[]) {
       to,
       type: "template",
       template: {
-        name: WA_TEMPLATE,
+        name: tplName,
         language: { code: WA_LANG },
         components: [{ type: "body", parameters: params.map((t) => ({ type: "text", text: t })) }],
       },
@@ -93,7 +104,7 @@ async function sendOne(
   }
 
   const to = normalizePhone(appt.phone);
-  const r = await sendTemplate(to, params);
+  const r = await sendTemplate(to, params, templateFor(template));
   await admin.from("reminder_log").insert({
     doctor_id: appt.doctor_id, appointment_id: appt.id, patient_name: appt.patient_name,
     phone: appt.phone, template, body: bodyText,
@@ -107,7 +118,7 @@ async function sendOne(
 async function dueAppointments(admin: ReturnType<typeof createClient>, fromISO: string, toISO: string) {
   const { data } = await admin
     .from("appointments")
-    .select("id, doctor_id, datetime, status, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users(full_name))")
+    .select("id, doctor_id, datetime, status, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users!doctors_user_id_fkey(full_name))")
     .gte("datetime", fromISO).lte("datetime", toISO)
     .in("status", ["pending", "confirmed"]);
   return (data ?? []).map((a: any) => ({
@@ -127,17 +138,17 @@ Deno.serve(async (req) => {
     if (p.type === "test") {
       if (!WA_TOKEN || !WA_PHONE_ID) return json({ ok: false, error: "WHATSAPP_TOKEN / WHATSAPP_PHONE_ID manquants dans les secrets." });
       if (!p.to) return json({ ok: false, error: "Numéro destinataire manquant." });
-      const r = await sendTemplate(normalizePhone(p.to), ["patient", "aujourd'hui", "—", "Tabibo"]);
+      const r = await sendTemplate(normalizePhone(p.to), ["patient", "aujourd'hui", "—", "Tabibo"], TPL.reminder);
       return json(r);
     }
 
     // ── send one ───────────────────────────────────────────────────────────────
     if (p.type === "send" && p.appointment_id) {
-      const { data } = await admin
+      const { data, error: qErr } = await admin
         .from("appointments")
-        .select("id, doctor_id, datetime, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users(full_name))")
+        .select("id, doctor_id, datetime, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users!doctors_user_id_fkey(full_name))")
         .eq("id", p.appointment_id).maybeSingle();
-      if (!data) return json({ ok: false, error: "Rendez-vous introuvable." }, 404);
+      if (!data) return json({ ok: false, error: "Rendez-vous introuvable.", detail: qErr?.message ?? null }, 404);
       const a: any = data;
       const template = p.template ?? "confirmation";
 

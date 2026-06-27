@@ -94,15 +94,27 @@ export async function fetchAvailability(doctorId) {
  * @returns the inserted appointment row
  */
 /**
- * Fire-and-forget WhatsApp confirmation for a freshly booked appointment.
- * Never throws — booking UX must not depend on it. The Edge Function itself
- * skips the send when the doctor disabled the "confirmation" toggle.
+ * Fire-and-forget WhatsApp to the patient for an appointment event.
+ * template: 'confirmation' (booked) | 'confirmed' | 'cancelled' | 'rescheduled' | 'j1' | 'j2'.
+ * Never throws — UX must not depend on it.
  */
-export function sendBookingConfirmation(appointmentId) {
+export function sendApptWhatsApp(appointmentId, template) {
   if (!appointmentId) return;
   supabase.functions
-    .invoke('send-reminder', { body: { type: 'send', appointment_id: appointmentId, template: 'confirmation' } })
-    .catch((e) => console.warn('[Tabibo] confirmation send skipped', e));
+    .invoke('send-reminder', { body: { type: 'send', appointment_id: appointmentId, template } })
+    .catch((e) => console.warn(`[Tabibo] WhatsApp (${template}) skipped`, e));
+}
+
+/** Fire-and-forget email to the doctor. event: 'booked' | 'cancelled_by_patient'. */
+export function notifyDoctorEmail(appointmentId, event) {
+  if (!appointmentId) return;
+  supabase.functions
+    .invoke('notify-verification', { body: { type: 'appointment', appointment_id: appointmentId, event } })
+    .catch((e) => console.warn(`[Tabibo] doctor email (${event}) skipped`, e));
+}
+
+export function sendBookingConfirmation(appointmentId) {
+  sendApptWhatsApp(appointmentId, 'confirmation');
 }
 
 export async function createAppointment({ patientId, doctorId, datetime, reason, notes }) {
@@ -119,7 +131,8 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
     .select()
     .single();
   if (error) throw error;
-  sendBookingConfirmation(data.id);
+  sendBookingConfirmation(data.id);   // WhatsApp → patient
+  notifyDoctorEmail(data.id, 'booked'); // Email → doctor
   return data;
 }
 
