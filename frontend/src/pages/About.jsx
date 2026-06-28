@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { I18N, initials, CITY_OPTS } from '../shared.jsx';
+import { I18N, CITY_OPTS } from '../shared.jsx';
 import Icon from '../components/Icon';
+import MarketingHeader from '../components/MarketingHeader';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -12,26 +12,11 @@ const MUTED = '#6B7B76';
 const BODY = '#5A6B65';
 
 export default function About() {
-  const { state, setState, go } = useApp();
-  const { lang, langOpen, patient } = state;
+  const { state, go } = useApp();
+  const { lang } = state;
   const t = I18N[lang] || I18N.fr;
   const dir = t.dir || 'ltr';
   const { isMobile } = useViewport();
-  const [hoveredNav, setHoveredNav] = useState(null);
-  const [hoveredLang, setHoveredLang] = useState(null);
-
-  const langOptions = [
-    { key: 'fr', label: 'Français (FR)' },
-    { key: 'en', label: 'English (EN)' },
-    { key: 'ar', label: 'العربية (AR)' },
-  ];
-
-  const navItems = [
-    { key: 'home', label: t.navHome },
-    { key: 'forpatients', label: t.navPatients },
-    { key: 'fordoctors', label: t.navDoctors },
-    { key: 'about', label: t.navAbout },
-  ];
 
   const stats = [
     { num: '1 200+', label: lang === 'ar' ? 'طبيب' : 'Médecins partenaires', icon: 'stethoscope' },
@@ -66,138 +51,7 @@ export default function About() {
   return (
     <div dir={dir} style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
       {/* Header */}
-      <header style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px', height: isMobile ? 58 : 68, display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 28 }}>
-          {/* Logo */}
-          <button
-            onClick={() => go('home')}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
-          >
-            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 8 }} />
-            {!isMobile && (
-              <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
-                Tabib<span style={{ color: PRIMARY }}>o</span>
-              </span>
-            )}
-          </button>
-
-          {/* Nav — horizontally scrollable on mobile (no wrap, hidden scrollbar) */}
-          <nav className="sa-navscroll" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                onClick={() => go(item.key)}
-                onMouseEnter={() => setHoveredNav(item.key)}
-                onMouseLeave={() => setHoveredNav(null)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: '6px 12px', fontSize: 14,
-                  fontWeight: item.key === 'about' ? 700 : (hoveredNav === item.key ? 600 : 500),
-                  color: item.key === 'about' ? PRIMARY : (hoveredNav === item.key ? DARK : BODY),
-                  borderRadius: 6, transition: 'color 0.15s', whiteSpace: 'nowrap',
-                  borderBottom: item.key === 'about' ? `2px solid ${PRIMARY}` : '2px solid transparent',
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Right side */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            {/* Language switcher */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setState({ langOpen: !langOpen })}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: '#F4F8F5', border: `1px solid ${BORDER}`,
-                  borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
-                  fontSize: 13, fontWeight: 600, color: DARK,
-                }}
-              >
-                <span>{t.langLabel}</span>
-                <span style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>▾</span>
-              </button>
-              {langOpen && (
-                <div
-                  style={{
-                    position: 'absolute', top: 'calc(100% + 6px)',
-                    [dir === 'rtl' ? 'left' : 'right']: 0,
-                    background: '#fff', border: `1px solid ${BORDER}`,
-                    borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
-                    minWidth: 160, zIndex: 100, overflow: 'hidden',
-                  }}
-                >
-                  {langOptions.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setState({ lang: opt.key, langOpen: false })}
-                      onMouseEnter={() => setHoveredLang(opt.key)}
-                      onMouseLeave={() => setHoveredLang(null)}
-                      style={{
-                        display: 'block', width: '100%', textAlign: dir === 'rtl' ? 'right' : 'left',
-                        padding: '10px 16px', background: hoveredLang === opt.key ? BG : '#fff',
-                        border: 'none', cursor: 'pointer', fontSize: 13,
-                        fontWeight: lang === opt.key ? 600 : 400,
-                        color: lang === opt.key ? PRIMARY : DARK,
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {patient ? (
-              <button
-                onClick={() => go('paccount')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: '#EAF6F0', border: `1px solid #C3E8D8`,
-                  borderRadius: 24, padding: '6px 14px 6px 8px', cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: PRIMARY, color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700,
-                }}>
-                  {initials(patient.name)}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>
-                  {patient.name?.split(' ')[0]}
-                </span>
-              </button>
-            ) : !isMobile ? (
-              <>
-                <button
-                  onClick={() => go('plogin')}
-                  style={{
-                    background: 'none', border: `1px solid ${BORDER}`,
-                    borderRadius: 8, padding: '7px 16px',
-                    cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK,
-                  }}
-                >
-                  {t.btnLogin}
-                </button>
-                <button
-                  onClick={() => go('pregister')}
-                  style={{
-                    background: PRIMARY, border: 'none', borderRadius: 8,
-                    padding: '7px 16px', cursor: 'pointer',
-                    fontSize: 13, fontWeight: 600, color: '#fff',
-                  }}
-                >
-                  {t.btnRegister}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <MarketingHeader activeKey="about" audience="patient" />
 
       {/* Hero */}
       <section style={{ background: 'linear-gradient(180deg, #EAF6F0 0%, #F4F8F5 100%)', padding: isMobile ? '44px 16px 40px' : '80px 24px 72px' }}>
@@ -318,13 +172,6 @@ export default function About() {
           <span>© {new Date().getFullYear()} Tabibo. Tous droits réservés.</span>
         </div>
       </footer>
-
-      {langOpen && (
-        <div
-          onClick={() => setState({ langOpen: false })}
-          style={{ position: 'fixed', inset: 0, zIndex: 49 }}
-        />
-      )}
     </div>
   );
 }

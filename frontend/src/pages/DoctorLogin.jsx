@@ -90,13 +90,16 @@ export default function DoctorLogin() {
           <div style={{ marginBottom: 18 }}>
             <label style={labelStyle}>Email ou téléphone</label>
             <input
-              type="email"
-              placeholder="docteur@exemple.ma ou 06 12 34 56 78"
+              type="text"
+              placeholder="docteur@exemple.ma ou 0612345678"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && doctorLogin()}
-              style={inputStyle}
+              style={{ ...inputStyle, fontSize: 13 }}
             />
+            <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
+              Numéro international ? Ajoutez l'indicatif du pays (ex&nbsp;: +33, +49…).
+            </div>
           </div>
 
           {/* Password */}

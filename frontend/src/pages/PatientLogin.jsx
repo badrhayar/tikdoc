@@ -79,7 +79,7 @@ export default function PatientLogin() {
           </label>
           <input
             type="text"
-            placeholder="exemple@email.ma ou 06 12 34 56 78"
+            placeholder="exemple@email.ma ou 0612345678"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && patientLogin()}
@@ -90,11 +90,14 @@ export default function PatientLogin() {
               borderRadius: 10,
               border: `1.5px solid ${INPUT_BORDER}`,
               background: INPUT_BG,
-              fontSize: 14,
+              fontSize: 13,
               color: DARK,
               outline: 'none',
             }}
           />
+          <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
+            Numéro international ? Ajoutez l'indicatif du pays (ex&nbsp;: +33, +49…).
+          </div>
         </div>
 
         {/* Password input */}
