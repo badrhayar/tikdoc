@@ -117,13 +117,13 @@ export default function ForDoctors() {
               ? 'Manage your appointments, patients, and agenda — and reduce no-shows with automatic WhatsApp reminders.'
               : 'Gérez vos rendez-vous, vos patients et votre agenda — et réduisez les absences grâce aux rappels WhatsApp automatiques.'}
           </p>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 460, margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 440, margin: '0 auto' }}>
             <button
               onClick={() => go('docregister')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
                 borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
                 boxShadow: '0 4px 20px rgba(22,160,106,0.30)',
                 width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
               }}
@@ -135,7 +135,7 @@ export default function ForDoctors() {
               style={{
                 background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`,
                 borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center',
+                fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
                 width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
               }}
             >
@@ -265,10 +265,10 @@ export default function ForDoctors() {
       {/* Features Grid */}
       <section style={{ padding: '56px 24px 72px', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', marginBottom: 10, letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'كل ما تحتاجه لإدارة عيادتك' : lang === 'en' ? 'Everything you need to run your practice' : 'Tout ce qu\'il faut pour gérer votre cabinet'}
           </h2>
-          <p style={{ textAlign: 'center', color: MUTED, fontSize: 15, marginBottom: 40 }}>
+          <p style={{ textAlign: 'center', whiteSpace: 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
             {lang === 'ar' ? 'مزايا مصممة لتوفير وقتك وتنمية نشاطك' : lang === 'en' ? 'Features designed to save you time and grow your practice' : 'Des fonctionnalités pensées pour vous faire gagner du temps et développer votre activité'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>
@@ -317,12 +317,12 @@ export default function ForDoctors() {
               ? 'Join hundreds of doctors growing their practice with Tabibo. 14-day free trial, no payment at sign-up.'
               : 'Rejoignez des centaines de médecins qui développent leur cabinet avec Tabibo. Essai gratuit 14 jours, sans paiement à l\'inscription.'}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 440, margin: '0 auto' }}>
             <button
               onClick={() => go('docregister')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
-                borderRadius: 10, padding: '14px 32px',
+                borderRadius: 10, padding: '14px 18px', whiteSpace: 'nowrap', textAlign: 'center', width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
                 fontSize: 16, fontWeight: 700, cursor: 'pointer',
                 boxShadow: '0 4px 20px rgba(22,160,106,0.35)',
               }}
@@ -334,7 +334,7 @@ export default function ForDoctors() {
               style={{
                 background: 'transparent', color: 'rgba(255,255,255,0.85)',
                 border: '1.5px solid rgba(255,255,255,0.25)',
-                borderRadius: 10, padding: '14px 32px',
+                borderRadius: 10, padding: '14px 18px', whiteSpace: 'nowrap', textAlign: 'center', width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
                 fontSize: 16, fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -345,7 +345,7 @@ export default function ForDoctors() {
       </section>
 
       {/* Footer */}
-      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', fontSize: 13 }}>
+      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 13 }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
           <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
           <span>© {new Date().getFullYear()} Tabibo. Tous droits réservés.</span>

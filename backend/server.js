@@ -212,5 +212,5 @@ if (fs.existsSync(frontendDist)) {
 // ─── START ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`TikDoc backend running on http://localhost:${PORT}`);
+  console.log(`Tabibo backend running on http://localhost:${PORT}`);
 });

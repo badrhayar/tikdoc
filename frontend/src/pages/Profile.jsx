@@ -184,14 +184,14 @@ export default function Profile() {
           {/* Avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 18 }}>
             <div style={{
-              width: 88, height: 88, borderRadius: 20,
+              width: 88, height: 88, borderRadius: 20, overflow: 'hidden',
               background: `linear-gradient(135deg, ${avatarBg}, ${avatarFg}22)`,
               color: avatarFg,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 28, fontWeight: 800, flexShrink: 0,
               border: `2px solid ${avatarFg}33`,
             }}>
-              {initials(doc.name)}
+              {doc.avatar ? <img src={doc.avatar} alt={doc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(doc.name)}
             </div>
             <div>
               <div style={{ fontSize: 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{doc.name}</div>

@@ -99,13 +99,13 @@ export default function ForPatients() {
               ? 'Find the right doctor, book your appointment, and track your medical file — all in one place.'
               : 'Trouvez le bon médecin, réservez votre rendez-vous et suivez votre dossier médical — tout en un seul endroit.'}
           </p>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 460, margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 640, margin: '0 auto' }}>
             <button
               onClick={() => go('search')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
                 borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
                 boxShadow: '0 4px 20px rgba(22,160,106,0.30)',
                 width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
               }}
@@ -117,7 +117,7 @@ export default function ForPatients() {
               style={{
                 background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`,
                 borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
                 width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
               }}
             >
@@ -128,7 +128,7 @@ export default function ForPatients() {
               style={{
                 background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`,
                 borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center',
+                fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
                 width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
               }}
             >
@@ -258,10 +258,10 @@ export default function ForPatients() {
       {/* Features Grid */}
       <section style={{ padding: '56px 24px 72px', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', marginBottom: 10, letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'كل ما تحتاجه في مكان واحد' : lang === 'en' ? 'Everything you need, in one place' : 'Tout ce dont vous avez besoin, en un seul endroit'}
           </h2>
-          <p style={{ textAlign: 'center', color: MUTED, fontSize: 15, marginBottom: 40 }}>
+          <p style={{ textAlign: 'center', whiteSpace: 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
             {lang === 'ar' ? 'مزايا مصممة لتجربة صحية أفضل' : lang === 'en' ? 'Features designed for a better health experience' : 'Des fonctionnalités pensées pour une meilleure expérience santé'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>
@@ -310,12 +310,12 @@ export default function ForPatients() {
               ? 'Join over 85,000 patients who trust Tabibo.'
               : 'Rejoignez plus de 85 000 patients qui font confiance à Tabibo.'}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 480, margin: '0 auto' }}>
             <button
               onClick={() => go('pregister')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
-                borderRadius: 10, padding: '14px 32px',
+                borderRadius: 10, padding: '14px 18px', whiteSpace: 'nowrap', textAlign: 'center', width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
                 fontSize: 16, fontWeight: 700, cursor: 'pointer',
                 boxShadow: '0 4px 20px rgba(22,160,106,0.35)',
               }}
@@ -327,7 +327,7 @@ export default function ForPatients() {
               style={{
                 background: 'transparent', color: 'rgba(255,255,255,0.85)',
                 border: '1.5px solid rgba(255,255,255,0.25)',
-                borderRadius: 10, padding: '14px 32px',
+                borderRadius: 10, padding: '14px 18px', whiteSpace: 'nowrap', textAlign: 'center', width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
                 fontSize: 16, fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -338,7 +338,7 @@ export default function ForPatients() {
       </section>
 
       {/* Footer */}
-      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', fontSize: 13 }}>
+      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '28px 24px', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 13 }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
           <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
           <span>© {new Date().getFullYear()} Tabibo. Tous droits réservés.</span>

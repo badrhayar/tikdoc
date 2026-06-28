@@ -16,6 +16,7 @@ const MOROCCO_CENTER = [-7.5, 29.5];
 // fight MapLibre's positioning and the pin lands in the wrong place.
 const PIN_CSS = `
 .tbpin-anchor{width:22px;height:34px}
+.tbpin-zoom{width:22px;height:34px;transform-origin:50% 100%;will-change:transform;transition:transform .12s ease}
 .tbpin{position:relative;width:22px;height:34px;cursor:pointer;transition:transform .15s ease;transform-origin:50% 100%;will-change:transform}
 .tbpin:hover{transform:scale(1.2) translateY(-2px)}
 .tbpin.sel{transform:scale(1.28) translateY(-3px)}
@@ -34,13 +35,22 @@ function injectCss() {
   s.textContent = PIN_CSS;
   document.head.appendChild(s);
 }
+// Pins are small when the map is zoomed out (so they don't blanket the map)
+// and grow to full size as the visitor zooms in. 0.5× at z≤5.5 → 1.0× at z≥12.
+function zoomScale(z) {
+  const t = (z - 5.5) / (12 - 5.5);
+  return Math.max(0.5, Math.min(1, 0.5 + t * 0.5));
+}
 function makePinEl(selected) {
   const root = document.createElement('div');     // MapLibre positions this (no CSS transform here)
   root.className = 'tbpin-anchor';
+  const zoom = document.createElement('div');     // zoom-driven scale lives here
+  zoom.className = 'tbpin-zoom';
   const inner = document.createElement('div');    // our hover/scale transforms live here
   inner.className = 'tbpin' + (selected ? ' sel' : '');
   inner.innerHTML = '<div class="stem"></div><div class="head"></div>';
-  root.appendChild(inner);
+  zoom.appendChild(inner);
+  root.appendChild(zoom);
   return root;
 }
 
@@ -52,6 +62,15 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
   const lastSigRef = useRef('');
   onSelectRef.current = onSelect;
   injectCss();
+
+  // Scale every pin to match the current zoom level (small when zoomed out).
+  const applyPinZoom = (map) => {
+    const s = zoomScale(map.getZoom());
+    markersRef.current.forEach((m) => {
+      const z = m.getElement()?.querySelector('.tbpin-zoom');
+      if (z) z.style.transform = `scale(${s})`;
+    });
+  };
 
   // Create the map once.
   useEffect(() => {
@@ -76,6 +95,7 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
     // container changes size.
     map.on('load', () => { cleanMoroccoMap(map); try { map.resize(); } catch (e) { /* ignore */ } });
     map.on('styledata', () => cleanMoroccoMap(map));
+    map.on('zoom', () => applyPinZoom(map));
     let ro;
     try {
       ro = new ResizeObserver(() => { try { map.resize(); } catch (e) { /* ignore */ } });
@@ -123,6 +143,7 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
       for (const [id, m] of markersRef.current) {
         if (!seen.has(id)) { try { m.remove(); } catch (e) { /* ignore */ } markersRef.current.delete(id); }
       }
+      applyPinZoom(map);
       const sig = signature(doctors);
       if (sig !== lastSigRef.current) { lastSigRef.current = sig; fitTo(map, doctors); }
     };

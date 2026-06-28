@@ -53,8 +53,8 @@ export default function Search() {
   // The floating "selected doctor" card, reused on desktop + mobile maps.
   const pinCard = pinDoc && (
     <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 18px 44px -16px rgba(13,43,30,0.35)', display: 'flex', alignItems: 'center', gap: 12, animation: 'saFade .18s ease', zIndex: 6 }}>
-      <div style={{ width: 46, height: 46, borderRadius: 12, background: `linear-gradient(140deg, ${tint(doctors.indexOf(pinDoc))[0]}, ${tint(doctors.indexOf(pinDoc))[1]}22)`, color: tint(doctors.indexOf(pinDoc))[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
-        {initials(pinDoc.name)}
+      <div style={{ width: 46, height: 46, borderRadius: 12, overflow: 'hidden', background: `linear-gradient(140deg, ${tint(doctors.indexOf(pinDoc))[0]}, ${tint(doctors.indexOf(pinDoc))[1]}22)`, color: tint(doctors.indexOf(pinDoc))[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
+        {pinDoc.avatar ? <img src={pinDoc.avatar} alt={pinDoc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(pinDoc.name)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{pinDoc.name}</div>
@@ -253,36 +253,36 @@ export default function Search() {
                   style={{
                     background: '#fff',
                     border: `1px solid ${isSelected ? PRIMARY : BORDER}`,
-                    borderRadius: 18, padding: 17, display: 'flex', gap: 15, cursor: 'pointer',
+                    borderRadius: 18, padding: isMobile ? 13 : 17, display: 'flex', gap: isMobile ? 11 : 15, cursor: 'pointer',
                     boxShadow: isSelected ? `0 0 0 3px ${PRIMARY}22, 0 10px 26px -14px rgba(13,43,30,0.2)` : '0 2px 10px -6px rgba(13,43,30,0.12)',
                   }}
                   onClick={() => setState({ selDoc: d.id })}
                 >
-                  <div style={{ width: 62, height: 62, borderRadius: 16, background: `linear-gradient(140deg, ${bg}, ${fg}22)`, color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, flexShrink: 0, border: `1px solid ${fg}22` }}>
-                    {initials(d.name)}
+                  <div style={{ width: isMobile ? 52 : 62, height: isMobile ? 52 : 62, borderRadius: 16, overflow: 'hidden', background: `linear-gradient(140deg, ${bg}, ${fg}22)`, color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, flexShrink: 0, border: `1px solid ${fg}22` }}>
+                    {d.avatar ? <img src={d.avatar} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(d.name)}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15.5, color: DARK, marginBottom: 2 }}>{d.name}</div>
-                    <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600, marginBottom: 5 }}>{si.label}</div>
-                    <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15.5, color: DARK, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                    <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600, marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.label}</div>
+                    <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {d.rating}</span>
                       <span>· {d.reviews} avis · {kmOf(d)} km</span>
                     </div>
-                    <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 9 }}>{d.clinic}, {d.city}</div>
+                    <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.clinic}, {d.city}</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {d.conv && <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: '#E7F6EE', padding: '3px 9px', borderRadius: 20 }}>Conventionné</span>}
                       {d.tele && <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', background: '#EFF6FF', padding: '3px 9px', borderRadius: 20 }}>Téléconsultation</span>}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 16, color: DARK }}>{d.price} <span style={{ fontSize: 12, color: MUTED }}>MAD</span></div>
-                    <div>
-                      <div style={{ fontSize: 12, color: MUTED, textAlign: 'right', marginBottom: 8 }}>Disponible {nextLabel(d.next)}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
+                    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 16, color: DARK, whiteSpace: 'nowrap' }}>{d.price} <span style={{ fontSize: 12, color: MUTED }}>MAD</span></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      {!isMobile && <div style={{ fontSize: 12, color: MUTED, textAlign: 'right', marginBottom: 8 }}>Disponible {nextLabel(d.next)}</div>}
                       <button
                         onClick={(e) => { e.stopPropagation(); setState({ selDoc: d.id }); go('profile'); }}
-                        style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}
+                        style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: isMobile ? '9px 14px' : '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}
                       >
                         Réserver
                       </button>
