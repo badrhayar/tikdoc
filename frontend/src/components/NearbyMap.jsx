@@ -71,8 +71,17 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
     }
     mapRef.current = map;
     map.on('error', (e) => console.warn('NearbyMap:', e?.error?.message || e));
-    map.on('load', () => cleanMoroccoMap(map));
+    // A 0-size container at init is the usual cause of a blank map (style loads
+    // but no tiles are ever requested). Force a resize on load and whenever the
+    // container changes size.
+    map.on('load', () => { cleanMoroccoMap(map); try { map.resize(); } catch (e) { /* ignore */ } });
     map.on('styledata', () => cleanMoroccoMap(map));
+    let ro;
+    try {
+      ro = new ResizeObserver(() => { try { map.resize(); } catch (e) { /* ignore */ } });
+      ro.observe(elRef.current);
+    } catch (e) { /* ResizeObserver unavailable */ }
+    const resizeT = setTimeout(() => { try { map.resize(); } catch (e) { /* ignore */ } }, 400);
     const canvas = map.getCanvas();
     const onCtxLost = (ev) => { ev.preventDefault(); };
     canvas.addEventListener('webglcontextlost', onCtxLost, false);
@@ -80,6 +89,8 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
     map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false, showUserLocation: true }), 'top-right');
 
     return () => {
+      clearTimeout(resizeT);
+      try { ro && ro.disconnect(); } catch (e) { /* ignore */ }
       canvas.removeEventListener('webglcontextlost', onCtxLost);
       markersRef.current.forEach((m) => { try { m.remove(); } catch (e) { /* ignore */ } });
       markersRef.current.clear();
