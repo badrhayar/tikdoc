@@ -17,9 +17,23 @@ function featureCollection(doctors) {
       .map((d) => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [d.lng, d.lat] },
-        properties: { id: String(d.id), price: `${d.price} MAD`, name: d.name },
+        properties: { id: String(d.id), name: d.name },
       })),
   };
+}
+
+// A small map pin (red head, white dot) — added once as a map image so the
+// marker stays a constant small size at every zoom level and never covers the map.
+function ensurePin(map, cb) {
+  if (map.hasImage('doc-pin')) { cb(); return; }
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="36" viewBox="0 0 26 36">' +
+    '<path d="M13 0C5.8 0 0 5.8 0 13c0 9.3 13 23 13 23s13-13.7 13-23C26 5.8 20.2 0 13 0z" fill="#E23744"/>' +
+    '<circle cx="13" cy="13" r="5" fill="#fff"/></svg>';
+  const img = new Image(26, 36);
+  img.onload = () => { try { if (!map.hasImage('doc-pin')) map.addImage('doc-pin', img); } catch (e) { /* ignore */ } cb(); };
+  img.onerror = () => cb();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
 export default function NearbyMap({ doctors = [], onSelect }) {
@@ -65,15 +79,23 @@ export default function NearbyMap({ doctors = [], onSelect }) {
       try {
       map.addSource('doctors', { type: 'geojson', data: featureCollection(doctors), cluster: true, clusterRadius: 46, clusterMaxZoom: 13 });
 
+      // Clusters: compact green badges with a count (only when markers overlap).
       map.addLayer({ id: 'clusters', type: 'circle', source: 'doctors', filter: ['has', 'point_count'],
-        paint: { 'circle-color': '#16A06A', 'circle-radius': ['step', ['get', 'point_count'], 18, 5, 23, 15, 28], 'circle-stroke-width': 3, 'circle-stroke-color': '#fff' } });
+        paint: { 'circle-color': '#16A06A', 'circle-radius': ['step', ['get', 'point_count'], 13, 10, 16, 50, 20], 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } });
       map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'doctors', filter: ['has', 'point_count'],
-        layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 13, 'text-font': ['Open Sans Bold', 'Noto Sans Bold'] }, paint: { 'text-color': '#fff' } });
+        layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 12, 'text-font': ['Open Sans Bold', 'Noto Sans Bold'] }, paint: { 'text-color': '#fff' } });
 
-      map.addLayer({ id: 'points', type: 'circle', source: 'doctors', filter: ['!', ['has', 'point_count']],
-        paint: { 'circle-color': '#fff', 'circle-radius': 19, 'circle-stroke-width': 2, 'circle-stroke-color': '#16A06A' } });
-      map.addLayer({ id: 'point-price', type: 'symbol', source: 'doctors', filter: ['!', ['has', 'point_count']],
-        layout: { 'text-field': ['get', 'price'], 'text-size': 10.5, 'text-font': ['Open Sans Bold', 'Noto Sans Bold'], 'text-allow-overlap': true }, paint: { 'text-color': '#15314A' } });
+      // Individual doctors: a small red pin (constant size on zoom, no labels).
+      ensurePin(map, () => {
+        try {
+          map.addLayer({ id: 'points', type: 'symbol', source: 'doctors', filter: ['!', ['has', 'point_count']],
+            layout: { 'icon-image': 'doc-pin', 'icon-size': 0.9, 'icon-anchor': 'bottom', 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
+          // Click a pin → show the doctor's info card (handled by the parent).
+          map.on('click', 'points', (e) => { const id = e.features?.[0]?.properties?.id; if (id) onSelectRef.current?.(id); });
+          map.on('mouseenter', 'points', () => { map.getCanvas().style.cursor = 'pointer'; });
+          map.on('mouseleave', 'points', () => { map.getCanvas().style.cursor = ''; });
+        } catch (err) { console.warn('NearbyMap: pin layer failed', err); }
+      });
 
       // Zoom into a cluster on click.
       map.on('click', 'clusters', (e) => {
@@ -83,12 +105,8 @@ export default function NearbyMap({ doctors = [], onSelect }) {
           map.easeTo({ center: f.geometry.coordinates, zoom: z });
         }).catch(() => {});
       });
-      // Select a doctor on click.
-      map.on('click', 'points', (e) => { const id = e.features?.[0]?.properties?.id; if (id) onSelectRef.current?.(id); });
-      ['points', 'clusters'].forEach((layer) => {
-        map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
-        map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
-      });
+      map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
 
       lastSigRef.current = signature(doctors);
       fitTo(map, doctors);

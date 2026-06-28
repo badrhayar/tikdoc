@@ -30,13 +30,15 @@ const WA_LANG = Deno.env.get("WHATSAPP_LANG") ?? "fr";
 // (patient · date · heure · médecin), so they're interchangeable.
 const TPL = {
   reminder:  Deno.env.get("WHATSAPP_TEMPLATE_REMINDER")  ?? "tabibo_reminder",
+  booked:    Deno.env.get("WHATSAPP_TEMPLATE_BOOKED")    ?? "tabibo_booked",
   confirmed: Deno.env.get("WHATSAPP_TEMPLATE_CONFIRMED") ?? "tabibo_confirmed",
   cancelled: Deno.env.get("WHATSAPP_TEMPLATE_CANCELLED") ?? "tabibo_cancelled",
 };
 function templateFor(label: string): string {
+  if (label === "confirmation") return TPL.booked;             // brand-new booking ("réservé")
   if (label === "confirmed" || label === "rescheduled") return TPL.confirmed;
   if (label === "cancelled") return TPL.cancelled;
-  return TPL.reminder; // confirmation, j1, j2, followup, test
+  return TPL.reminder; // j1, j2, followup, test
 }
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Prefer an explicitly-provided key (new API-key system: a `sb_secret_…` key),
@@ -135,11 +137,14 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
     // ── test ─────────────────────────────────────────────────────────────────
+    // Optional `template`: 'reminder' (default) | 'confirmation' (booked) |
+    // 'confirmed' | 'cancelled' | 'rescheduled' — to test any template.
     if (p.type === "test") {
       if (!WA_TOKEN || !WA_PHONE_ID) return json({ ok: false, error: "WHATSAPP_TOKEN / WHATSAPP_PHONE_ID manquants dans les secrets." });
       if (!p.to) return json({ ok: false, error: "Numéro destinataire manquant." });
-      const r = await sendTemplate(normalizePhone(p.to), ["patient", "aujourd'hui", "—", "Tabibo"], TPL.reminder);
-      return json(r);
+      const tpl = templateFor(p.template ?? "");
+      const r = await sendTemplate(normalizePhone(p.to), ["Ahmed", "lundi 30 juin", "14:30", "Dr. Benali"], tpl);
+      return json({ ...r, template_used: tpl });
     }
 
     // ── send one ───────────────────────────────────────────────────────────────

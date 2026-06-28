@@ -146,28 +146,47 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ── appointment events → email the doctor ───────────────────────────────
+    // ── appointment events → email the patient (+ the doctor for some events) ──
     if (p.type === "appointment" && p.appointment_id) {
+      const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
       const { data: a } = await admin
         .from("appointments")
-        .select("datetime, patient_name, patient:users(full_name), doctor:doctors(user:users!doctors_user_id_fkey(full_name, email))")
+        .select("datetime, patient_name, patient:users(full_name, email), doctor:doctors(user:users!doctors_user_id_fkey(full_name, email))")
         .eq("id", p.appointment_id).maybeSingle();
       const av: any = a;
-      const doctorEmail = av?.doctor?.user?.email;
-      if (!av || !doctorEmail) return new Response(JSON.stringify({ ok: true, skipped: "no doctor email" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      if (!av) return new Response(JSON.stringify({ ok: true, skipped: "appt not found" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      const doctorEmail = av.doctor?.user?.email;
       const doctorName = av.doctor?.user?.full_name ?? "";
-      const patientName = av.patient?.full_name ?? av.patient_name ?? "Un patient";
+      const patientEmail = av.patient?.email;
+      const patientName = av.patient?.full_name ?? av.patient_name ?? "Patient";
       const when = new Date(av.datetime).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
-      const isCancel = p.event === "cancelled_by_patient";
-      const title = isCancel ? "Rendez-vous annulé par le patient" : "Nouveau rendez-vous";
-      const body = isCancel
-        ? `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> a annulé son rendez-vous prévu le :</p>
-           <p style="background:#FCE7EE;color:#C2466A;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600">${when}</p>
-           <p>Le créneau est de nouveau disponible dans votre agenda.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`
-        : `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> vient de réserver un rendez-vous :</p>
-           <p style="background:#E7F6EE;color:#138257;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600">${when}</p>
-           <p>Connectez-vous à votre espace Tabibo pour le confirmer.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`;
-      await sendEmail(doctorEmail, `${title} — Tabibo`, shell(title, body));
+      const ev = p.event;
+      const cta = `<p style="margin-top:18px"><a href="${APP_URL}" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Gérer mes rendez-vous</a></p>`;
+      const box = (c: string, t: string) => `<p style="background:${c};border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;color:${t}">${when} · Dr. ${doctorName}</p>`;
+
+      // → Patient email
+      if (patientEmail) {
+        let title = "", lead = "", color = "#E7F6EE", txt = "#138257";
+        if (ev === "booked")            { title = "Rendez-vous enregistré"; lead = "votre rendez-vous a bien été enregistré. Vous recevrez une confirmation du médecin."; }
+        else if (ev === "confirmed")    { title = "Rendez-vous confirmé";   lead = "votre rendez-vous est confirmé ✅."; }
+        else if (ev === "rescheduled")  { title = "Rendez-vous reporté";    lead = "votre rendez-vous a été déplacé. Nouveau créneau :"; color = "#FEF3DC"; txt = "#9A6510"; }
+        else if (ev === "cancelled" || ev === "cancelled_by_patient") { title = "Rendez-vous annulé"; lead = "votre rendez-vous a été annulé :"; color = "#FCE7EE"; txt = "#C2466A"; }
+        if (title) {
+          const body = `<p>Bonjour ${patientName},</p><p>${lead}</p>${box(color, txt)}<p>Connectez-vous à <strong>Tabibo</strong> pour gérer vos rendez-vous, modifier vos informations ou en réserver un nouveau.</p>${cta}<p style="margin-top:18px">— L'équipe Tabibo</p>`;
+          await sendEmail(patientEmail, `${title} — Tabibo`, shell(title, body));
+        }
+      }
+
+      // → Doctor email (only on new booking / patient cancellation)
+      if (doctorEmail && (ev === "booked" || ev === "cancelled_by_patient")) {
+        const isCancel = ev === "cancelled_by_patient";
+        const title = isCancel ? "Rendez-vous annulé par le patient" : "Nouveau rendez-vous";
+        const body = isCancel
+          ? `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> a annulé son rendez-vous :</p>${box("#FCE7EE", "#C2466A")}<p>Le créneau est de nouveau disponible.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`
+          : `<p>Bonjour Dr. ${doctorName},</p><p><strong>${patientName}</strong> vient de réserver un rendez-vous :</p>${box("#E7F6EE", "#138257")}<p>Connectez-vous pour le confirmer.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`;
+        await sendEmail(doctorEmail, `${title} — Tabibo`, shell(title, body));
+      }
+
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 

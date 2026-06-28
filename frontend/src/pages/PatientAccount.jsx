@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyDoctorEmail } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../lib/api';
 import PhoneField from '../components/PhoneField';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
@@ -160,7 +160,7 @@ export default function PatientAccount() {
       await updateAppointmentStatus(id, 'cancelled');
       setState({ myAppointments: (state.myAppointments || []).map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a)), toast: 'Rendez-vous annulé', toastShow: true });
       sendApptWhatsApp(id, 'cancelled');
-      notifyDoctorEmail(id, 'cancelled_by_patient');
+      notifyApptEmail(id, 'cancelled_by_patient');
     } catch (e) {
       setState({ toast: 'Annulation impossible : ' + (e?.message || 'erreur'), toastShow: true });
     }

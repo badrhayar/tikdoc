@@ -105,12 +105,16 @@ export function sendApptWhatsApp(appointmentId, template) {
     .catch((e) => console.warn(`[Tabibo] WhatsApp (${template}) skipped`, e));
 }
 
-/** Fire-and-forget email to the doctor. event: 'booked' | 'cancelled_by_patient'. */
-export function notifyDoctorEmail(appointmentId, event) {
+/**
+ * Fire-and-forget email for an appointment event. The Edge Function decides the
+ * recipients: the patient (booked/confirmed/cancelled/rescheduled) and the
+ * doctor (booked / cancelled_by_patient). Skips anyone without an email.
+ */
+export function notifyApptEmail(appointmentId, event) {
   if (!appointmentId) return;
   supabase.functions
     .invoke('notify-verification', { body: { type: 'appointment', appointment_id: appointmentId, event } })
-    .catch((e) => console.warn(`[Tabibo] doctor email (${event}) skipped`, e));
+    .catch((e) => console.warn(`[Tabibo] appointment email (${event}) skipped`, e));
 }
 
 export function sendBookingConfirmation(appointmentId) {
@@ -132,7 +136,7 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
     .single();
   if (error) throw error;
   sendBookingConfirmation(data.id);   // WhatsApp → patient
-  notifyDoctorEmail(data.id, 'booked'); // Email → doctor
+  notifyApptEmail(data.id, 'booked'); // Email → patient + doctor
   return data;
 }
 
@@ -158,6 +162,7 @@ export async function createWalkinAppointment({ doctorId, datetime, reason, note
     .single();
   if (error) throw error;
   sendBookingConfirmation(data.id);
+  notifyApptEmail(data.id, 'booked'); // emails the patient if a linked account exists
   return data;
 }
 export async function fetchMyAppointments() {

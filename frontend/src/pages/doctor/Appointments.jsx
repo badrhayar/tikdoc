@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, updateAppointment, sendApptWhatsApp, STATUS_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, sendApptWhatsApp, notifyApptEmail, STATUS_FR } from '../../lib/api';
 import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -78,8 +78,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     }
   };
   // Status changes also notify the patient by WhatsApp (only on a real DB update).
-  const cancelAppt   = async (id) => { if (await setStatus(id, 'cancelled', 'Annulé')) sendApptWhatsApp(id, 'cancelled'); };
-  const confirmAppt  = async (id) => { if (await setStatus(id, 'confirmed')) sendApptWhatsApp(id, 'confirmed'); };
+  const cancelAppt   = async (id) => { if (await setStatus(id, 'cancelled', 'Annulé')) { sendApptWhatsApp(id, 'cancelled'); notifyApptEmail(id, 'cancelled'); } };
+  const confirmAppt  = async (id) => { if (await setStatus(id, 'confirmed')) { sendApptWhatsApp(id, 'confirmed'); notifyApptEmail(id, 'confirmed'); } };
   const completeAppt = (id) => setStatus(id, 'completed', 'Terminé');
   const noShowAppt   = (id) => setStatus(id, 'no_show', 'Absent');
 
@@ -98,6 +98,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       setState({ myAppointments: (state.myAppointments || []).map(a => a.id === r.id ? { ...a, datetime: iso } : a), toast: 'Rendez-vous reporté ✓', toastShow: true });
       setResched(null);
       sendApptWhatsApp(r.id, 'rescheduled');
+      notifyApptEmail(r.id, 'rescheduled');
     } catch (e) {
       setState({ toast: 'Report impossible : ' + (e?.message || 'erreur'), toastShow: true });
     }
