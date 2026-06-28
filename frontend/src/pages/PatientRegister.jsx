@@ -26,8 +26,9 @@ export default function PatientRegister() {
   const submitRegister = async () => {
     setError('');
     if (!isSupabaseConfigured) { setError('Supabase non configuré — vérifiez votre fichier .env.'); return; }
-    if (!reg.name || !reg.email || !reg.pass) { setError('Renseignez au moins le nom, l’email et le mot de passe.'); return; }
+    if (!reg.name || !reg.phone || !reg.email || !reg.pass) { setError('Veuillez remplir tous les champs obligatoires (marqués d’un *).'); return; }
     if (reg.pass.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (reg.pass !== reg.pass2) { setError('Les deux mots de passe ne correspondent pas.'); return; }
     setBusy(true);
     try {
       const res = await authSignUp({
@@ -99,21 +100,7 @@ export default function PatientRegister() {
             onClick={() => go('home')}
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
           >
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                background: PRIMARY,
-                borderRadius: 9,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 34, height: 34, borderRadius: 9 }} />
             <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
           </div>
 
@@ -122,7 +109,7 @@ export default function PatientRegister() {
 
           {/* Nom complet */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Nom complet</label>
+            <label style={labelStyle}>Nom complet <span style={{ color: '#C2466A' }}>*</span></label>
             <input
               type="text"
               placeholder="Prénom Nom"
@@ -145,7 +132,7 @@ export default function PatientRegister() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Téléphone</label>
+              <label style={labelStyle}>Téléphone <span style={{ color: '#C2466A' }}>*</span></label>
               <PhoneField value={reg.phone} onChange={(v) => setReg('phone', v)} borderColor={INPUT_BORDER} bg={INPUT_BG} />
             </div>
           </div>
@@ -168,7 +155,7 @@ export default function PatientRegister() {
 
           {/* Email */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Email</label>
+            <label style={labelStyle}>Email <span style={{ color: '#C2466A' }}>*</span></label>
             <input
               type="email"
               placeholder="exemple@email.ma"
@@ -178,16 +165,31 @@ export default function PatientRegister() {
             />
           </div>
 
-          {/* Password */}
-          <div style={{ marginBottom: 28 }}>
-            <label style={labelStyle}>Mot de passe</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={reg.pass}
-              onChange={(e) => setReg('pass', e.target.value)}
-              style={inputStyle}
-            />
+          {/* Password + confirm */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+            <div>
+              <label style={labelStyle}>Mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={reg.pass}
+                onChange={(e) => setReg('pass', e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Confirmer <span style={{ color: '#C2466A' }}>*</span></label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={reg.pass2 || ''}
+                onChange={(e) => setReg('pass2', e.target.value)}
+                style={{ ...inputStyle, borderColor: reg.pass2 && reg.pass2 !== reg.pass ? '#C2466A' : INPUT_BORDER }}
+              />
+              {reg.pass2 && reg.pass2 !== reg.pass && (
+                <div style={{ fontSize: 11.5, color: '#C2466A', marginTop: 4 }}>Ne correspond pas.</div>
+              )}
+            </div>
           </div>
 
           {error && (
