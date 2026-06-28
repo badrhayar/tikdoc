@@ -7,14 +7,17 @@ const KEY = import.meta.env.VITE_MAPTILER_KEY;
 const STYLE = KEY
   ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${KEY}`
   : 'https://demotiles.maplibre.org/style.json';
-const MOROCCO_CENTER = [-7.0926, 31.7917];
+const MOROCCO_CENTER = [-7.5, 29.5];
 
-// ── Pin styling: a thin metal needle with a glossy green head ────────────────
-// HTML markers stay a constant small size at every zoom and never cover the map.
+// ── Pin: a thin metal needle with a glossy green head ─────────────────────────
+// IMPORTANT: MapLibre sets `transform` on the marker's ROOT element to position
+// it. So our hover/scale transforms live on an INNER element — otherwise they
+// fight MapLibre's positioning and the pin lands in the wrong place.
 const PIN_CSS = `
+.tbpin-anchor{width:22px;height:34px}
 .tbpin{position:relative;width:22px;height:34px;cursor:pointer;transition:transform .15s ease;transform-origin:50% 100%;will-change:transform}
-.tbpin:hover{transform:scale(1.2) translateY(-2px);z-index:5}
-.tbpin.sel{transform:scale(1.28) translateY(-3px);z-index:6}
+.tbpin:hover{transform:scale(1.2) translateY(-2px)}
+.tbpin.sel{transform:scale(1.28) translateY(-3px)}
 .tbpin .stem{position:absolute;left:50%;top:13px;width:3px;height:21px;transform:translateX(-50%);border-radius:2px;
   background:linear-gradient(90deg,#7f8a93 0%,#eef1f3 45%,#7f8a93 100%);box-shadow:0 1px 1px rgba(0,0,0,.25)}
 .tbpin .head{position:absolute;left:50%;top:0;width:18px;height:18px;transform:translateX(-50%);border-radius:50%;
@@ -31,10 +34,24 @@ function injectCss() {
   document.head.appendChild(s);
 }
 function makePinEl(selected) {
-  const el = document.createElement('div');
-  el.className = 'tbpin' + (selected ? ' sel' : '');
-  el.innerHTML = '<div class="stem"></div><div class="head"></div>';
-  return el;
+  const root = document.createElement('div');     // MapLibre positions this (no CSS transform here)
+  root.className = 'tbpin-anchor';
+  const inner = document.createElement('div');    // our hover/scale transforms live here
+  inner.className = 'tbpin' + (selected ? ' sel' : '');
+  inner.innerHTML = '<div class="stem"></div><div class="head"></div>';
+  root.appendChild(inner);
+  return root;
+}
+
+// Hide administrative/disputed boundary lines so Morocco renders undivided.
+function hideBoundaries(map) {
+  try {
+    (map.getStyle()?.layers || []).forEach((l) => {
+      if (/boundary|admin|disputed/i.test(l.id)) {
+        try { map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) { /* ignore */ }
+      }
+    });
+  } catch (e) { /* ignore */ }
 }
 
 export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
@@ -64,6 +81,8 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
     }
     mapRef.current = map;
     map.on('error', (e) => console.warn('NearbyMap:', e?.error?.message || e));
+    map.on('load', () => hideBoundaries(map));
+    map.on('styledata', () => hideBoundaries(map));
     const canvas = map.getCanvas();
     const onCtxLost = (ev) => { ev.preventDefault(); };
     canvas.addEventListener('webglcontextlost', onCtxLost, false);
@@ -93,13 +112,13 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
         if (!m) {
           const el = makePinEl(String(selectedId) === id);
           el.addEventListener('click', (ev) => { ev.stopPropagation(); onSelectRef.current?.(id); });
+          // anchor 'bottom' → the needle TIP sits exactly on the coordinate.
           m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([d.lng, d.lat]).addTo(map);
           markersRef.current.set(id, m);
         } else {
           m.setLngLat([d.lng, d.lat]);
         }
       });
-      // Drop markers for doctors no longer in the list.
       for (const [id, m] of markersRef.current) {
         if (!seen.has(id)) { try { m.remove(); } catch (e) { /* ignore */ } markersRef.current.delete(id); }
       }
@@ -112,8 +131,8 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
   // Toggle the "selected" highlight without rebuilding markers.
   useEffect(() => {
     for (const [id, m] of markersRef.current) {
-      const el = m.getElement();
-      if (el) el.classList.toggle('sel', String(selectedId) === id);
+      const inner = m.getElement()?.querySelector('.tbpin');
+      if (inner) inner.classList.toggle('sel', String(selectedId) === id);
     }
   }, [selectedId]);
 
