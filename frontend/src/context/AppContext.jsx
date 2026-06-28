@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, emailForPhone } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
@@ -262,7 +262,14 @@ export function AppProvider({ children }) {
   }, []);
 
   // Exposed auth actions
-  const authSignIn = async (email, password) => {
+  const authSignIn = async (identifier, password) => {
+    // Accept email OR phone: if no '@', treat it as a phone and resolve the email.
+    let email = (identifier || '').trim();
+    if (email && !email.includes('@')) {
+      const resolved = await emailForPhone(email);
+      if (!resolved) { const err = new Error('Aucun compte trouvé pour ce numéro.'); err.code = 'no_account'; throw err; }
+      email = resolved;
+    }
     const res = await sbSignIn({ email, password });
     const u = await loadUser(res.session);
     return u;                       // the loaded public.users profile (or null)

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 import PhoneField from '../components/PhoneField';
 
@@ -12,6 +13,7 @@ const INPUT_BORDER = '#DCE5E0';
 
 export default function PatientRegister() {
   const { state, setState, go, authSignUp, isSupabaseConfigured } = useApp();
+  const { isMobile } = useViewport();
 
   const reg = state.reg || { name: '', cin: '', phone: '', email: '', pass: '' };
 
@@ -89,7 +91,7 @@ export default function PatientRegister() {
           style={{
             background: '#fff',
             borderRadius: 20,
-            padding: 36,
+            padding: isMobile ? 22 : 36,
             width: '100%',
             maxWidth: 460,
             boxShadow: '0 4px 32px rgba(21,49,74,0.10)',
@@ -101,7 +103,7 @@ export default function PatientRegister() {
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
           >
             <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 34, height: 34, borderRadius: 9 }} />
-            <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
+            <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 6px' }}>Créer un compte</h1>
@@ -120,7 +122,7 @@ export default function PatientRegister() {
           </div>
 
           {/* CIN + Téléphone */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>CIN</label>
               <input
@@ -138,7 +140,7 @@ export default function PatientRegister() {
           </div>
 
           {/* Sexe + Date de naissance */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>Sexe</label>
               <select value={reg.sex || ''} onChange={(e) => setReg('sex', e.target.value)} style={inputStyle}>
@@ -166,7 +168,7 @@ export default function PatientRegister() {
           </div>
 
           {/* Password + confirm */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 28 }}>
             <div>
               <label style={labelStyle}>Mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
               <input

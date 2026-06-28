@@ -703,6 +703,14 @@ export async function getDocumentUrl(path) {
 }
 
 // ── Chat: conversations + messages ────────────────────────────────────────────
+/** Resolve a phone number to the account's login email (for phone-or-email login). */
+export async function emailForPhone(phone) {
+  if (!phone) return null;
+  const { data, error } = await supabase.rpc('email_for_phone', { p: phone });
+  if (error) { console.warn('[Tabibo] email_for_phone failed', error); return null; }
+  return data || null;
+}
+
 /** The existing conversation between a patient and a doctor, or null (no insert). */
 export async function findConversation(patientId, doctorId) {
   if (!patientId || !doctorId) return null;

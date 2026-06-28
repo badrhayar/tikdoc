@@ -172,7 +172,7 @@ export default function DoctorRegister() {
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 36 }}
           >
             <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 36, height: 36, borderRadius: 10 }} />
-            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
+            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
           </div>
 
           {/* Free-trial banner */}
@@ -224,7 +224,7 @@ export default function DoctorRegister() {
             </div>
 
             {/* INPE + N° Ordre */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 10 }}>
               <div>
                 <label style={labelStyle}>INPE <span style={{ color: '#C2466A' }}>*</span></label>
                 <input
@@ -256,7 +256,7 @@ export default function DoctorRegister() {
             <p style={sectionHeadingStyle}>Cabinet &amp; contact</p>
 
             {/* Ville + Téléphone */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={labelStyle}>Ville <span style={{ color: '#C2466A' }}>*</span></label>
                 <select
@@ -555,22 +555,8 @@ export default function DoctorRegister() {
             boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
           }}
         >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              background: PRIMARY,
-              borderRadius: 9,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
+          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 36, height: 36, borderRadius: 9 }} />
+          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
           <span
             style={{
               fontSize: 11,

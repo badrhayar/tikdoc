@@ -64,22 +64,8 @@ export default function PatientLogin() {
           onClick={() => go('home')}
           style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
         >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              background: PRIMARY,
-              borderRadius: 9,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
+          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 34, height: 34, borderRadius: 9 }} />
+          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
         </div>
 
         {/* Heading */}
@@ -93,7 +79,7 @@ export default function PatientLogin() {
           </label>
           <input
             type="text"
-            placeholder="exemple@email.ma"
+            placeholder="exemple@email.ma ou 06 12 34 56 78"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && patientLogin()}
