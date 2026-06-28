@@ -218,7 +218,7 @@ export default function Search() {
           {/* Mobile: compact map preview above the list — tap a pin or “Agrandir” for full screen */}
           {isMobile && !mapFull && mapDoctors.some((d) => typeof d.lat === 'number') && (
             <div style={{ position: 'relative', height: 200, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 18, boxShadow: '0 6px 20px -12px rgba(13,43,30,0.3)' }}>
-              <NearbyMap doctors={mapDoctors} onSelect={(id) => { setState({ selPin: id }); setMapFull(true); }} />
+              <NearbyMap doctors={mapDoctors} selectedId={state.selPin} onSelect={(id) => { setState({ selPin: id }); setMapFull(true); }} />
               <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 5, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)', borderRadius: 20, padding: '5px 11px', fontSize: 12, fontWeight: 700, color: DARK, boxShadow: '0 2px 8px rgba(13,43,30,0.12)' }}>
                 {list.length} sur la carte
               </div>
@@ -298,7 +298,7 @@ export default function Search() {
         {!isMobile && (
         <div style={{ position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
           <div style={{ height: '100%', minHeight: 560, borderRadius: 20, position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
-            <NearbyMap doctors={mapDoctors} onSelect={(id) => setState({ selPin: id })} />
+            <NearbyMap doctors={mapDoctors} selectedId={state.selPin} onSelect={(id) => setState({ selPin: id })} />
             {pinCard}
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function Search() {
             </button>
           </div>
           <div style={{ flex: 1, position: 'relative' }}>
-            <NearbyMap doctors={mapDoctors} onSelect={(id) => setState({ selPin: id })} />
+            <NearbyMap doctors={mapDoctors} selectedId={state.selPin} onSelect={(id) => setState({ selPin: id })} />
             {pinCard}
           </div>
         </div>
