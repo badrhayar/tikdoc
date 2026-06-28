@@ -20,7 +20,7 @@ const PinIcon = ({ size = 13 }) => (
   </svg>
 );
 
-export default function ForPatients() {
+export default function ForDoctors() {
   const { state, setState, go } = useApp();
   const { lang, langOpen, patient } = state;
   const t = I18N[lang] || I18N.fr;
@@ -45,39 +45,57 @@ export default function ForPatients() {
   const features = [
     {
       icon: 'calendar',
-      title: lang === 'ar' ? 'حجز 24/7' : lang === 'en' ? 'Online Booking 24/7' : 'Réservation 24h/24',
+      title: lang === 'ar' ? 'أجندة ذكية' : lang === 'en' ? 'Smart Agenda' : 'Agenda intelligent',
       desc: lang === 'ar'
-        ? 'احجز موعدك في أي وقت، حتى في الليل أو عطلة نهاية الأسبوع، دون انتظار.'
+        ? 'أدِر فتراتك الزمنية، إغلاقاتك وتوفّرك في الوقت الفعلي.'
         : lang === 'en'
-        ? 'Book your appointment any time of day or night, even on weekends — no waiting on hold.'
-        : 'Réservez votre rendez-vous à toute heure, même la nuit ou le week-end, sans attente téléphonique.',
+        ? 'Manage your slots, blocks, and availability in real time.'
+        : 'Gérez vos créneaux, blocages et disponibilités en temps réel.',
     },
     {
       icon: 'chat',
-      title: lang === 'ar' ? 'تذكير عبر واتساب' : lang === 'en' ? 'WhatsApp Reminders' : 'Rappels WhatsApp',
+      title: lang === 'ar' ? 'تذكيرات واتساب التلقائية' : lang === 'en' ? 'Automatic WhatsApp Reminders' : 'Rappels WhatsApp automatiques',
       desc: lang === 'ar'
-        ? 'تلقّ تذكيرات تلقائية بموعدك عبر واتساب حتى لا تفوّتك أي زيارة.'
+        ? 'قلّل حالات الغياب بفضل التذكيرات والتأكيدات المرسلة تلقائياً.'
         : lang === 'en'
-        ? 'Receive automatic WhatsApp reminders before each appointment so you never miss a visit.'
-        : 'Recevez des rappels automatiques par WhatsApp avant chaque rendez-vous pour ne rien manquer.',
+        ? 'Reduce no-shows with reminders and confirmations sent automatically.'
+        : 'Réduisez les absences grâce aux rappels et confirmations envoyés automatiquement.',
     },
     {
       icon: 'clipboard',
-      title: lang === 'ar' ? 'ملف موحد' : lang === 'en' ? 'Centralised Medical File' : 'Dossier centralisé',
+      title: lang === 'ar' ? 'إدارة المرضى' : lang === 'en' ? 'Patient Management' : 'Gestion des patients',
       desc: lang === 'ar'
-        ? 'وثائقك الطبية، نتائج التحاليل والوصفات في مكان واحد آمن يمكنك الوصول إليه دائماً.'
+        ? 'ملف مريض كامل، يُنشأ تلقائياً عند كل موعد.'
         : lang === 'en'
-        ? 'All your medical documents, test results, and prescriptions in one secure place, always accessible.'
-        : 'Tous vos documents médicaux, résultats et ordonnances regroupés dans un espace sécurisé et accessible partout.',
+        ? 'A complete patient file, created automatically at each appointment.'
+        : 'Un dossier patient complet, créé automatiquement à chaque rendez-vous.',
+    },
+    {
+      icon: 'chart',
+      title: lang === 'ar' ? 'إحصائيات وفوترة' : lang === 'en' ? 'Statistics & Billing' : 'Statistiques & facturation',
+      desc: lang === 'ar'
+        ? 'تابع نشاطك وأنشئ فواتيرك بنقرة واحدة.'
+        : lang === 'en'
+        ? 'Track your activity and generate your invoices in one click.'
+        : 'Suivez votre activité et générez vos factures en un clic.',
+    },
+    {
+      icon: 'shield',
+      title: lang === 'ar' ? 'ملف موثّق' : lang === 'en' ? 'Verified Profile' : 'Profil vérifié',
+      desc: lang === 'ar'
+        ? 'يتم التحقق من رقم INPE وشهاداتك — ضمان للثقة لدى المرضى.'
+        : lang === 'en'
+        ? 'Your INPE and diplomas are verified — a sign of trust for patients.'
+        : 'Votre INPE et vos diplômes sont vérifiés — un gage de confiance pour les patients.',
     },
     {
       icon: 'star',
-      title: lang === 'ar' ? 'تقييمات موثوقة' : lang === 'en' ? 'Verified Reviews' : 'Avis vérifiés',
+      title: lang === 'ar' ? 'تجربة مجانية 14 يوماً' : lang === 'en' ? '14-Day Free Trial' : 'Essai gratuit 14 jours',
       desc: lang === 'ar'
-        ? 'اطّلع على تقييمات حقيقية من مرضى تحقق منهم، لاختيار الطبيب الأنسب لك.'
+        ? 'دون دفع عند التسجيل. كل الميزات لمدة 14 يوماً.'
         : lang === 'en'
-        ? 'Read genuine ratings from verified patients to choose the right doctor with confidence.'
-        : 'Consultez les avis authentiques de patients vérifiés pour choisir le bon médecin en toute confiance.',
+        ? 'No payment at sign-up. All features for 14 days.'
+        : 'Sans paiement à l\'inscription. Toutes les fonctionnalités pendant 14 jours.',
     },
   ];
 
@@ -110,10 +128,10 @@ export default function ForPatients() {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   padding: '6px 12px', fontSize: 14,
-                  fontWeight: item.key === 'forpatients' ? 700 : (hoveredNav === item.key ? 600 : 500),
-                  color: item.key === 'forpatients' ? PRIMARY : (hoveredNav === item.key ? DARK : BODY),
+                  fontWeight: item.key === 'fordoctors' ? 700 : (hoveredNav === item.key ? 600 : 500),
+                  color: item.key === 'fordoctors' ? PRIMARY : (hoveredNav === item.key ? DARK : BODY),
                   borderRadius: 6, transition: 'color 0.15s', whiteSpace: 'nowrap',
-                  borderBottom: item.key === 'forpatients' ? `2px solid ${PRIMARY}` : '2px solid transparent',
+                  borderBottom: item.key === 'fordoctors' ? `2px solid ${PRIMARY}` : '2px solid transparent',
                 }}
               >
                 {item.label}
@@ -193,7 +211,7 @@ export default function ForPatients() {
             ) : !isMobile ? (
               <>
                 <button
-                  onClick={() => go('plogin')}
+                  onClick={() => go('login')}
                   style={{
                     background: 'none', border: `1px solid ${BORDER}`,
                     borderRadius: 8, padding: '7px 16px',
@@ -203,7 +221,7 @@ export default function ForPatients() {
                   {t.btnLogin}
                 </button>
                 <button
-                  onClick={() => go('pregister')}
+                  onClick={() => go('docregister')}
                   style={{
                     background: PRIMARY, border: 'none', borderRadius: 8,
                     padding: '7px 16px', cursor: 'pointer',
@@ -227,28 +245,28 @@ export default function ForPatients() {
             fontSize: 12, fontWeight: 600, color: '#0D7A50', marginBottom: 20,
           }}>
             <Icon name="stethoscope" size={13} />
-            <span>{lang === 'ar' ? 'للمرضى' : lang === 'en' ? 'For Patients' : 'Pour les patients'}</span>
+            <span>{lang === 'ar' ? 'للأطباء' : lang === 'en' ? 'For Doctors' : 'Pour les médecins'}</span>
           </div>
           <h1 style={{
             fontSize: 40, fontWeight: 800, color: DARK,
             lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.4px',
           }}>
             {lang === 'ar'
-              ? 'صحتك في متناول يدك، دائمًا'
+              ? 'طوّر عيادتك مع Tabibo'
               : lang === 'en'
-              ? 'Your health in your hands, always'
-              : 'Votre santé entre vos mains, à tout moment'}
+              ? 'Grow your practice with Tabibo'
+              : 'Développez votre cabinet avec Tabibo'}
           </h1>
           <p style={{ fontSize: 17, color: BODY, lineHeight: 1.65, marginBottom: 40, maxWidth: 520, margin: '0 auto 40px' }}>
             {lang === 'ar'
-              ? 'ابحث عن الطبيب المناسب، احجز موعدك وتتبع ملفك الطبي — كل ذلك في مكان واحد.'
+              ? 'أدِر مواعيدك ومرضاك وأجندتك — وقلّل حالات الغياب بفضل تذكيرات واتساب التلقائية.'
               : lang === 'en'
-              ? 'Find the right doctor, book your appointment, and track your medical file — all in one place.'
-              : 'Trouvez le bon médecin, réservez votre rendez-vous et suivez votre dossier médical — tout en un seul endroit.'}
+              ? 'Manage your appointments, patients, and agenda — and reduce no-shows with automatic WhatsApp reminders.'
+              : 'Gérez vos rendez-vous, vos patients et votre agenda — et réduisez les absences grâce aux rappels WhatsApp automatiques.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
             <button
-              onClick={() => go('search')}
+              onClick={() => go('docregister')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
                 borderRadius: 10, padding: '13px 28px',
@@ -256,27 +274,17 @@ export default function ForPatients() {
                 boxShadow: '0 4px 20px rgba(22,160,106,0.30)',
               }}
             >
-              {lang === 'ar' ? 'ابحث عن طبيب' : lang === 'en' ? 'Find a doctor' : 'Trouver un médecin'}
+              {lang === 'ar' ? 'سجّل عيادتي' : lang === 'en' ? 'Register my practice' : 'Enregistrer mon cabinet'}
             </button>
             <button
-              onClick={() => go('plogin')}
-              style={{
-                background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`,
-                borderRadius: 10, padding: '13px 28px',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              {lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Sign in' : 'Se connecter'}
-            </button>
-            <button
-              onClick={() => go('pregister')}
+              onClick={() => go('login')}
               style={{
                 background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`,
                 borderRadius: 10, padding: '13px 28px',
                 fontSize: 15, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {lang === 'ar' ? 'إنشاء حسابي' : lang === 'en' ? 'Create my account' : 'Créer mon compte'}
+              {lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Log in' : 'Se connecter'}
             </button>
           </div>
         </div>
@@ -318,20 +326,20 @@ export default function ForPatients() {
               </div>
               <h2 style={{ fontSize: isMobile ? 23 : 28, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
                 {lang === 'ar'
-                  ? 'أطباء في كل أنحاء المغرب'
+                  ? 'انضم إلى شبكة Tabibo'
                   : lang === 'en'
-                  ? 'Doctors across all of Morocco'
-                  : 'Des médecins partout au Maroc'}
+                  ? 'Join the Tabibo network'
+                  : 'Rejoignez le réseau Tabibo'}
               </h2>
               <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.6, marginBottom: 24 }}>
                 {lang === 'ar'
-                  ? `شبكتنا تغطي ${CITY_COUNT} مدينة مغربية — الدار البيضاء، الرباط، مراكش، طنجة وأكثر.`
+                  ? 'آلاف المرضى يبحثون عن طبيب بالقرب منهم، في كل أنحاء المغرب — الدار البيضاء، الرباط، مراكش، طنجة وأكثر.'
                   : lang === 'en'
-                  ? `Our network covers ${CITY_COUNT} Moroccan cities — Casablanca, Rabat, Marrakech, Tangier and more.`
-                  : `Notre réseau couvre ${CITY_COUNT} villes marocaines — Casablanca, Rabat, Marrakech, Tanger et plus encore.`}
+                  ? 'Thousands of patients are looking for a doctor near them, all across Morocco — Casablanca, Rabat, Marrakech, Tangier and more.'
+                  : 'Des milliers de patients recherchent un médecin près d\'eux, partout au Maroc — Casablanca, Rabat, Marrakech, Tanger et plus encore.'}
               </p>
               <button
-                onClick={() => go('search')}
+                onClick={() => go('docregister')}
                 style={{
                   background: '#fff', color: PRIMARY, border: 'none',
                   borderRadius: 10, padding: '12px 22px', minHeight: 48,
@@ -339,7 +347,7 @@ export default function ForPatients() {
                   width: isMobile ? '100%' : 'auto',
                 }}
               >
-                {lang === 'ar' ? 'استكشف الأطباء' : lang === 'en' ? 'Explore doctors' : 'Explorer les médecins'}
+                {lang === 'ar' ? 'سجّل عيادتي' : lang === 'en' ? 'Register my practice' : 'Enregistrer mon cabinet'}
               </button>
             </div>
 
@@ -403,10 +411,10 @@ export default function ForPatients() {
       <section style={{ padding: '56px 24px 72px', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', marginBottom: 10, letterSpacing: '-0.3px' }}>
-            {lang === 'ar' ? 'كل ما تحتاجه في مكان واحد' : lang === 'en' ? 'Everything you need, in one place' : 'Tout ce dont vous avez besoin, en un seul endroit'}
+            {lang === 'ar' ? 'كل ما تحتاجه لإدارة عيادتك' : lang === 'en' ? 'Everything you need to run your practice' : 'Tout ce qu\'il faut pour gérer votre cabinet'}
           </h2>
           <p style={{ textAlign: 'center', color: MUTED, fontSize: 15, marginBottom: 40 }}>
-            {lang === 'ar' ? 'مزايا مصممة لتجربة صحية أفضل' : lang === 'en' ? 'Features designed for a better health experience' : 'Des fonctionnalités pensées pour une meilleure expérience santé'}
+            {lang === 'ar' ? 'مزايا مصممة لتوفير وقتك وتنمية نشاطك' : lang === 'en' ? 'Features designed to save you time and grow your practice' : 'Des fonctionnalités pensées pour vous faire gagner du temps et développer votre activité'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>
             {features.map((f, i) => (
@@ -445,18 +453,18 @@ export default function ForPatients() {
       <section style={{ padding: '64px 24px', background: DARK }}>
         <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 14, letterSpacing: '-0.3px' }}>
-            {lang === 'ar' ? 'ابدأ رحلتك الصحية اليوم' : lang === 'en' ? 'Start your health journey today' : 'Commencez votre parcours santé dès aujourd\'hui'}
+            {lang === 'ar' ? 'ابدأ مع Tabibo اليوم' : lang === 'en' ? 'Get started with Tabibo today' : 'Lancez-vous avec Tabibo dès aujourd\'hui'}
           </h2>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 32, lineHeight: 1.6 }}>
             {lang === 'ar'
-              ? 'انضم إلى أكثر من 85,000 مريض يثقون في تيك دوك.'
+              ? 'انضم إلى مئات الأطباء الذين يطوّرون عيادتهم مع Tabibo. تجربة مجانية لمدة 14 يوماً، دون دفع عند التسجيل.'
               : lang === 'en'
-              ? 'Join over 85,000 patients who trust Tabibo.'
-              : 'Rejoignez plus de 85 000 patients qui font confiance à Tabibo.'}
+              ? 'Join hundreds of doctors growing their practice with Tabibo. 14-day free trial, no payment at sign-up.'
+              : 'Rejoignez des centaines de médecins qui développent leur cabinet avec Tabibo. Essai gratuit 14 jours, sans paiement à l\'inscription.'}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
             <button
-              onClick={() => go('pregister')}
+              onClick={() => go('docregister')}
               style={{
                 background: PRIMARY, color: '#fff', border: 'none',
                 borderRadius: 10, padding: '14px 32px',
@@ -464,10 +472,10 @@ export default function ForPatients() {
                 boxShadow: '0 4px 20px rgba(22,160,106,0.35)',
               }}
             >
-              {lang === 'ar' ? 'إنشاء حساب مجاني' : lang === 'en' ? 'Create a free account' : 'Créer un compte gratuit'}
+              {lang === 'ar' ? 'سجّل عيادتي' : lang === 'en' ? 'Register my practice' : 'Enregistrer mon cabinet'}
             </button>
             <button
-              onClick={() => go('search')}
+              onClick={() => go('login')}
               style={{
                 background: 'transparent', color: 'rgba(255,255,255,0.85)',
                 border: '1.5px solid rgba(255,255,255,0.25)',
@@ -475,7 +483,7 @@ export default function ForPatients() {
                 fontSize: 16, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {lang === 'ar' ? 'ابحث عن طبيب' : lang === 'en' ? 'Find a doctor' : 'Trouver un médecin'}
+              {lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Log in' : 'Se connecter'}
             </button>
           </div>
         </div>

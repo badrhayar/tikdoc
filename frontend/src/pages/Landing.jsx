@@ -76,7 +76,7 @@ export default function Landing() {
   const navItems = [
     { key: 'home', label: t.navHome },
     { key: 'forpatients', label: t.navPatients },
-    { key: 'login', label: t.navDoctors },
+    { key: 'fordoctors', label: t.navDoctors },
     { key: 'about', label: t.navAbout },
   ];
 

@@ -16,6 +16,7 @@ const PatientRegister = lazy(() => import('./pages/PatientRegister'));
 const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const About          = lazy(() => import('./pages/About'));
 const ForPatients    = lazy(() => import('./pages/ForPatients'));
+const ForDoctors     = lazy(() => import('./pages/ForDoctors'));
 const DoctorLogin    = lazy(() => import('./pages/DoctorLogin'));
 const DoctorRegister = lazy(() => import('./pages/DoctorRegister'));
 const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
@@ -41,6 +42,7 @@ const SCREEN_MAP = {
   paccount:    PatientAccount,
   about:       About,
   forpatients: ForPatients,
+  fordoctors:  ForDoctors,
   login:       DoctorLogin,
   docregister: DoctorRegister,
   admin:       Admin,
