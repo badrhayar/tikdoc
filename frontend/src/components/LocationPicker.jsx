@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { cleanMoroccoMap } from '../lib/mapClean';
 import { CITY_COORDS, CITY_OPTS } from '../shared.jsx';
 
 const KEY = import.meta.env.VITE_MAPTILER_KEY;
@@ -86,6 +87,8 @@ export default function LocationPicker({ city, value, initialQuery = '', onChang
       return;
     }
     mapRef.current = map;
+    map.on('load', () => cleanMoroccoMap(map));
+    map.on('styledata', () => cleanMoroccoMap(map));
     map.on('error', (e) => console.warn('LocationPicker:', e?.error?.message || e));
     const canvas = map.getCanvas();
     const onCtxLost = (ev) => { ev.preventDefault(); };

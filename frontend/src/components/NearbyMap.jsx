@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { cleanMoroccoMap } from '../lib/mapClean';
 
 const KEY = import.meta.env.VITE_MAPTILER_KEY;
 // MapTiler when a key is set, else MapLibre's free demo style (no key needed).
@@ -43,17 +44,6 @@ function makePinEl(selected) {
   return root;
 }
 
-// Hide administrative/disputed boundary lines so Morocco renders undivided.
-function hideBoundaries(map) {
-  try {
-    (map.getStyle()?.layers || []).forEach((l) => {
-      if (/boundary|admin|disputed/i.test(l.id)) {
-        try { map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) { /* ignore */ }
-      }
-    });
-  } catch (e) { /* ignore */ }
-}
-
 export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
   const elRef = useRef(null);
   const mapRef = useRef(null);
@@ -81,8 +71,8 @@ export default function NearbyMap({ doctors = [], onSelect, selectedId }) {
     }
     mapRef.current = map;
     map.on('error', (e) => console.warn('NearbyMap:', e?.error?.message || e));
-    map.on('load', () => hideBoundaries(map));
-    map.on('styledata', () => hideBoundaries(map));
+    map.on('load', () => cleanMoroccoMap(map));
+    map.on('styledata', () => cleanMoroccoMap(map));
     const canvas = map.getCanvas();
     const onCtxLost = (ev) => { ev.preventDefault(); };
     canvas.addEventListener('webglcontextlost', onCtxLost, false);

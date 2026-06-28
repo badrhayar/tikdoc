@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS, cityCoord } from '../shared.jsx';
 import LocationPicker from '../components/LocationPicker';
+import PhoneField from '../components/PhoneField';
 import Icon from '../components/Icon';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
 
@@ -36,8 +37,11 @@ export default function DoctorRegister() {
   const submitDoctor = async () => {
     setError('');
     if (!isSupabaseConfigured) { setError('Supabase non configuré — vérifiez votre fichier .env.'); return; }
-    if (!dreg.name || !dreg.email || !dreg.pass) { setError('Renseignez le nom, l’email et le mot de passe.'); return; }
+    if (!dreg.name || !dreg.spec || !dreg.inpe || !dreg.city || !dreg.phone || !dreg.address || !dreg.email || !dreg.pass) {
+      setError('Veuillez remplir tous les champs obligatoires (marqués d’un *).'); return;
+    }
     if (dreg.pass.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (dreg.pass !== dreg.pass2) { setError('Les deux mots de passe ne correspondent pas.'); return; }
     const missing = CREDENTIAL_DOCS.filter((d) => d.required && !docFiles[d.key]);
     if (missing.length) { setError('Documents obligatoires manquants : ' + missing.map((d) => d.label).join(', ')); return; }
     setBusy(true);
@@ -167,21 +171,7 @@ export default function DoctorRegister() {
             onClick={() => go('home')}
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 36 }}
           >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                background: PRIMARY,
-                borderRadius: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 36, height: 36, borderRadius: 10 }} />
             <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabibo</span>
           </div>
 
@@ -209,7 +199,7 @@ export default function DoctorRegister() {
 
             {/* Nom complet */}
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Nom complet</label>
+              <label style={labelStyle}>Nom complet <span style={{ color: '#C2466A' }}>*</span></label>
               <input
                 type="text"
                 placeholder="Dr. Prénom Nom"
@@ -221,7 +211,7 @@ export default function DoctorRegister() {
 
             {/* Spécialité */}
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Spécialité</label>
+              <label style={labelStyle}>Spécialité <span style={{ color: '#C2466A' }}>*</span></label>
               <select
                 value={dreg.spec}
                 onChange={(e) => setDreg('spec', e.target.value)}
@@ -236,7 +226,7 @@ export default function DoctorRegister() {
             {/* INPE + N° Ordre */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
               <div>
-                <label style={labelStyle}>INPE</label>
+                <label style={labelStyle}>INPE <span style={{ color: '#C2466A' }}>*</span></label>
                 <input
                   type="text"
                   placeholder="1234567890"
@@ -268,7 +258,7 @@ export default function DoctorRegister() {
             {/* Ville + Téléphone */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
-                <label style={labelStyle}>Ville</label>
+                <label style={labelStyle}>Ville <span style={{ color: '#C2466A' }}>*</span></label>
                 <select
                   value={dreg.city}
                   onChange={(e) => setDreg('city', e.target.value)}
@@ -280,37 +270,14 @@ export default function DoctorRegister() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Téléphone</label>
-                <div style={{ display: 'flex' }}>
-                  <span
-                    style={{
-                      padding: '11px 10px',
-                      background: INPUT_BG,
-                      border: `1.5px solid ${INPUT_BORDER}`,
-                      borderRight: 'none',
-                      borderRadius: '10px 0 0 10px',
-                      fontSize: 13,
-                      color: MUTED,
-                      whiteSpace: 'nowrap',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    +212
-                  </span>
-                  <input
-                    type="tel"
-                    placeholder="6 12 34 56 78"
-                    value={dreg.phone}
-                    onChange={(e) => setDreg('phone', e.target.value)}
-                    style={{ ...inputStyle, borderRadius: '0 10px 10px 0', borderLeft: 'none', flex: 1 }}
-                  />
-                </div>
+                <label style={labelStyle}>Téléphone <span style={{ color: '#C2466A' }}>*</span></label>
+                <PhoneField value={dreg.phone} onChange={(v) => setDreg('phone', v)} borderColor={INPUT_BORDER} bg={INPUT_BG} />
               </div>
             </div>
 
             {/* Adresse */}
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Adresse du cabinet</label>
+              <label style={labelStyle}>Adresse du cabinet <span style={{ color: '#C2466A' }}>*</span></label>
               <input
                 type="text"
                 placeholder="123 Rue, Quartier, Ville"
@@ -334,7 +301,7 @@ export default function DoctorRegister() {
 
             {/* Email */}
             <div style={{ marginBottom: 0 }}>
-              <label style={labelStyle}>Email professionnel</label>
+              <label style={labelStyle}>Email professionnel <span style={{ color: '#C2466A' }}>*</span></label>
               <input
                 type="email"
                 placeholder="docteur@exemple.ma"
@@ -436,15 +403,30 @@ export default function DoctorRegister() {
           {/* Section 4: Password + Submit */}
           <div style={{ marginBottom: 28 }}>
             <p style={sectionHeadingStyle}>Mot de passe</p>
-            <div style={{ marginBottom: 24 }}>
-              <label style={labelStyle}>Mot de passe</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={dreg.pass || ''}
-                onChange={(e) => setDreg('pass', e.target.value)}
-                style={inputStyle}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 24 }}>
+              <div>
+                <label style={labelStyle}>Mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={dreg.pass || ''}
+                  onChange={(e) => setDreg('pass', e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Confirmer le mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={dreg.pass2 || ''}
+                  onChange={(e) => setDreg('pass2', e.target.value)}
+                  style={{ ...inputStyle, borderColor: dreg.pass2 && dreg.pass2 !== dreg.pass ? '#C2466A' : INPUT_BORDER }}
+                />
+                {dreg.pass2 && dreg.pass2 !== dreg.pass && (
+                  <div style={{ fontSize: 11.5, color: '#C2466A', marginTop: 4 }}>Les mots de passe ne correspondent pas.</div>
+                )}
+              </div>
             </div>
 
             {error && (

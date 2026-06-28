@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { cleanMoroccoMap } from '../lib/mapClean';
 
 const KEY = import.meta.env.VITE_MAPTILER_KEY;
 const STYLE = KEY
@@ -29,6 +30,8 @@ export default function DoctorLocationMap({ lat, lng, height = 220 }) {
     }
     mapRef.current = map;
     map.on('error', (e) => console.warn('DoctorLocationMap:', e?.error?.message || e));
+    map.on('load', () => cleanMoroccoMap(map));
+    map.on('styledata', () => cleanMoroccoMap(map));
     const canvas = map.getCanvas();
     const onCtxLost = (ev) => { ev.preventDefault(); };
     canvas.addEventListener('webglcontextlost', onCtxLost, false);

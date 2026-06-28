@@ -505,7 +505,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <div style={{ paddingTop: 20, textAlign: 'center', fontSize: 13 }}>© 2024 Tabibo. {tr('Tous droits réservés.', 'All rights reserved.', 'جميع الحقوق محفوظة.')}</div>
+          <div style={{ paddingTop: 20, textAlign: 'center', fontSize: 13 }}>© {new Date().getFullYear()} Tabibo. {tr('Tous droits réservés.', 'All rights reserved.', 'جميع الحقوق محفوظة.')}</div>
         </div>
       </footer>
 
