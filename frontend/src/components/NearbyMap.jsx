@@ -6,7 +6,7 @@ import { cleanMoroccoMap } from '../lib/mapClean';
 const KEY = import.meta.env.VITE_MAPTILER_KEY;
 // MapTiler when a key is set, else MapLibre's free demo style (no key needed).
 const STYLE = KEY
-  ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${KEY}`
+  ? `https://api.maptiler.com/maps/019f0e8b-b600-725f-9c7c-1aa8b98c84eb/style.json?key=${KEY}`
   : 'https://demotiles.maplibre.org/style.json';
 const MOROCCO_CENTER = [-7.5, 29.5];
 
