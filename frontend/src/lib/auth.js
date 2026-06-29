@@ -29,6 +29,27 @@ export async function signIn({ email, password, captchaToken }) {
   return data;
 }
 
+/**
+ * Sign in with a phone number. Resolution + authentication happen entirely in the
+ * `phone-login` Edge Function so the account email is never exposed to the client
+ * and unknown numbers are indistinguishable from wrong passwords. On success the
+ * returned session is installed into the Supabase client.
+ */
+export async function phoneLogin({ phone, password, captchaToken }) {
+  const { data, error } = await supabase.functions.invoke('phone-login', {
+    body: { phone, password, captchaToken },
+  });
+  // The function returns a uniform 401; surface it as the standard credentials
+  // error so the UI shows "Email ou mot de passe incorrect."
+  if (error || !data?.session?.access_token) throw new Error('Invalid login credentials');
+  await supabase.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
+  const { data: sess } = await supabase.auth.getSession();
+  return sess;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;

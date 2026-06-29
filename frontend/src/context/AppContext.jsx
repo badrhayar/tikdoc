@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, emailForPhone } from '../lib/api';
-import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange } from '../lib/auth';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients } from '../lib/api';
+import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange, phoneLogin as sbPhoneLogin } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
 
@@ -263,14 +263,15 @@ export function AppProvider({ children }) {
 
   // Exposed auth actions
   const authSignIn = async (identifier, password, captchaToken) => {
-    // Accept email OR phone: if no '@', treat it as a phone and resolve the email.
-    let email = (identifier || '').trim();
-    if (email && !email.includes('@')) {
-      const resolved = await emailForPhone(email);
-      if (!resolved) { const err = new Error('Aucun compte trouvé pour ce numéro.'); err.code = 'no_account'; throw err; }
-      email = resolved;
+    // Accept email OR phone. A phone (no '@') is resolved AND authenticated
+    // server-side by the phone-login Edge Function, so the account email is
+    // never exposed to the browser and numbers can't be enumerated.
+    const id = (identifier || '').trim();
+    if (id && !id.includes('@')) {
+      const sess = await sbPhoneLogin({ phone: id, password, captchaToken });
+      return loadUser(sess?.session ?? sess);
     }
-    const res = await sbSignIn({ email, password, captchaToken });
+    const res = await sbSignIn({ email: id, password, captchaToken });
     const u = await loadUser(res.session);
     return u;                       // the loaded public.users profile (or null)
   };
