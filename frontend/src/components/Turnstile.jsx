@@ -11,6 +11,7 @@
 // local/staging environments that talk to a Supabase project without CAPTCHA.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useRef } from 'react';
+import { useApp } from '../context/AppContext';
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
@@ -37,6 +38,9 @@ function loadTurnstile() {
 }
 
 export default function Turnstile({ onToken, style }) {
+  const { state } = useApp();
+  // Match the app's language (fr/ar/en are all valid Turnstile codes); default FR.
+  const language = ['fr', 'ar', 'en'].includes(state?.lang) ? state.lang : 'fr';
   const elRef = useRef(null);
   const widgetIdRef = useRef(null);
   const onTokenRef = useRef(onToken);
@@ -50,6 +54,7 @@ export default function Turnstile({ onToken, style }) {
         if (cancelled || !elRef.current || !window.turnstile) return;
         widgetIdRef.current = window.turnstile.render(elRef.current, {
           sitekey: SITE_KEY,
+          language,
           callback: (token) => onTokenRef.current?.(token),
           'expired-callback': () => onTokenRef.current?.(''),
           'error-callback': () => onTokenRef.current?.(''),
