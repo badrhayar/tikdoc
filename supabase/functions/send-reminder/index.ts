@@ -52,6 +52,30 @@ const cors = {
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// ── Caller authorization ──────────────────────────────────────────────────────
+// This function holds the service-role key (bypasses RLS), so it must verify WHO
+// is calling. Two kinds of legitimate callers:
+//   • the pg_cron dispatcher, which presents the service-role key as its bearer;
+//   • logged-in app users (admin "test", patient/doctor "send"), whose JWT we
+//     validate. The public anon key resolves to no user and is rejected.
+const SERVICE_KEYS = [
+  SERVICE_KEY,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+  Deno.env.get("SB_SECRET_KEY"),
+].filter(Boolean) as string[];
+
+async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
+  const deny = { ok: false, isService: false, isAdmin: false, me: null as any };
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return deny;
+  if (SERVICE_KEYS.includes(token)) return { ok: true, isService: true, isAdmin: true, me: null as any };
+  const { data: { user } } = await admin.auth.getUser(token);
+  if (!user) return deny;
+  const { data: me } = await admin.from("users").select("id, role, email").eq("auth_id", user.id).maybeSingle();
+  if (!me) return deny;
+  return { ok: true, isService: false, isAdmin: (me as any).role === "admin", me: me as any };
+}
+
 // Moroccan numbers → E.164 digits with no "+": 06.. → 2126.., +212.. → 212..
 function normalizePhone(raw: string): string {
   let d = (raw || "").replace(/\D/g, "");
@@ -136,10 +160,14 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}));
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    const authz = await authorize(req, admin);
+    if (!authz.ok) return json({ ok: false, error: "unauthorized" }, 401);
+
     // ── test ─────────────────────────────────────────────────────────────────
     // Optional `template`: 'reminder' (default) | 'confirmation' (booked) |
     // 'confirmed' | 'cancelled' | 'rescheduled' — to test any template.
     if (p.type === "test") {
+      if (!authz.isAdmin) return json({ ok: false, error: "forbidden" }, 403);
       if (!WA_TOKEN || !WA_PHONE_ID) return json({ ok: false, error: "WHATSAPP_TOKEN / WHATSAPP_PHONE_ID manquants dans les secrets." });
       if (!p.to) return json({ ok: false, error: "Numéro destinataire manquant." });
       const tpl = templateFor(p.template ?? "");
@@ -151,10 +179,14 @@ Deno.serve(async (req) => {
     if (p.type === "send" && p.appointment_id) {
       const { data, error: qErr } = await admin
         .from("appointments")
-        .select("id, doctor_id, datetime, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users!doctors_user_id_fkey(full_name))")
+        .select("id, doctor_id, patient_id, datetime, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user_id, user:users!doctors_user_id_fkey(full_name))")
         .eq("id", p.appointment_id).maybeSingle();
       if (!data) return json({ ok: false, error: "Rendez-vous introuvable.", detail: qErr?.message ?? null }, 404);
       const a: any = data;
+      // Only a party to the appointment (its patient or its doctor), an admin, or
+      // the server may trigger its messages.
+      const isParty = authz.isAdmin || (authz.me && (authz.me.id === a.patient_id || authz.me.id === a.doctor?.user_id));
+      if (!isParty) return json({ ok: false, error: "forbidden" }, 403);
       const template = p.template ?? "confirmation";
 
       // Respect the doctor's toggle for confirmation / follow-up sends.
@@ -174,6 +206,7 @@ Deno.serve(async (req) => {
 
     // ── dispatch (hourly cron) ─────────────────────────────────────────────────
     if (p.type === "dispatch") {
+      if (!authz.isService) return json({ ok: false, error: "forbidden" }, 403);
       const now = Date.now();
       const windows: { template: string; flag: "j1" | "j2"; from: number; to: number }[] = [
         { template: "j1", flag: "j1", from: now + 23 * 3600e3, to: now + 25 * 3600e3 },

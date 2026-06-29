@@ -59,14 +59,40 @@ async function sendEmail(to: string, subject: string, html: string) {
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// ── Caller authorization ──────────────────────────────────────────────────────
+// This function holds the service-role key (bypasses RLS), so it must verify WHO
+// is calling. Every legitimate caller is a logged-in app user; we validate their
+// JWT and read their role. The public anon key resolves to no user → rejected.
+const SERVICE_KEYS = [
+  SERVICE_KEY,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+  Deno.env.get("SB_SECRET_KEY"),
+].filter(Boolean) as string[];
+
+async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
+  const deny = { ok: false, isService: false, isAdmin: false, me: null as any };
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return deny;
+  if (SERVICE_KEYS.includes(token)) return { ok: true, isService: true, isAdmin: true, me: null as any };
+  const { data: { user } } = await admin.auth.getUser(token);
+  if (!user) return deny;
+  const { data: me } = await admin.from("users").select("id, role, email").eq("auth_id", user.id).maybeSingle();
+  if (!me) return deny;
+  return { ok: true, isService: false, isAdmin: (me as any).role === "admin", me: me as any };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const p = await req.json();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    const authz = await authorize(req, admin);
+    if (!authz.ok) return json({ ok: false, error: "unauthorized" }, 401);
+
     // ── Diagnostic: send a test email and return the real result ──
     if (p.type === "test") {
+      if (!authz.isAdmin) return json({ ok: false, error: "forbidden" }, 403);
       if (!RESEND_API_KEY) return json({ ok: false, error: "RESEND_API_KEY manquant dans les secrets de la fonction." });
       if (!p.to) return json({ ok: false, error: "Adresse destinataire manquante." });
       const r = await sendEmail(p.to, "Email de test — Tabibo", shell("Email de test ✓", `<p>Ceci est un email de test envoyé depuis la console d'administration Tabibo.</p><p>Si vous le recevez, votre configuration Resend (clé API + adresse d'envoi) fonctionne correctement.</p>`));
@@ -93,8 +119,11 @@ Deno.serve(async (req) => {
         <p style="font-size:14px"><strong>Action requise :</strong> connectez-vous à la console d'administration Tabibo pour examiner les documents et accepter ou refuser ce médecin.</p>`;
       for (const to of recipients) await sendEmail(to, `Nouveau médecin en attente de validation — ${esc(p.doctorName)}`, shell("Médecin en attente de validation", adminBody));
 
-      // 2) Confirm to the doctor that their application was received.
-      if (p.doctorEmail) {
+      // 2) Confirm to the doctor that their application was received. Send to the
+      //    caller's OWN account email (never a body-supplied address), so this
+      //    branch can't be abused to mail arbitrary recipients.
+      const docTo = authz.me?.email ?? null;
+      if (docTo) {
         const docBody = `
           <p>Bonjour Dr. ${esc(p.doctorName)},</p>
           <p>Nous avons bien reçu votre demande d'inscription sur <strong>Tabibo</strong>. Merci de votre confiance.</p>
@@ -109,7 +138,7 @@ Deno.serve(async (req) => {
           </div>
           <p><strong>Et maintenant ?</strong> Vous recevrez un email dès qu'une décision sera prise — généralement sous <strong>24 à 48 h</strong>. Aucune action n'est requise de votre part pour le moment.</p>
           <p style="margin-top:18px">À très bientôt,<br/>L'équipe Tabibo</p>`;
-        await sendEmail(p.doctorEmail, "Nous avons bien reçu votre inscription Tabibo", shell("Inscription reçue — en cours de vérification", docBody));
+        await sendEmail(docTo, "Nous avons bien reçu votre inscription Tabibo", shell("Inscription reçue — en cours de vérification", docBody));
       }
 
       return new Response(JSON.stringify({ ok: true, sent: recipients.length }), { headers: { ...cors, "Content-Type": "application/json" } });
@@ -132,6 +161,7 @@ Deno.serve(async (req) => {
     }
 
     if (p.type === "decision" && p.doctorEmail) {
+      if (!authz.isAdmin) return json({ ok: false, error: "forbidden" }, 403);
       if (p.status === "approved") {
         const body = `
           <p>Bonjour Dr. ${esc(p.doctorName)},</p>
@@ -160,10 +190,14 @@ Deno.serve(async (req) => {
       const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
       const { data: a } = await admin
         .from("appointments")
-        .select("datetime, patient_name, patient:users(full_name, email), doctor:doctors(user:users!doctors_user_id_fkey(full_name, email))")
+        .select("datetime, patient_id, patient_name, patient:users(full_name, email), doctor:doctors(user_id, user:users!doctors_user_id_fkey(full_name, email))")
         .eq("id", p.appointment_id).maybeSingle();
       const av: any = a;
       if (!av) return new Response(JSON.stringify({ ok: true, skipped: "appt not found" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      // Only a party to this appointment (its patient or doctor), an admin, or the
+      // server may trigger its emails — recipients are DB-derived regardless.
+      const isParty = authz.isAdmin || (authz.me && (authz.me.id === av.patient_id || authz.me.id === av.doctor?.user_id));
+      if (!isParty) return json({ ok: false, error: "forbidden" }, 403);
       const doctorEmail = av.doctor?.user?.email;
       const doctorName = av.doctor?.user?.full_name ?? "";
       const patientEmail = av.patient?.email;
