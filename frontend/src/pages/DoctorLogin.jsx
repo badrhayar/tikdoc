@@ -114,7 +114,7 @@ export default function DoctorLogin() {
               <label style={{ fontSize: 13, fontWeight: 600, color: DARK }}>Mot de passe</label>
               <a
                 href="#"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => { e.preventDefault(); go('forgotpw'); }}
                 style={{ fontSize: 12, color: PRIMARY, textDecoration: 'none', fontWeight: 500 }}
               >
                 Mot de passe oublié ?

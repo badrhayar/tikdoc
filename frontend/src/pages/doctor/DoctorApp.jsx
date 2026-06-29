@@ -51,6 +51,7 @@ import Subscription from './Subscription';
 import Settings from './Settings';
 import History from './History';
 import Chat from './Chat';
+import BookingShare from './BookingShare';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -71,6 +72,7 @@ const IC = {
   dstats:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg>,
   dabo:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>,
   dsettings: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>,
+  dshare:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>,
 };
 
 // Grouped navigation — a divider is drawn between each group.
@@ -83,6 +85,7 @@ const NAV_GROUPS = [
   ],
   [
     { screen:'dpatients', icon:IC.dpatients, label:'Patients' },
+    { screen:'dshare',    icon:IC.dshare,    label:'Inviter mes patients' },
     { screen:'dhist',     icon:IC.dhist,     label:'Historique consultations' },
     { screen:'ddocs',     icon:IC.ddocs,     label:'Documents' },
   ],
@@ -150,7 +153,7 @@ export default function DoctorApp() {
     doctor: Dashboard, dcal: Calendar, dappts: Appointments, dhist: History,
     dpatients: Patients, ddocs: Documents, davail: Availability,
     dnotif: Notifications, dstats: Statistics, dabo: Subscription, dsettings: Settings,
-    dchat: Chat,
+    dchat: Chat, dshare: BookingShare,
   };
   const SubScreen = SUB[screen] || Dashboard;
 
@@ -350,7 +353,7 @@ export default function DoctorApp() {
 
           {/* Avatar */}
           <div style={{ position:'relative', zIndex:40 }}>
-            <button onClick={() => { setPopAvatar(a=>!a); setPopBell(false); setPopChat(false); }} style={{ width:38, height:38, borderRadius:'50%', border:'none', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
+            <button onClick={() => setPopAvatar(a=>!a)} style={{ width:38, height:38, borderRadius:'50%', border:'none', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
               <svg width="26" height="30" viewBox="0 0 26 30" fill="#16A06A" opacity=".35"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>
             </button>
             {popAvatar && (

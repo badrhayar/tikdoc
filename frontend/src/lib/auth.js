@@ -55,6 +55,22 @@ export async function signOut() {
   if (error) throw error;
 }
 
+/** Email a password-reset link. The link reopens the app with a recovery session,
+ *  which fires a 'PASSWORD_RECOVERY' auth event (handled in AppContext). */
+export async function resetPasswordRequest(email) {
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const { error } = await supabase.auth.resetPasswordForEmail((email || '').trim(), { redirectTo });
+  if (error) throw error;
+  return true;
+}
+
+/** Set a new password for the user in the active (recovery) session. */
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return true;
+}
+
 export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
@@ -62,6 +78,6 @@ export async function getSession() {
 
 /** Subscribe to auth changes; returns an unsubscribe function. */
 export function onAuthChange(cb) {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => cb(session));
+  const { data } = supabase.auth.onAuthStateChange((event, session) => cb(event, session));
   return () => data.subscription.unsubscribe();
 }

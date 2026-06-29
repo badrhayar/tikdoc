@@ -121,7 +121,16 @@ export function sendBookingConfirmation(appointmentId) {
   sendApptWhatsApp(appointmentId, 'confirmation');
 }
 
-export async function createAppointment({ patientId, doctorId, datetime, reason, notes }) {
+// Resolve a doctor's default consultation fee (MAD). Best-effort: returns null
+// if unavailable so callers can fall back to the DB default / leave it empty.
+async function doctorDefaultFee(doctorId) {
+  if (!doctorId) return null;
+  const { data } = await supabase.from('doctors').select('fee_mad').eq('id', doctorId).maybeSingle();
+  const f = data?.fee_mad;
+  return f != null ? Number(f) || null : null;
+}
+
+export async function createAppointment({ patientId, doctorId, datetime, reason, notes, fee = null }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
@@ -131,6 +140,8 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
       reason: reason || null,
       notes: notes || null,
       status: 'pending',
+      // Expected price: caller may pass it; otherwise default to the doctor's fee.
+      fee: fee != null ? Number(fee) || null : await doctorDefaultFee(doctorId),
     })
     .select()
     .single();
@@ -145,7 +156,7 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
  * (`patientId`) or a walk-in identified by name/phone (no account yet). These
  * persist in the DB so the booking calendar greys the slot out for patients.
  */
-export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null }) {
+export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null, fee = null }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
@@ -157,6 +168,7 @@ export async function createWalkinAppointment({ doctorId, datetime, reason, note
       patient_name: patientName || null,
       patient_phone: patientPhone || null,
       status: 'pending',
+      fee: fee != null ? Number(fee) || null : await doctorDefaultFee(doctorId),
     })
     .select()
     .single();
@@ -168,7 +180,7 @@ export async function createWalkinAppointment({ doctorId, datetime, reason, note
 export async function fetchMyAppointments() {
   const { data, error } = await supabase
     .from('appointments')
-    .select('*, doctor:doctors(id, specialty, city, clinic_address, fee_mad), patient:users(full_name, phone)')
+    .select('*, doctor:doctors(id, specialty, city, clinic_address, fee_mad), patient:users(full_name, phone, sex, dob)')
     .order('datetime', { ascending: true });
   if (error) throw error;
   const rows = data || [];
@@ -199,12 +211,23 @@ export function mapAppointment(row, nameById = {}) {
     doctorName: nameById[row.doctor_id] || 'Médecin',
     patientName: row.patient?.full_name || row.patient_name || 'Patient',
     patientPhone: row.patient?.phone || row.patient_phone || '',
+    patientSex: normSex(row.patient?.sex),
+    patientAge: ageFromDob(row.patient?.dob),
     spec: d.specialty || '',
     clinic: d.clinic_address || '',
     city: d.city || '',
-    fee: d.fee_mad || 0,
+    // Expected price for this visit (its own fee, falling back to the doctor's default).
+    fee: row.fee != null ? Number(row.fee) || 0 : (d.fee_mad || 0),
+    // Real payment capture (see 20260629180000_appointment_payments.sql).
+    paid: !!row.paid,
+    amountPaid: row.amount_paid != null ? Number(row.amount_paid) || 0 : 0,
+    payMethod: row.pay_method || null,
   };
 }
+
+// French labels for the captured payment method.
+export const PAY_METHOD_FR = { cash: 'Espèces', card: 'CMI', wallet: 'M-Wallet' };
+export const PAY_METHOD_FROM_FR = { 'Espèces': 'cash', 'CMI': 'card', 'Carte': 'card', 'M-Wallet': 'wallet', 'Wallet': 'wallet' };
 
 // French status labels shared across doctor screens.
 export const STATUS_FR = {
@@ -218,20 +241,23 @@ const pad = (n) => String(n).padStart(2, '0');
 // Calendar / History / Statistics screens, so they all render real data.
 export function apptToConsultation(a) {
   const d = new Date(a.datetime);
+  // Payment status comes from the real `paid` flag, not the appointment status:
+  // a completed visit that hasn't been settled stays "En attente".
   const status =
-    a.status === 'completed' ? 'Payé'
+    a.paid ? 'Payé'
     : a.status === 'cancelled' || a.status === 'no_show' ? 'Annulé'
     : 'En attente';
   return {
     id: a.id,
     patient: a.patientName || 'Patient',
-    age: 0,
-    sex: '',
+    age: a.patientAge ?? '—',
+    sex: a.patientSex || '',
     service: a.reason || 'Consultation générale',
     date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    amount: a.fee || 0,
-    pay: '—',
+    // What was actually collected when paid; otherwise the expected fee.
+    amount: a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0),
+    pay: a.paid && a.payMethod ? (PAY_METHOD_FR[a.payMethod] || a.payMethod) : '—',
     status,
     notes: a.notes || '',
   };
@@ -246,6 +272,117 @@ export async function updateAppointmentStatus(id, status) {
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Record a payment a doctor collected for an appointment.
+ * Marks paid + amount + method, and completes the visit (unless it was
+ * cancelled/no_show, which stay as-is). amount/method are normalised.
+ * @param {object} opts { amount (MAD), method ('cash'|'card'|'wallet') }
+ */
+export async function markAppointmentPaid(id, { amount, method } = {}) {
+  // Resolve the current status so we never resurrect a cancelled/no_show visit.
+  let nextStatus = 'completed';
+  const { data: cur } = await supabase.from('appointments').select('status').eq('id', id).maybeSingle();
+  if (cur && (cur.status === 'cancelled' || cur.status === 'no_show')) nextStatus = cur.status;
+
+  const patch = {
+    paid: true,
+    amount_paid: amount != null ? Number(amount) || 0 : null,
+    pay_method: method || null,
+    status: nextStatus,
+  };
+  const { data, error } = await supabase
+    .from('appointments')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ── Doctor statistics (real aggregates) ───────────────────────────────────────
+const MA_TZ = 'Africa/Casablanca';
+// 'YYYY-MM-DD' for an instant, in Morocco local time.
+function moDateKey(d) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-CA', { timeZone: MA_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+    return dtf.format(d); // en-CA → YYYY-MM-DD
+  } catch {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+}
+
+/**
+ * Real aggregates for a doctor's appointments in [from, to] (ISO instants;
+ * both optional). All money is MAD. Robust to nulls.
+ * @returns {{
+ *   revenue, expected, paidCount, avgTicket, newPatients, returningPatients, teleconsultPct,
+ *   counts: {total, completed, cancelled, no_show, pending, confirmed},
+ *   byDay: [{date, revenue, count}], byService: [{service, count}]
+ * }}
+ */
+export async function fetchDoctorStats(doctorId, { from = null, to = null } = {}) {
+  const empty = {
+    revenue: 0, expected: 0, paidCount: 0, avgTicket: 0,
+    newPatients: 0, returningPatients: 0, teleconsultPct: 0,
+    counts: { total: 0, completed: 0, cancelled: 0, no_show: 0, pending: 0, confirmed: 0 },
+    byDay: [], byService: [],
+  };
+  if (!doctorId) return empty;
+
+  let q = supabase
+    .from('appointments')
+    .select('id, datetime, status, reason, fee, paid, pay_method, amount_paid, patient_id, patient_name')
+    .eq('doctor_id', doctorId);
+  if (from) q = q.gte('datetime', from);
+  if (to) q = q.lte('datetime', to);
+  const { data, error } = await q;
+  if (error) throw error;
+  const rows = data || [];
+
+  const counts = { total: rows.length, completed: 0, cancelled: 0, no_show: 0, pending: 0, confirmed: 0 };
+  let revenue = 0, expected = 0, paidCount = 0, teleCount = 0;
+  const byDayMap = {};   // dateKey -> { revenue, count }
+  const bySvcMap = {};   // service -> count
+  const patientCount = {}; // patient key -> visits in window
+
+  for (const r of rows) {
+    if (r.status && counts[r.status] != null) counts[r.status] += 1;
+    expected += Number(r.fee) || 0;
+    if (r.paid) {
+      paidCount += 1;
+      const got = r.amount_paid != null ? (Number(r.amount_paid) || 0) : (Number(r.fee) || 0);
+      revenue += got;
+    }
+    const svc = (r.reason || 'Consultation générale').trim() || 'Consultation générale';
+    bySvcMap[svc] = (bySvcMap[svc] || 0) + 1;
+    if (/t[ée]l[ée]/i.test(svc)) teleCount += 1;
+
+    const dk = moDateKey(new Date(r.datetime));
+    if (!byDayMap[dk]) byDayMap[dk] = { revenue: 0, count: 0 };
+    byDayMap[dk].count += 1;
+    if (r.paid) byDayMap[dk].revenue += r.amount_paid != null ? (Number(r.amount_paid) || 0) : (Number(r.fee) || 0);
+
+    const pk = r.patient_id || (r.patient_name ? `name:${String(r.patient_name).toLowerCase()}` : null);
+    if (pk) patientCount[pk] = (patientCount[pk] || 0) + 1;
+  }
+
+  const distinct = Object.keys(patientCount).length;
+  const returningPatients = Object.values(patientCount).filter((n) => n > 1).length;
+  const newPatients = distinct - returningPatients;
+  const avgTicket = paidCount ? Math.round(revenue / paidCount) : 0;
+  const teleconsultPct = counts.total ? Math.round((teleCount / counts.total) * 100) : 0;
+
+  const byDay = Object.entries(byDayMap)
+    .map(([date, v]) => ({ date, revenue: v.revenue, count: v.count }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const byService = Object.entries(bySvcMap)
+    .map(([service, count]) => ({ service, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { revenue, expected, paidCount, avgTicket, newPatients, returningPatients, teleconsultPct, counts, byDay, byService };
 }
 
 /** Create the doctors row for the currently signed-in doctor user. */

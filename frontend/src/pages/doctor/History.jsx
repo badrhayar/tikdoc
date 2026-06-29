@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { updateAppointment } from '../../lib/api';
+import { updateAppointment, markAppointmentPaid, PAY_METHOD_FROM_FR } from '../../lib/api';
 
 const STATUS_TO_ENUM = { 'Payé': 'completed', 'En attente': 'pending', 'Annulé': 'cancelled', 'Terminé': 'completed', 'Absent': 'no_show' };
 
@@ -94,9 +94,15 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
   }
 
   async function saveEdit() {
+    const isLocal = String(editData.id).startsWith('local_');
     // Optimistic local update (also refreshes Calendar / Statistics).
-    setState({ consultations: state.consultations.map(c => c.id === editData.id ? editData : c) });
+    if (isLocal) {
+      setState({ manualConsults: (state.manualConsults || []).map(c => c.id === editData.id ? editData : c) });
+    } else {
+      setState({ consultations: state.consultations.map(c => c.id === editData.id ? editData : c) });
+    }
     setEditOpen(false);
+    if (isLocal) return; // manual rows are state-only
     // Persist to the database (the consultation id is the appointment id).
     try {
       const fields = {
@@ -108,6 +114,17 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
         fields.datetime = new Date(`${editData.date}T${editData.time}:00`).toISOString();
       }
       await updateAppointment(editData.id, fields);
+      // When marked "Payé", capture the real amount + method on the appointment.
+      if (editData.status === 'Payé') {
+        await markAppointmentPaid(editData.id, {
+          amount: Number(editData.amount) || 0,
+          method: PAY_METHOD_FROM_FR[editData.pay] || 'cash',
+        });
+        // Keep myAppointments in sync so other pages see the payment.
+        setState({ myAppointments: (state.myAppointments || []).map(a => a.id === editData.id
+          ? { ...a, status: 'completed', paid: true, amountPaid: Number(editData.amount) || 0, payMethod: PAY_METHOD_FROM_FR[editData.pay] || 'cash' }
+          : a) });
+      }
     } catch (e) {
       setState({ toast: 'Enregistrement DB échoué : ' + (e?.message || 'erreur'), toastShow: true });
     }

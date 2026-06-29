@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, updateAppointment, sendApptWhatsApp, notifyApptEmail, STATUS_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, sendApptWhatsApp, notifyApptEmail, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -55,7 +55,12 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
       motif: a.reason || 'Consultation',
       statut: STATUS_FR[a.status] || a.status,
-      paiement: '—',
+      // Real payment state from the appointment's captured columns.
+      paiement: a.paid ? 'Payé' : (a.status === 'completed' ? 'Non payé' : '—'),
+      fee: a.fee || 0,
+      amountPaid: a.amountPaid || 0,
+      payMethod: a.payMethod || null,
+      paid: !!a.paid,
     };
   });
 
@@ -80,8 +85,37 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   // Status changes also notify the patient by WhatsApp (only on a real DB update).
   const cancelAppt   = async (id) => { if (await setStatus(id, 'cancelled', 'Annulé')) { sendApptWhatsApp(id, 'cancelled'); notifyApptEmail(id, 'cancelled'); } };
   const confirmAppt  = async (id) => { if (await setStatus(id, 'confirmed')) { sendApptWhatsApp(id, 'confirmed'); notifyApptEmail(id, 'confirmed'); } };
-  const completeAppt = (id) => setStatus(id, 'completed', 'Terminé');
   const noShowAppt   = (id) => setStatus(id, 'no_show', 'Absent');
+
+  // ── Record payment on completion (terminé) — amount collected + method ───────
+  const [payModal, setPayModal] = useState(null); // { id, amount, method, isLocal }
+  const openPay = (appt) => setPayModal({ id: appt.id, amount: String(appt.fee || ''), method: 'cash', isLocal: isLocal(appt.id) });
+  const recordPayment = async () => {
+    const p = payModal; if (!p) return;
+    const amount = Number(p.amount) || 0;
+    const payFr = PAY_METHOD_FR[p.method] || 'Espèces';
+    if (p.isLocal) {
+      // Local/manual appointment: reflect in state only.
+      setState({
+        manualAppts: (state.manualAppts || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method } : a),
+        manualConsults: (state.manualConsults || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr } : c),
+        toast: 'Paiement enregistré ✓', toastShow: true,
+      });
+      setPayModal(null);
+      return;
+    }
+    try {
+      await markAppointmentPaid(p.id, { amount, method: p.method });
+      setState({
+        myAppointments: (state.myAppointments || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method } : a),
+        consultations: (state.consultations || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr } : c),
+        toast: 'Paiement enregistré ✓', toastShow: true,
+      });
+      setPayModal(null);
+    } catch (e) {
+      setState({ toast: 'Enregistrement impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
 
   // ── Reschedule (doctor changes date/time → patient gets a WhatsApp) ──────────
   const [resched, setResched] = useState(null); // { id, date, time }
@@ -263,7 +297,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2C5BA6',
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
                         }}>⟳</button>
-                        <button title="Terminer" onClick={() => completeAppt(appt.id)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                        <button title="Terminer & encaisser" onClick={() => openPay(appt)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
                           background: '#E8F1FC', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 13,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', fontWeight: 800,
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
@@ -309,6 +343,37 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           </div>
         </div>
       </div>
+
+      {/* Payment modal — record amount collected + method when completing a visit */}
+      {payModal && (
+        <div onClick={() => setPayModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 90 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, padding: 22, boxShadow: '0 24px 60px rgba(21,49,74,.3)' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 800, color: DARK }}>Terminer &amp; encaisser</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 12.5, color: MUTED }}>Enregistrez le montant réellement perçu et le mode de paiement.</p>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Montant encaissé (MAD)</label>
+              <input type="number" min="0" value={payModal.amount} onChange={(e) => setPayModal({ ...payModal, amount: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Mode de paiement</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[['cash', 'Espèces'], ['card', 'Carte / CMI'], ['wallet', 'Wallet']].map(([val, label]) => (
+                  <button key={val} onClick={() => setPayModal({ ...payModal, method: val })} style={{
+                    flex: 1, padding: '9px 6px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                    background: payModal.method === val ? PRIMARY : '#fff',
+                    color: payModal.method === val ? '#fff' : MUTED,
+                    border: `1.5px solid ${payModal.method === val ? PRIMARY : BORDER_STRONG}`,
+                  }}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={recordPayment} style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Encaisser</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reschedule modal */}
       {resched && (

@@ -247,6 +247,20 @@ export function AppProvider({ children }) {
     try { sessionStorage.setItem('tabibo_screen', state.screen); } catch (e) { /* ignore */ }
   }, [state.screen]);
 
+  // Deep links: a shared booking link (?doc=<id>) opens that doctor's profile.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const doc = params.get('doc');
+      if (doc) {
+        dispatch({ selDoc: doc, screen: 'profile' });
+        // Clean the URL so a refresh doesn't re-trigger.
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   // Bootstrap session on mount + subscribe to auth changes.
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -256,7 +270,12 @@ export function AppProvider({ children }) {
       // No session but the restored screen needs auth → send home.
       if (!session && PROTECTED_SCREENS.has(restoreScreen())) dispatch({ screen: 'home' });
       await loadUser(session);
-      unsub = onAuthChange((s) => loadUser(s));
+      unsub = onAuthChange((event, s) => {
+        // A password-reset link signs the user in with a recovery session and
+        // fires this event — route them straight to the "set new password" screen.
+        if (event === 'PASSWORD_RECOVERY') { dispatch({ screen: 'resetpw' }); return; }
+        loadUser(s);
+      });
     })();
     return () => unsub();
   }, []);
