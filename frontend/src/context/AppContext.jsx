@@ -262,7 +262,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // Exposed auth actions
-  const authSignIn = async (identifier, password) => {
+  const authSignIn = async (identifier, password, captchaToken) => {
     // Accept email OR phone: if no '@', treat it as a phone and resolve the email.
     let email = (identifier || '').trim();
     if (email && !email.includes('@')) {
@@ -270,7 +270,7 @@ export function AppProvider({ children }) {
       if (!resolved) { const err = new Error('Aucun compte trouvé pour ce numéro.'); err.code = 'no_account'; throw err; }
       email = resolved;
     }
-    const res = await sbSignIn({ email, password });
+    const res = await sbSignIn({ email, password, captchaToken });
     const u = await loadUser(res.session);
     return u;                       // the loaded public.users profile (or null)
   };

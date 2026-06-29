@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
+import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -18,14 +19,18 @@ export default function DoctorLogin() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [captcha, setCaptcha] = useState('');
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = () => { setCaptcha(''); setCaptchaKey((k) => k + 1); };
 
   const doctorLogin = async () => {
     setError('');
     if (!isSupabaseConfigured) { setError('Supabase non configuré — vérifiez votre fichier .env.'); return; }
     if (!email || !password) { setError('Saisissez votre email et votre mot de passe.'); return; }
+    if (isCaptchaEnabled() && !captcha) { setError('Veuillez confirmer que vous n’êtes pas un robot.'); return; }
     setBusy(true);
     try {
-      const u = await authSignIn(email.trim(), password);
+      const u = await authSignIn(email.trim(), password, captcha);
       if (u?.role === 'admin') { go('admin'); return; }
       if (u && u.role !== 'doctor') { setError('Ce compte n’est pas un espace médecin.'); return; }
       go('doctor');
@@ -33,6 +38,7 @@ export default function DoctorLogin() {
       setError(e?.message === 'Invalid login credentials'
         ? 'Email ou mot de passe incorrect.'
         : (e?.message || 'Connexion impossible.'));
+      resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
     }
@@ -129,6 +135,9 @@ export default function DoctorLogin() {
               {error}
             </div>
           )}
+
+          {/* Bot protection */}
+          <Turnstile key={captchaKey} onToken={setCaptcha} />
 
           {/* Login button */}
           <button

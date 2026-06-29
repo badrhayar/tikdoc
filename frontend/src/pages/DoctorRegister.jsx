@@ -6,6 +6,7 @@ import LocationPicker from '../components/LocationPicker';
 import PhoneField from '../components/PhoneField';
 import Icon from '../components/Icon';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
+import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -29,6 +30,9 @@ export default function DoctorRegister() {
   const [error, setError] = useState('');
   const [needConfirm, setNeedConfirm] = useState(false);
   const [docFiles, setDocFiles] = useState({});   // { docType: File }
+  const [captcha, setCaptcha] = useState('');
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = () => { setCaptcha(''); setCaptchaKey((k) => k + 1); };
 
   const setDreg = (field, value) => {
     setState({ dreg: { ...state.dreg, [field]: value } });
@@ -44,6 +48,7 @@ export default function DoctorRegister() {
     if (dreg.pass !== dreg.pass2) { setError('Les deux mots de passe ne correspondent pas.'); return; }
     const missing = CREDENTIAL_DOCS.filter((d) => d.required && !docFiles[d.key]);
     if (missing.length) { setError('Documents obligatoires manquants : ' + missing.map((d) => d.label).join(', ')); return; }
+    if (isCaptchaEnabled() && !captcha) { setError('Veuillez confirmer que vous n’êtes pas un robot.'); return; }
     setBusy(true);
     try {
       const res = await authSignUp({
@@ -53,6 +58,7 @@ export default function DoctorRegister() {
         phone: dreg.phone,
         cinOrInpe: dreg.inpe,
         role: 'doctor',
+        captchaToken: captcha,
       });
       if (!res.session || !res.appUser) {
         setNeedConfirm(true);   // email confirmation required → finish profile after first login
@@ -85,6 +91,7 @@ export default function DoctorRegister() {
       go('doctor');
     } catch (e) {
       setError(e?.message || 'Inscription impossible.');
+      resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
     }
@@ -439,6 +446,9 @@ export default function DoctorRegister() {
                 Compte créé ✓ Confirmez votre email, puis connectez-vous pour finaliser votre profil.
               </div>
             )}
+
+            {/* Bot protection */}
+            <Turnstile key={captchaKey} onToken={setCaptcha} />
 
             <button
               onClick={submitDoctor}

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 import PhoneField from '../components/PhoneField';
+import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -20,6 +21,9 @@ export default function PatientRegister() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needConfirm, setNeedConfirm] = useState(false);
+  const [captcha, setCaptcha] = useState('');
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = () => { setCaptcha(''); setCaptchaKey((k) => k + 1); };
 
   const setReg = (field, value) => {
     setState({ reg: { ...state.reg, [field]: value } });
@@ -31,6 +35,7 @@ export default function PatientRegister() {
     if (!reg.name || !reg.phone || !reg.email || !reg.pass) { setError('Veuillez remplir tous les champs obligatoires (marqués d’un *).'); return; }
     if (reg.pass.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return; }
     if (reg.pass !== reg.pass2) { setError('Les deux mots de passe ne correspondent pas.'); return; }
+    if (isCaptchaEnabled() && !captcha) { setError('Veuillez confirmer que vous n’êtes pas un robot.'); return; }
     setBusy(true);
     try {
       const res = await authSignUp({
@@ -42,6 +47,7 @@ export default function PatientRegister() {
         sex: reg.sex,
         dob: reg.dob,
         role: 'patient',
+        captchaToken: captcha,
       });
       if (res.session) {
         go('paccount');           // logged in immediately (email confirmation off)
@@ -50,6 +56,7 @@ export default function PatientRegister() {
       }
     } catch (e) {
       setError(e?.message || 'Inscription impossible.');
+      resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
     }
@@ -204,6 +211,9 @@ export default function PatientRegister() {
               Compte créé ✓ Vérifiez votre boîte mail pour confirmer, puis connectez-vous.
             </div>
           )}
+
+          {/* Bot protection */}
+          <Turnstile key={captchaKey} onToken={setCaptcha} />
 
           {/* Submit */}
           <button

@@ -10,11 +10,12 @@ import { supabase } from './supabaseClient';
  * picked up by the DB trigger to populate public.users.
  * @returns { user, session }  — session is null if email confirmation is on.
  */
-export async function signUp({ email, password, fullName, phone, role = 'patient', cinOrInpe, sex, dob }) {
+export async function signUp({ email, password, fullName, phone, role = 'patient', cinOrInpe, sex, dob, captchaToken }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      captchaToken,
       data: { full_name: fullName, phone: phone || null, role, cin_or_inpe: cinOrInpe || null, sex: sex || null, dob: dob || null },
     },
   });
@@ -22,8 +23,8 @@ export async function signUp({ email, password, fullName, phone, role = 'patient
   return data;
 }
 
-export async function signIn({ email, password }) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+export async function signIn({ email, password, captchaToken }) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
   if (error) throw error;
   return data;
 }
