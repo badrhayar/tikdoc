@@ -109,8 +109,9 @@ const NAV_GROUPS = [
   ],
 ];
 
-// Items a secretary/assistant must not see (billing + team management).
-const STAFF_HIDDEN = new Set(['dabo', 'dstaff']);
+// Items a secretary/assistant must not see (billing, team management, and
+// prescribing — an ordonnance is a medical act signed by the doctor only).
+const STAFF_HIDDEN = new Set(['dabo', 'dstaff', 'dprescribe']);
 
 export default function DoctorApp() {
   const { state, setState, go, reloadAppointments } = useApp();

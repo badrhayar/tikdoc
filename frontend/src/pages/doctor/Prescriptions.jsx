@@ -113,11 +113,13 @@ export default function Prescriptions() {
     .filter(it => it.drug || it.dosage || it.duration || it.instructions);
 
   const buildDoctorDoc = (itemsArg, nameArg, notesArg) => ({
+    // state.myDoctor is the RAW doctors row (specialty / clinic_address / cnom);
+    // fall back to the mapped names just in case the shape varies.
     doctorName: appUser?.full_name,
-    specialty: myDoctor?.spec,
+    specialty: myDoctor?.specialty || myDoctor?.spec,
     cnom: myDoctor?.cnom,
     inpe: appUser?.cin_or_inpe,
-    clinic: myDoctor?.clinic,
+    clinic: myDoctor?.clinic_address || myDoctor?.clinic,
     city: myDoctor?.city,
     phone: appUser?.phone,
     patientName: nameArg,
