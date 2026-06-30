@@ -65,6 +65,9 @@ export default function Prescriptions() {
 
   const [busy, setBusy] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  // Signature of the last auto-saved ordonnance, so generate→download→save of the
+  // same content doesn't create duplicate records (but an edited one does).
+  const savedSigRef = useRef(null);
 
   const patients = state?.patients || [];
   const filteredPatients = useMemo(() => {
@@ -183,26 +186,40 @@ export default function Prescriptions() {
     return its;
   };
 
+  // Save the ordonnance unless this exact content was already saved this session.
+  const persist = async (its) => {
+    const sig = JSON.stringify({ p: patientName.trim(), i: its, n: notes.trim() });
+    if (sig === savedSigRef.current) return 'skip';   // unchanged → already archived
+    savedSigRef.current = sig;
+    try {
+      await createPrescription(doctorId, { patientId, patientName: patientName.trim(), items: its, notes: notes.trim() || null });
+      await refreshRecent();
+      setState({ toast: 'Ordonnance enregistrée ✓', toastShow: true });
+      return 'saved';
+    } catch (e) {
+      savedSigRef.current = null;                // allow a retry on the next action
+      setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
+      return 'error';
+    }
+  };
+
   const generatePDF = () => {
     const its = ensureReady(); if (!its) return;
-    const doc = buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim()));
-    pdfOpen(doc);
+    pdfOpen(buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim())));
+    persist(its);                                // auto-save so nothing is lost
   };
   const downloadPDF = () => {
     const its = ensureReady(); if (!its) return;
-    const doc = buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim()));
-    pdfDownload(doc, `ordonnance-${patientName.trim() || 'patient'}.pdf`);
+    pdfDownload(buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim())), `ordonnance-${patientName.trim() || 'patient'}.pdf`);
     setDownloaded(true);
+    persist(its);                                // auto-save
   };
   const savePrescription = async () => {
     const its = ensureReady(); if (!its) return;
     setBusy(true);
     try {
-      await createPrescription(doctorId, { patientId, patientName: patientName.trim(), items: its, notes: notes.trim() || null });
-      await refreshRecent();
-      setState({ toast: 'Ordonnance enregistrée ✓', toastShow: true });
-    } catch (e) {
-      setState({ toast: 'Échec : ' + (e?.message || 'erreur'), toastShow: true });
+      const r = await persist(its);
+      if (r === 'skip') setState({ toast: 'Ordonnance déjà enregistrée ✓', toastShow: true });
     } finally { setBusy(false); }
   };
 
