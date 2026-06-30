@@ -243,7 +243,7 @@ export default function DoctorApp() {
   const submitAddPatient = async () => {
     const np = state.newPatient;
     if (!np.name) return;
-    const blank = { name:'',cin:'',phone:'',email:'',dob:'',sex:'Femme',address:'',city:'Casablanca',blood:'',allergies:'',chronic:'',insurance:'CNSS',notes:'' };
+    const blank = { name:'',cin:'',phone:'',email:'',dob:'',sex:'Femme',address:'',city:'Casablanca',blood:'',allergies:'',chronic:'',insurance:'CNSS',amoNumber:'',notes:'' };
     inviteNewPatient({ name: np.name, phone: np.phone, email: np.email }).catch(() => {});
     // Persist to the doctor's real roster when connected; fall back to local for demo mode.
     if (isSupabaseConfigured && state.myDoctor?.id) {
@@ -572,6 +572,10 @@ export default function DoctorApp() {
                     <select value={newPatient.insurance || 'CNSS'} onChange={e => setNP('insurance', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>
                       {['CNSS','CNOPS','Mutuelle privée','Sans assurance'].map(o => <option key={o}>{o}</option>)}
                     </select>
+                  </div>
+                  <div>
+                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>N° AMO / immatriculation <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
+                    <input value={newPatient.amoNumber || ''} onChange={e => setNP('amoNumber', e.target.value)} placeholder="N° d'immatriculation AMO" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
                   </div>
                   <div>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Allergies</label>

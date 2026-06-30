@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor, fetchDoctorBySlug } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange, phoneLogin as sbPhoneLogin } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
@@ -261,18 +261,28 @@ export function AppProvider({ children }) {
     try { sessionStorage.setItem('tabibo_screen', state.screen); } catch (e) { /* ignore */ }
   }, [state.screen]);
 
-  // Deep links: a shared booking link (?doc=<id>) opens that doctor's profile.
+  // Deep links: a shared booking link opens that doctor's profile. Supports
+  //   tabibo.ma/dr-aya-chakkour   (vanity slug path)
+  //   tabibo.ma/?dr=dr-aya-chakkour
+  //   tabibo.ma/?doc=<uuid>       (legacy id link)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const doc = params.get('doc');
-      if (doc) {
-        dispatch({ selDoc: doc, screen: 'profile' });
-        // Clean the URL so a refresh doesn't re-trigger.
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    } catch { /* ignore */ }
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
+        const slug = params.get('dr') || (/^dr-[a-z0-9-]+$/i.test(path) ? path : null);
+        const doc = params.get('doc');
+        if (slug) {
+          const d = await fetchDoctorBySlug(slug);
+          if (d?.id) dispatch({ selDoc: d.id, screen: 'profile' });
+          window.history.replaceState({}, '', '/');
+        } else if (doc) {
+          dispatch({ selDoc: doc, screen: 'profile' });
+          window.history.replaceState({}, '', '/');
+        }
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   // Bootstrap session on mount + subscribe to auth changes.

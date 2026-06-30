@@ -72,6 +72,14 @@ export function buildPrescriptionPDF(d) {
   doc.setFontSize(13);
   doc.setTextColor(...GREEN);
   doc.text('Ordonnance', 14, y + 2);
+  // Unique reference + QR (anti-falsification; FSE-ready) top-right of the body.
+  if (d.ref) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...MUT);
+    doc.text(`Réf : ${d.ref}`, W - 14, y - 2, { align: 'right' });
+    if (d.qr) { try { doc.addImage(d.qr, 'PNG', W - 36, y + 1, 22, 22); } catch (e) { /* ignore */ } }
+  }
   y += 10;
 
   doc.setFontSize(11);

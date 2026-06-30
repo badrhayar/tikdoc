@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import QRCode from 'qrcode';
 import { useViewport } from '../../hooks/useViewport';
 import { useApp } from '../../context/AppContext';
 import { buildPrescriptionPDF, pdfOpen, pdfDownload } from '../../lib/pdf';
@@ -186,13 +187,29 @@ export default function Prescriptions() {
     return its;
   };
 
+  // One stable reference (+ QR) per ordonnance content, reused across
+  // generate/download/save so the printed code matches the saved record.
+  const refMap = useRef({ sig: null, ref: null });
+  const currentRef = (its) => {
+    const sig = JSON.stringify({ p: patientName.trim(), i: its, n: notes.trim() });
+    if (refMap.current.sig !== sig) {
+      const code = 'ORD-' + (Date.now().toString(36) + Math.random().toString(36).slice(2)).toUpperCase().slice(-8);
+      refMap.current = { sig, ref: code };
+    }
+    return refMap.current.ref;
+  };
+  const makeQr = async (ref) => {
+    try { return await QRCode.toDataURL(`${window.location.origin}/?rx=${ref}`, { width: 240, margin: 0 }); }
+    catch { return ''; }
+  };
+
   // Save the ordonnance unless this exact content was already saved this session.
-  const persist = async (its) => {
+  const persist = async (its, ref) => {
     const sig = JSON.stringify({ p: patientName.trim(), i: its, n: notes.trim() });
     if (sig === savedSigRef.current) return 'skip';   // unchanged → already archived
     savedSigRef.current = sig;
     try {
-      await createPrescription(doctorId, { patientId, patientName: patientName.trim(), items: its, notes: notes.trim() || null });
+      await createPrescription(doctorId, { patientId, patientName: patientName.trim(), items: its, notes: notes.trim() || null, ref });
       await refreshRecent();
       setState({ toast: 'Ordonnance enregistrée ✓', toastShow: true });
       return 'saved';
@@ -203,30 +220,34 @@ export default function Prescriptions() {
     }
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const its = ensureReady(); if (!its) return;
-    pdfOpen(buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim())));
-    persist(its);                                // auto-save so nothing is lost
+    const ref = currentRef(its);
+    const qr = await makeQr(ref);
+    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr }));
+    persist(its, ref);                           // auto-save so nothing is lost
   };
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     const its = ensureReady(); if (!its) return;
-    pdfDownload(buildPrescriptionPDF(buildDoctorDoc(its, patientName.trim(), notes.trim())), `ordonnance-${patientName.trim() || 'patient'}.pdf`);
+    const ref = currentRef(its);
+    const qr = await makeQr(ref);
+    pdfDownload(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr }), `ordonnance-${patientName.trim() || 'patient'}.pdf`);
     setDownloaded(true);
-    persist(its);                                // auto-save
+    persist(its, ref);                           // auto-save
   };
   const savePrescription = async () => {
     const its = ensureReady(); if (!its) return;
     setBusy(true);
     try {
-      const r = await persist(its);
+      const r = await persist(its, currentRef(its));
       if (r === 'skip') setState({ toast: 'Ordonnance déjà enregistrée ✓', toastShow: true });
     } finally { setBusy(false); }
   };
 
-  const openRecent = (p) => {
+  const openRecent = async (p) => {
     const its = Array.isArray(p.items) ? p.items : [];
-    const doc = buildPrescriptionPDF(buildDoctorDoc(its, p.patient_name || '', p.notes || ''));
-    pdfOpen(doc);
+    const qr = p.ref ? await makeQr(p.ref) : '';
+    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, p.patient_name || '', p.notes || ''), ref: p.ref || '', qr }));
   };
 
   const dropRef = useRef(null);

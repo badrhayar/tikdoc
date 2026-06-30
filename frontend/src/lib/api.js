@@ -32,7 +32,24 @@ function mapDoctor(row) {
     avatar: row.avatar_url || '',
     lat: row.lat ?? null,
     lng: row.lng ?? null,
+    slug: row.slug || '',
   };
+}
+
+/** Resolve a vanity slug (dr-aya-chakkour) to a doctor, or null. */
+export async function fetchDoctorBySlug(slug) {
+  if (!slug) return null;
+  const { data, error } = await supabase
+    .from('doctor_directory').select('*').eq('slug', slug).maybeSingle();
+  if (error || !data) return null;
+  return mapDoctor(data);
+}
+
+/** Change the signed-in doctor's vanity slug. Returns the saved slug. */
+export async function setMySlug(doctorId, slug) {
+  const { data, error } = await supabase.rpc('set_my_slug', { p_doctor_id: doctorId, p_slug: slug });
+  if (error) throw error;
+  return data;
 }
 
 // ── Doctors ──────────────────────────────────────────────────────────────────
@@ -1050,6 +1067,7 @@ export function mapPatient(row) {
     insurance: row.insurance || '',
     notes: row.notes || '',
     statut: row.status || 'Actif',
+    amoNumber: row.amo_number || '',
     initials: patientInitials(row.name),
     color: patientColor(row.name),
     visits: row.visits || 0,
@@ -1089,6 +1107,7 @@ export async function createPatient(doctorId, p) {
       allergies: p.allergies || null,
       chronic: p.chronic || null,
       insurance: p.insurance || null,
+      amo_number: p.amoNumber || p.amo_number || null,
       notes: p.notes || null,
     })
     .select()
@@ -1118,10 +1137,10 @@ export async function deletePatient(id) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Save an ordonnance. items: [{drug,dosage,duration,instructions}]. */
-export async function createPrescription(doctorId, { patientId = null, appointmentId = null, patientName = null, items = [], notes = null }) {
+export async function createPrescription(doctorId, { patientId = null, appointmentId = null, patientName = null, items = [], notes = null, ref = null }) {
   const { data, error } = await supabase
     .from('prescriptions')
-    .insert({ doctor_id: doctorId, patient_id: patientId, appointment_id: appointmentId, patient_name: patientName, items, notes })
+    .insert({ doctor_id: doctorId, patient_id: patientId, appointment_id: appointmentId, patient_name: patientName, items, notes, ref })
     .select()
     .single();
   if (error) throw error;

@@ -11,9 +11,11 @@ const MUT = '#6B7B76';
 export default function BookingShare() {
   const { state, setState } = useApp();
   const doctorId = state.myDoctor?.id;
+  const slug = state.myDoctor?.slug;
   const docName = state.appUser?.full_name || 'votre médecin';
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://tabibo.ma';
-  const link = doctorId ? `${origin}/?doc=${doctorId}` : '';
+  // Prefer the clean vanity slug (tabibo.ma/dr-aya-chakkour); fall back to the id.
+  const link = slug ? `${origin}/${slug}` : (doctorId ? `${origin}/?doc=${doctorId}` : '');
 
   const [qr, setQr] = useState('');
   useEffect(() => {

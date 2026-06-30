@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { SPEC_INFO, CITY_OPTS } from '../../shared.jsx';
 import LocationPicker from '../../components/LocationPicker';
-import { saveDoctorServices, updateDoctorFields, uploadAvatar } from '../../lib/api';
+import { saveDoctorServices, updateDoctorFields, uploadAvatar, setMySlug } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 const villes = CITY_OPTS.map((c) => (typeof c === 'string' ? c : c.label));
@@ -148,6 +148,7 @@ function formFromProfile(appUser, myDoctor) {
     email: appUser?.email || '',
     bio: myDoctor?.bio || '',
     adresse: myDoctor?.clinic_address || '',
+    slug: myDoctor?.slug || '',
     loc: (myDoctor?.lat != null && myDoctor?.lng != null) ? { lat: myDoctor.lat, lng: myDoctor.lng } : null,
   };
 }
@@ -230,6 +231,20 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     setForm(prev => ({ ...prev, [key]: value }));
   }
 
+  const [slugBusy, setSlugBusy] = useState(false);
+  const bookingOrigin = typeof window !== 'undefined' ? window.location.origin.replace(/^https?:\/\//, '') : 'tabibo.ma';
+  const saveSlug = async () => {
+    if (!myDoctor?.id) return;
+    setSlugBusy(true);
+    try {
+      const saved = await setMySlug(myDoctor.id, form.slug);
+      setForm(p => ({ ...p, slug: saved }));
+      setState({ myDoctor: { ...myDoctor, slug: saved }, toast: 'Lien personnalisé enregistré ✓', toastShow: true });
+    } catch (e) {
+      setState({ toast: e?.message || 'Identifiant indisponible.', toastShow: true });
+    } finally { setSlugBusy(false); }
+  };
+
   // Index-based (services loaded from the DB have no stable id).
   function updateService(idx, key, value) {
     setServices(prev => prev.map((s, i) => i === idx ? { ...s, [key]: value } : s));
@@ -266,6 +281,28 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
           Sauvegarder les modifications
         </button>
       </div>
+
+      {/* Vanity booking link */}
+      {myDoctor?.id && (
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isMobile ? 16 : 22, marginBottom: 20 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, margin: '0 0 4px' }}>Lien de réservation personnalisé</h2>
+          <p style={{ fontSize: 13, color: MUTED, margin: '0 0 14px' }}>
+            Le lien que vos patients utilisent pour réserver. Choisissez un identifiant simple à partager.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 13.5, color: MUTED, whiteSpace: 'nowrap', direction: 'ltr' }}>{bookingOrigin}/</span>
+            <input
+              value={form.slug}
+              onChange={e => updateForm('slug', e.target.value)}
+              placeholder="dr-aya-chakkour"
+              style={{ flex: '1 1 200px', minWidth: 0, padding: '10px 12px', border: `1.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13.5, color: DARK, outline: 'none', direction: 'ltr' }}
+            />
+            <button onClick={saveSlug} disabled={slugBusy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: slugBusy ? 'default' : 'pointer', opacity: slugBusy ? 0.7 : 1 }}>
+              {slugBusy ? '…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2-column layout */}
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
