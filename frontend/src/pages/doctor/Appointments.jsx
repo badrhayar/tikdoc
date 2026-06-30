@@ -307,6 +307,13 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700,
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
                         }}>∅</button>
+                        <button title="Démarrer la téléconsultation" onClick={() => setState({ teleRoom: `tabibo-appt-${appt.id}` })} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                          background: '#E7F6EE', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A06A',
+                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                        </button>
                       </div>
                     </td>
                   </tr>

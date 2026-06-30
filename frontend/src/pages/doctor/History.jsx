@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { updateAppointment, markAppointmentPaid, PAY_METHOD_FROM_FR } from '../../lib/api';
+import { buildReceiptPDF, pdfOpen } from '../../lib/pdf';
 
 const STATUS_TO_ENUM = { 'Payé': 'completed', 'En attente': 'pending', 'Annulé': 'cancelled', 'Terminé': 'completed', 'Absent': 'no_show' };
 
@@ -424,6 +425,20 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
                   </td>
                   {/* Actions */}
                   <td style={{ padding: '13px 16px' }}>
+                   <div style={{ display: 'flex', gap: 6 }}>
+                    {row.status === 'Payé' && (
+                      <button
+                        onClick={() => pdfOpen(buildReceiptPDF({
+                          doctorName: state.appUser?.full_name, specialty: state.myDoctor?.spec,
+                          clinic: state.myDoctor?.clinic, city: state.myDoctor?.city, phone: state.appUser?.phone,
+                          patientName: row.patient, dateLabel: row.date, service: row.service, amount: row.amount, method: row.pay,
+                        }))}
+                        title="Reçu de paiement"
+                        style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${BORDER_STRONG}`, background: '#fff', color: PRIMARY, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6"/></svg>
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(row)}
                       title="Modifier"
@@ -446,6 +461,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
                     </button>
+                   </div>
                   </td>
                 </tr>
               );

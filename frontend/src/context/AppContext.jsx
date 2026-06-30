@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange, phoneLogin as sbPhoneLogin } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
@@ -233,6 +233,20 @@ export function AppProvider({ children }) {
           // Load the real patient roster (replaces demo data).
           try { if (md?.id) patch.patients = await fetchMyPatients(md.id); } catch (_) {}
         } catch (e) { /* ignore */ }
+      } else if (u.role !== 'admin') {
+        // A non-doctor account may be a secretary/assistant of a cabinet. RLS
+        // (owns_doctor now includes active staff) lets them manage that cabinet.
+        try {
+          const md = await fetchMyStaffDoctor();
+          if (md?.id) {
+            patch.myDoctor = md;
+            patch.isStaff = true;
+            patch.consultations = appts.map(apptToConsultation);
+            if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
+            try { patch.patients = await fetchMyPatients(md.id); } catch (_) {}
+            u.isStaff = true;   // let the login pages route them into the cabinet
+          }
+        } catch (_) { /* not staff */ }
       }
       dispatch(patch);
       return u;

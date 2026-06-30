@@ -29,6 +29,7 @@ const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
   'davail', 'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare',
+  'dprescribe', 'dstaff',
 ]);
 
 const SCREEN_MAP = {

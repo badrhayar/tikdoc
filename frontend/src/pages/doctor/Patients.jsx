@@ -179,7 +179,14 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
                         color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0,
                       }}>{patient.initials}</div>
                       <div>
-                        <div style={{ fontWeight: 600, color: DARK }}>{patient.name}</div>
+                        <div style={{ fontWeight: 600, color: DARK, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {patient.name}
+                          {patient.noShows >= 3 && (
+                            <span title={`${patient.noShows} absences non justifiées`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#FEE2E2', color: '#B91C1C', fontSize: 10.5, fontWeight: 800, padding: '1px 7px', borderRadius: 20 }}>
+                              ⚠ {patient.noShows} absences
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{patient.age} ans</div>
                       </div>
                     </div>

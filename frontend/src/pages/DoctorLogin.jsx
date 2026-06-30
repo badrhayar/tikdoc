@@ -32,7 +32,8 @@ export default function DoctorLogin() {
     try {
       const u = await authSignIn(email.trim(), password, captcha);
       if (u?.role === 'admin') { go('admin'); return; }
-      if (u && u.role !== 'doctor') { setError('Ce compte n’est pas un espace médecin.'); return; }
+      // Doctors and their secretaries (staff) both land in the cabinet.
+      if (u && u.role !== 'doctor' && !u.isStaff) { setError('Ce compte n’est pas un espace médecin.'); return; }
       go('doctor');
     } catch (e) {
       setError(e?.message === 'Invalid login credentials'

@@ -1053,6 +1053,7 @@ export function mapPatient(row) {
     initials: patientInitials(row.name),
     color: patientColor(row.name),
     visits: row.visits || 0,
+    noShows: row.no_show_count || 0,
     lastVisit: fmtDateShort(row.last_visit),
     nextAppt: fmtDateShort(row.next_appt),
   };
@@ -1110,4 +1111,112 @@ export async function deletePatient(id) {
   const { error } = await supabase.from('doctor_patients').delete().eq('id', id);
   if (error) throw error;
   return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Tier-2 · prescriptions, prescription templates, staff (secretary), calls
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Save an ordonnance. items: [{drug,dosage,duration,instructions}]. */
+export async function createPrescription(doctorId, { patientId = null, appointmentId = null, patientName = null, items = [], notes = null }) {
+  const { data, error } = await supabase
+    .from('prescriptions')
+    .insert({ doctor_id: doctorId, patient_id: patientId, appointment_id: appointmentId, patient_name: patientName, items, notes })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchPrescriptions(doctorId, patientId = null) {
+  let q = supabase.from('prescriptions').select('*').eq('doctor_id', doctorId).order('created_at', { ascending: false });
+  if (patientId) q = q.eq('patient_id', patientId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchPrescriptionTemplates(doctorId) {
+  const { data, error } = await supabase
+    .from('prescription_templates').select('*').eq('doctor_id', doctorId).order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function savePrescriptionTemplate(doctorId, { name, items }) {
+  const { data, error } = await supabase
+    .from('prescription_templates').insert({ doctor_id: doctorId, name, items }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePrescriptionTemplate(id) {
+  const { error } = await supabase.from('prescription_templates').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+// ── Staff (secretary / assistant) ──────────────────────────────────────────
+export async function fetchStaff(doctorId) {
+  const { data, error } = await supabase
+    .from('doctor_staff')
+    .select('id, role, active, created_at, user:users!doctor_staff_user_id_fkey(id, full_name, email)')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map((s) => ({
+    id: s.id, role: s.role, active: s.active,
+    name: s.user?.full_name || s.user?.email || '—', email: s.user?.email || '', userId: s.user?.id || null,
+  }));
+}
+
+/** Invite an EXISTING Tabibo account (by email) as a secretary for this cabinet. */
+export async function inviteStaff(doctorId, email) {
+  const { data: uid, error: e1 } = await supabase.rpc('user_id_for_email', { p_email: (email || '').trim() });
+  if (e1) throw e1;
+  if (!uid) { const err = new Error('Aucun compte Tabibo avec cet email. Demandez à la personne de créer un compte, puis réessayez.'); err.code = 'no_user'; throw err; }
+  const { error } = await supabase.from('doctor_staff').insert({ doctor_id: doctorId, user_id: uid, role: 'secretary', active: true });
+  if (error) {
+    if (error.code === '23505') { const err = new Error('Cette personne fait déjà partie de votre équipe.'); err.code = 'dup'; throw err; }
+    throw error;
+  }
+  return true;
+}
+
+export async function setStaffActive(id, active) {
+  const { error } = await supabase.from('doctor_staff').update({ active }).eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function removeStaff(id) {
+  const { error } = await supabase.from('doctor_staff').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+/** For a signed-in user who is NOT a doctor: the cabinet they're staff of (or null). */
+export async function fetchMyStaffDoctor() {
+  const me = await getCurrentAppUser().catch(() => null);
+  if (!me) return null;
+  const { data, error } = await supabase
+    .from('doctor_staff')
+    .select('doctor_id, active')
+    .eq('user_id', me.id)
+    .eq('active', true)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return fetchDoctorById(data.doctor_id).catch(() => null);
+}
+
+// ── Calls (teleconsultation) ────────────────────────────────────────────────
+export async function logCall({ conversationId, type = 'video', status = 'completed', startedAt = null, endedAt = null, durationSeconds = null }) {
+  if (!conversationId) return null;
+  const { data, error } = await supabase
+    .from('calls')
+    .insert({ conversation_id: conversationId, type, status, started_at: startedAt, ended_at: endedAt, duration_seconds: durationSeconds })
+    .select().single();
+  if (error) throw error;
+  return data;
 }

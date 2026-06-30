@@ -52,6 +52,9 @@ import Settings from './Settings';
 import History from './History';
 import Chat from './Chat';
 import BookingShare from './BookingShare';
+import Prescriptions from './Prescriptions';
+import Staff from './Staff';
+import TeleconsultRoom from '../../components/TeleconsultRoom';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -73,6 +76,8 @@ const IC = {
   dabo:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>,
   dsettings: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>,
   dshare:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>,
+  dprescribe:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>,
+  dstaff:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 14.5c2.2.4 3.5 1.8 3.5 4"/></svg>,
 };
 
 // Grouped navigation — a divider is drawn between each group.
@@ -84,10 +89,11 @@ const NAV_GROUPS = [
     { screen:'davail', icon:IC.davail, label:'Disponibilités' },
   ],
   [
-    { screen:'dpatients', icon:IC.dpatients, label:'Patients' },
-    { screen:'dshare',    icon:IC.dshare,    label:'Inviter mes patients' },
-    { screen:'dhist',     icon:IC.dhist,     label:'Historique consultations' },
-    { screen:'ddocs',     icon:IC.ddocs,     label:'Documents' },
+    { screen:'dpatients',  icon:IC.dpatients,  label:'Patients' },
+    { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
+    { screen:'dshare',     icon:IC.dshare,     label:'Inviter mes patients' },
+    { screen:'dhist',      icon:IC.dhist,      label:'Historique consultations' },
+    { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
   ],
   [
     { screen:'dchat',  icon:IC.dchat,  label:'Messages' },
@@ -98,9 +104,13 @@ const NAV_GROUPS = [
     { screen:'dabo',   icon:IC.dabo,   label:'Abonnement' },
   ],
   [
+    { screen:'dstaff',    icon:IC.dstaff,    label:'Équipe', ownerOnly:true },
     { screen:'dsettings', icon:IC.dsettings, label:'Paramètres' },
   ],
 ];
+
+// Items a secretary/assistant must not see (billing + team management).
+const STAFF_HIDDEN = new Set(['dabo', 'dstaff']);
 
 export default function DoctorApp() {
   const { state, setState, go, reloadAppointments } = useApp();
@@ -153,9 +163,9 @@ export default function DoctorApp() {
     doctor: Dashboard, dcal: Calendar, dappts: Appointments, dhist: History,
     dpatients: Patients, ddocs: Documents, davail: Availability,
     dnotif: Notifications, dstats: Statistics, dabo: Subscription, dsettings: Settings,
-    dchat: Chat, dshare: BookingShare,
+    dchat: Chat, dshare: BookingShare, dprescribe: Prescriptions, dstaff: Staff,
   };
-  const SubScreen = SUB[screen] || Dashboard;
+  const SubScreen = (state.isStaff && STAFF_HIDDEN.has(screen)) ? Dashboard : (SUB[screen] || Dashboard);
 
   const openNewAppt = () => {
     closePops();
@@ -280,9 +290,9 @@ export default function DoctorApp() {
           <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tabib<span style={{ color:G }}>o</span></span>
         </div>
         <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>
-          {NAV_GROUPS.map((group, gi) => (
+          {NAV_GROUPS.map((g, gi) => (state.isStaff ? g.filter(it => !STAFF_HIDDEN.has(it.screen)) : g)).map((group, gi) => (
             <div key={gi} style={{ display:'flex', flexDirection:'column', gap:3 }}>
-              {gi > 0 && <div style={{ height:1, background:'#EDF2EF', margin:'7px 8px' }} />}
+              {gi > 0 && group.length > 0 && <div style={{ height:1, background:'#EDF2EF', margin:'7px 8px' }} />}
               {group.map(({ screen:sc, icon, label }) => {
                 const active = screen === sc;
                 return (
@@ -589,6 +599,11 @@ export default function DoctorApp() {
           </div>
         )}
       </div>
+
+      {/* Teleconsultation video overlay — any page can launch it via setState({ teleRoom }) */}
+      {state.teleRoom && (
+        <TeleconsultRoom room={state.teleRoom} displayName={docName} onClose={() => setState({ teleRoom: null })} />
+      )}
     </div>
   );
 }

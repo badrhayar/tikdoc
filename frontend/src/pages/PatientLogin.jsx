@@ -32,7 +32,7 @@ export default function PatientLogin() {
       const u = await authSignIn(email.trim(), password, captcha);
       // Route by role so admins/doctors don't land on the patient account.
       if (u?.role === 'admin') go('admin');
-      else if (u?.role === 'doctor') go('doctor');
+      else if (u?.role === 'doctor' || u?.isStaff) go('doctor');
       else go('paccount');
     } catch (e) {
       setError(e?.message === 'Invalid login credentials'

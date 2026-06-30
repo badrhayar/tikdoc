@@ -5,6 +5,7 @@ import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
 import Icon from '../components/Icon';
 import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../lib/api';
 import PhoneField from '../components/PhoneField';
+import TeleconsultRoom from '../components/TeleconsultRoom';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -52,6 +53,7 @@ export default function PatientAccount() {
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
   const [patientMsgInput, setPatientMsgInput] = useState('');
+  const [teleRoom, setTeleRoom] = useState(null);
   const composeRef = useRef(null);
   const openMessagerie = () => {
     composeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -405,9 +407,15 @@ export default function PatientAccount() {
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginTop:4 }}>
                       <span style={{ fontSize:11.5, color:G }}>✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.</span>
                       {a.status !== 'cancelled' && a.status !== 'completed' && (
-                        <button onClick={() => cancelMyAppt(a.id)} style={{ flexShrink:0, background:'#FCE7EE', color:'#C2466A', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                          Annuler
-                        </button>
+                        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                          <button onClick={() => setTeleRoom(`tabibo-appt-${a.id}`)} style={{ background:'#E7F6EE', color:'#138257', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                            Téléconsultation
+                          </button>
+                          <button onClick={() => cancelMyAppt(a.id)} style={{ background:'#FCE7EE', color:'#C2466A', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                            Annuler
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -661,6 +669,10 @@ export default function PatientAccount() {
             </div>
           </div>
         </div>
+      )}
+
+      {teleRoom && (
+        <TeleconsultRoom room={teleRoom} displayName={patient?.name || 'Patient'} onClose={() => setTeleRoom(null)} />
       )}
     </div>
   );
