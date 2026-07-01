@@ -137,6 +137,26 @@ export const SPEC_OPTS = [
   { key:'infirmier',         label:'Infirmier' },
 ];
 
+// Paramedical / non-physician specialties that do NOT carry the "Dr." title.
+// Everyone else (all physician specialties + chirurgien-dentiste) is titled "Dr.".
+export const NON_DR_SPECS = new Set([
+  'kine', 'psychologue', 'orthophoniste', 'orthoptiste', 'podologue', 'osteopathe',
+  'sagefemme', 'dieteticien', 'audioprothesiste', 'opticien', 'infirmier',
+]);
+
+// Strip a title already baked into a stored name (Dr / Dr. / Docteur / Pr).
+export function stripTitle(name) {
+  return String(name || '').replace(/^\s*(d(?:r|octeur)\.?|pr\.?)\s+/i, '').trim();
+}
+
+// Public-facing display name with the correct title for the specialty.
+// Physicians/dentists → "Dr. Aya Chakkour"; paramedical → "Aya Chakkour".
+export function docDisplayName(name, spec) {
+  const clean = stripTitle(name) || String(name || '').trim();
+  if (!clean) return '';
+  return NON_DR_SPECS.has(spec) ? clean : `Dr. ${clean}`;
+}
+
 // Build SPEC_INFO for every specialty (detailed where available, else generic).
 export const SPEC_INFO = Object.fromEntries(
   SPEC_OPTS.map((s) => [s.key, SPEC_DETAILED[s.key] || { label: s.label, tags: ['Consultation', 'Suivi', 'Diagnostic', 'Conseil'] }])

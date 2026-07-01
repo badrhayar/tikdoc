@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor, doctorCoords } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
@@ -163,7 +163,7 @@ export default function Profile() {
             Médecins
           </button>
           <span>›</span>
-          <span style={{ color: DARK, fontWeight: 500 }}>{doc.name}</span>
+          <span style={{ color: DARK, fontWeight: 500 }}>{docDisplayName(doc.name, doc.spec)}</span>
         </div>
       </div>
 
@@ -194,7 +194,7 @@ export default function Profile() {
               {doc.avatar ? <img src={doc.avatar} alt={doc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(doc.name)}
             </div>
             <div>
-              <div style={{ fontSize: 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{doc.name}</div>
+              <div style={{ fontSize: 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{docDisplayName(doc.name, doc.spec)}</div>
               <div style={{ fontSize: 14, color: PRIMARY, fontWeight: 600, marginBottom: 6 }}>{si.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>

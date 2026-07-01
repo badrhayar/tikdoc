@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import QRCode from 'qrcode';
 import { useViewport } from '../../hooks/useViewport';
 import { useApp } from '../../context/AppContext';
+import { docDisplayName } from '../../shared.jsx';
 import { buildPrescriptionPDF, pdfOpen, pdfDownload } from '../../lib/pdf';
 import {
   createPrescription,
@@ -119,7 +120,7 @@ export default function Prescriptions() {
   const buildDoctorDoc = (itemsArg, nameArg, notesArg) => ({
     // state.myDoctor is the RAW doctors row (specialty / clinic_address / cnom);
     // fall back to the mapped names just in case the shape varies.
-    doctorName: appUser?.full_name,
+    doctorName: docDisplayName(appUser?.full_name, myDoctor?.specialty || myDoctor?.spec),
     specialty: myDoctor?.specialty || myDoctor?.spec,
     cnom: myDoctor?.cnom,
     inpe: appUser?.cin_or_inpe,

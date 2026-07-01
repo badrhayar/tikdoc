@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { useApp } from '../../context/AppContext';
+import { docDisplayName } from '../../shared.jsx';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -12,7 +13,9 @@ export default function BookingShare() {
   const { state, setState } = useApp();
   const doctorId = state.myDoctor?.id;
   const slug = state.myDoctor?.slug;
-  const docName = state.appUser?.full_name || 'votre médecin';
+  const rawDocName = state.myDoctor?.name || state.appUser?.full_name || '';
+  const docSpec = state.myDoctor?.specialty || state.myDoctor?.spec;
+  const docName = docDisplayName(rawDocName, docSpec) || 'votre médecin';
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://tabibo.ma';
   // Prefer the clean vanity slug (tabibo.ma/dr-aya-chakkour); fall back to the id.
   const link = slug ? `${origin}/${slug}` : (doctorId ? `${origin}/?doc=${doctorId}` : '');

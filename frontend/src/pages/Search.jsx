@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel, doctorCoords } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
 
 const PRIMARY = '#16A06A';
@@ -57,7 +57,7 @@ export default function Search() {
         {pinDoc.avatar ? <img src={pinDoc.avatar} alt={pinDoc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(pinDoc.name)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{pinDoc.name}</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{docDisplayName(pinDoc.name, pinDoc.spec)}</div>
         <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec]?.label || pinDoc.spec}</div>
         <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD · {kmOf(pinDoc)} km</div>
       </div>
@@ -263,7 +263,7 @@ export default function Search() {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15.5, color: DARK, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15.5, color: DARK, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{docDisplayName(d.name, d.spec)}</div>
                     <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600, marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.label}</div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {d.rating}</span>

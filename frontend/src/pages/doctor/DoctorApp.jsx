@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
-import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState } from '../../shared.jsx';
+import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, docDisplayName } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
 import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox } from '../../lib/api';
 import PhoneField from '../../components/PhoneField';
@@ -153,8 +153,11 @@ export default function DoctorApp() {
   const closePops = () => { setPopAvatar(false); };
 
   // Signed-in doctor identity (falls back gracefully when not yet loaded).
-  const docName  = state.appUser?.full_name || 'Mon cabinet';
+  const docSpec  = state.myDoctor?.specialty || state.myDoctor?.spec;
+  const rawName  = state.appUser?.full_name || 'Mon cabinet';
+  const docName  = (state.appUser?.full_name && !state.isStaff) ? docDisplayName(rawName, docSpec) : rawName;
   const docEmail = state.appUser?.email || '';
+  const docAvatar = state.appUser?.avatar_url || '';
   const sub = subscriptionState(state.myDoctor);
   const todayISO = moroccoNow().dateISO;
   // The motif list must mirror exactly the services the doctor defined (Settings).
@@ -314,7 +317,9 @@ export default function DoctorApp() {
         </nav>
         <div style={{ margin:14, padding:'12px 13px', borderRadius:14, border:'1px solid #E8EFEB', background:'linear-gradient(140deg,#F6FBF8,#EEF6F1)', display:'flex', alignItems:'center', gap:11 }}>
           <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
-            <svg width="28" height="32" viewBox="0 0 26 30" fill="#16A06A" opacity=".4"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>
+            {docAvatar
+              ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              : <svg width="28" height="32" viewBox="0 0 26 30" fill="#16A06A" opacity=".4"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>}
           </div>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docName}</div>
@@ -365,7 +370,9 @@ export default function DoctorApp() {
           {/* Avatar */}
           <div style={{ position:'relative', zIndex:40 }}>
             <button onClick={() => setPopAvatar(a=>!a)} style={{ width:38, height:38, borderRadius:'50%', border:'none', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
-              <svg width="26" height="30" viewBox="0 0 26 30" fill="#16A06A" opacity=".35"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>
+              {docAvatar
+                ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : <svg width="26" height="30" viewBox="0 0 26 30" fill="#16A06A" opacity=".35"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>}
             </button>
             {popAvatar && (
               <>

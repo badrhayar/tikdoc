@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO } from '../shared.jsx';
+import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../lib/api';
 import PhoneField from '../components/PhoneField';
@@ -286,7 +286,7 @@ export default function PatientAccount() {
             <div style={{ fontSize:11.5, fontWeight:800, color:'#BFF0DA', textTransform:'uppercase', letterSpacing:.6, marginBottom:9 }}>⏱ Prochain rendez-vous</div>
             {nextAppt ? (
               <>
-                <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{nextAppt.doctorName} · {SPEC_LABEL(nextAppt.spec)}</div>
+                <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{docDisplayName(nextAppt.doctorName, nextAppt.spec)} · {SPEC_LABEL(nextAppt.spec)}</div>
                 <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(nextAppt.datetime)} · {fmtTime(nextAppt.datetime)}{nextAppt.clinic ? ` — ${nextAppt.clinic}, ${nextAppt.city}` : ''}</div>
               </>
             ) : (
@@ -397,7 +397,7 @@ export default function PatientAccount() {
                     <div style={{ display:'flex', alignItems:'center', gap:11, marginBottom:10 }}>
                       <div style={{ width:38, height:38, borderRadius:10, background:'#E7F6EE', color:'#138257', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:800 }}>{initials(a.doctorName)}</div>
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:DARK }}>{a.doctorName}</div>
+                        <div style={{ fontSize:14, fontWeight:700, color:DARK }}>{docDisplayName(a.doctorName, a.spec)}</div>
                         <div style={{ fontSize:12, color:G, fontWeight:600 }}>{SPEC_LABEL(a.spec)}</div>
                       </div>
                       <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{STATUS_FR[a.status] || a.status}</span>
@@ -438,7 +438,7 @@ export default function PatientAccount() {
                           {initials(p.doctorName)}
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{p.doctorName}</div>
+                          <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{docDisplayName(p.doctorName, p.spec)}</div>
                           <div style={{ fontSize:12, color:MUT }}>{SPEC_LABEL(p.spec)} · {fmtDate(p.datetime)}</div>
                         </div>
                         <button onClick={() => setState({ reviewOpen:true, reviewDoctor:p.doctorName, reviewApptId:p.id, reviewStars:5, reviewText:'' })} style={{ background:'#F4F8F5', color:DARK, border:'none', cursor:'pointer', padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:700, flexShrink:0 }}>
@@ -556,7 +556,7 @@ export default function PatientAccount() {
                       {initials(c.doctorName)}
                     </div>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{c.doctorName}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{docDisplayName(c.doctorName, c.spec)}</div>
                       <div style={{ fontSize:11, color:MUT }}>{SPEC_LABEL(c.spec)}</div>
                     </div>
                   </div>
