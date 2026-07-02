@@ -959,13 +959,16 @@ export function subscribeToConversation(conversationId, onMessage) {
 }
 
 /** Live inbox for the signed-in user: new messages and/or new appointments. */
-export function subscribeToInbox({ onMessage, onAppointment } = {}) {
-  const channel = supabase.channel('inbox');
+export function subscribeToInbox({ onMessage, onAppointment, onConversation } = {}) {
+  const channel = supabase.channel('inbox-' + Math.random().toString(36).slice(2));
   if (onMessage) {
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onMessage(p.new));
   }
   if (onAppointment) {
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (p) => onAppointment(p.new));
+  }
+  if (onConversation) {
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, (p) => onConversation(p.new));
   }
   channel.subscribe();
   return () => { supabase.removeChannel(channel); };

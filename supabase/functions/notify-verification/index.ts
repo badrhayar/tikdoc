@@ -32,6 +32,46 @@ function esc(v: unknown) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }
 
+// Doctor title driven by specialty: physicians/dentist → "Dr."; paramedical → none.
+const NON_DR_SPECS = new Set(["kine","psychologue","orthophoniste","orthoptiste","podologue","osteopathe","sagefemme","dieteticien","audioprothesiste","opticien","infirmier"]);
+function docTitle(name: string, spec?: string) {
+  const clean = String(name || "").replace(/^\s*(d(?:r|octeur)\.?|pr\.?)\s+/i, "").trim();
+  if (!clean) return "votre médecin";
+  return spec && NON_DR_SPECS.has(spec) ? clean : `Dr. ${clean}`;
+}
+
+// A polished, brand-consistent transactional email (email-client-safe tables).
+function apptEmail(d: {
+  name: string; title: string; sentence: string; ctaLabel: string; subLine: string;
+  accent: string; accentSoft: string; emoji: string; url: string;
+}) {
+  return `<!doctype html><html lang="fr"><body style="margin:0;padding:0;background:#F4F8F5;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F8F5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <tr><td align="center" style="padding:32px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+      <tr><td style="padding:2px 4px 16px;">
+        <img src="${d.url}/icons/icon-192.png" width="30" height="30" alt="Tabibo" style="border-radius:8px;vertical-align:middle;border:0;"/>
+        <span style="font-size:21px;font-weight:700;color:#15314A;letter-spacing:-0.4px;vertical-align:middle;margin-left:8px;">Tabib<span style="color:#16A06A;">o</span></span>
+      </td></tr>
+      <tr><td style="background:#ffffff;border:1px solid #EAEFEC;border-radius:14px;">
+        <div style="height:3px;background:${d.accent};border-radius:14px 14px 0 0;"></div>
+        <div style="padding:30px 34px 32px;">
+          <h1 style="font-size:19px;font-weight:600;color:#15314A;margin:0 0 16px;letter-spacing:-0.2px;line-height:1.35;">${d.title}</h1>
+          <p style="font-size:15px;color:#42504B;line-height:1.7;margin:0 0 26px;">Salut <strong style="color:#15314A;">${esc(d.name)}</strong>, ${d.sentence}</p>
+          <a href="${d.url}" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:600;color:#ffffff;background:#16A06A;border-radius:9px;text-decoration:none;letter-spacing:.2px;">${d.ctaLabel}</a>
+          <p style="font-size:13px;color:#7A8983;margin:16px 0 0;">${d.subLine} <a href="${d.url}" style="color:#16A06A;text-decoration:none;font-weight:600;">Tabibo.ma</a></p>
+          <div style="border-top:1px solid #EEF2F0;margin:26px 0 0;"></div>
+          <p style="font-size:13.5px;color:#7A8983;margin:18px 0 0;">Cordialement,<br/><span style="color:#15314A;font-weight:600;">L'équipe Tabibo</span></p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:16px 6px;text-align:center;font-size:12px;color:#9AA8A2;">
+        Tabibo · Plateforme de rendez-vous médicaux au Maroc
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
+
 
 function shell(title: string, body: string) {
   return `<!doctype html><html><body style="margin:0;background:#F4F8F5;font-family:Inter,Arial,sans-serif;color:#15314A">
@@ -190,7 +230,7 @@ Deno.serve(async (req) => {
       const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
       const { data: a } = await admin
         .from("appointments")
-        .select("datetime, patient_id, patient_name, patient:users(full_name, email), doctor:doctors(user_id, user:users!doctors_user_id_fkey(full_name, email))")
+        .select("datetime, patient_id, patient_name, patient:users(full_name, email), doctor:doctors(user_id, specialty, user:users!doctors_user_id_fkey(full_name, email))")
         .eq("id", p.appointment_id).maybeSingle();
       const av: any = a;
       if (!av) return new Response(JSON.stringify({ ok: true, skipped: "appt not found" }), { headers: { ...cors, "Content-Type": "application/json" } });
@@ -199,35 +239,35 @@ Deno.serve(async (req) => {
       const isParty = authz.isAdmin || (authz.me && (authz.me.id === av.patient_id || authz.me.id === av.doctor?.user_id));
       if (!isParty) return json({ ok: false, error: "forbidden" }, 403);
       const doctorEmail = av.doctor?.user?.email;
-      const doctorName = av.doctor?.user?.full_name ?? "";
+      const doctor = docTitle(av.doctor?.user?.full_name ?? "", av.doctor?.specialty);
       const patientEmail = av.patient?.email;
       const patientName = av.patient?.full_name ?? av.patient_name ?? "Patient";
-      const when = new Date(av.datetime).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
+      const dObj = new Date(av.datetime);
+      const dateStr = dObj.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Casablanca" });
+      const heureStr = dObj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
       const ev = p.event;
-      const cta = `<p style="margin-top:18px"><a href="${APP_URL}" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Gérer mes rendez-vous</a></p>`;
-      const box = (c: string, t: string) => `<p style="background:${c};border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;color:${t}">${when} · Dr. ${esc(doctorName)}</p>`;
+      const rdv = `le <strong>${esc(dateStr)}</strong> à <strong>${esc(heureStr)}</strong> avec <strong>${esc(doctor)}</strong>`;
 
-      // → Patient email
+      // → Patient email — one polished, on-brand template per event.
       if (patientEmail) {
-        let title = "", lead = "", color = "#E7F6EE", txt = "#138257";
-        if (ev === "booked")            { title = "Rendez-vous enregistré"; lead = "votre rendez-vous a bien été enregistré. Vous recevrez une confirmation du médecin."; }
-        else if (ev === "confirmed")    { title = "Rendez-vous confirmé";   lead = "votre rendez-vous est confirmé ✅."; }
-        else if (ev === "rescheduled")  { title = "Rendez-vous reporté";    lead = "votre rendez-vous a été déplacé. Nouveau créneau :"; color = "#FEF3DC"; txt = "#9A6510"; }
-        else if (ev === "cancelled" || ev === "cancelled_by_patient") { title = "Rendez-vous annulé"; lead = "votre rendez-vous a été annulé :"; color = "#FCE7EE"; txt = "#C2466A"; }
-        if (title) {
-          const body = `<p>Bonjour ${esc(patientName)},</p><p>${lead}</p>${box(color, txt)}<p>Connectez-vous à <strong>Tabibo</strong> pour gérer vos rendez-vous, modifier vos informations ou en réserver un nouveau.</p>${cta}<p style="margin-top:18px">— L'équipe Tabibo</p>`;
-          await sendEmail(patientEmail, `${title} — Tabibo`, shell(title, body));
-        }
+        const GREEN = { accent: "#16A06A", accentSoft: "#E7F6EE" };
+        const RED = { accent: "#E2546B", accentSoft: "#FCE7EE" };
+        const AMBER = { accent: "#E8A33D", accentSoft: "#FEF3DC" };
+        let cfg: any = null;
+        if (ev === "booked")           cfg = { ...GREEN, emoji: "📅", title: "Rendez-vous enregistré", sentence: `votre rendez-vous ${rdv} a bien été enregistré.`, ctaLabel: "Gérer mes rendez-vous", subLine: "Gérez vos rendez-vous sur" };
+        else if (ev === "confirmed")   cfg = { ...GREEN, emoji: "✅", title: "Rendez-vous confirmé", sentence: `votre rendez-vous ${rdv} est confirmé.`, ctaLabel: "Gérer mes rendez-vous", subLine: "Gérez vos rendez-vous sur" };
+        else if (ev === "rescheduled") cfg = { ...AMBER, emoji: "🔁", title: "Rendez-vous reporté", sentence: `votre rendez-vous a été reporté ${rdv}.`, ctaLabel: "Gérer mes rendez-vous", subLine: "Gérez vos rendez-vous sur" };
+        else if (ev === "cancelled" || ev === "cancelled_by_patient") cfg = { ...RED, emoji: "🗓️", title: "Rendez-vous annulé", sentence: `votre rendez-vous ${rdv} a bien été annulé.`, ctaLabel: "Prendre un rendez-vous", subLine: "Prenez un nouveau rendez-vous sur" };
+        if (cfg) await sendEmail(patientEmail, `${cfg.title} — Tabibo`, apptEmail({ name: patientName, url: APP_URL, ...cfg }));
       }
 
-      // → Doctor email (only on new booking / patient cancellation)
+      // → Doctor email (new booking / patient cancellation) — same brand template.
       if (doctorEmail && (ev === "booked" || ev === "cancelled_by_patient")) {
         const isCancel = ev === "cancelled_by_patient";
-        const title = isCancel ? "Rendez-vous annulé par le patient" : "Nouveau rendez-vous";
-        const body = isCancel
-          ? `<p>Bonjour Dr. ${esc(doctorName)},</p><p><strong>${esc(patientName)}</strong> a annulé son rendez-vous :</p>${box("#FCE7EE", "#C2466A")}<p>Le créneau est de nouveau disponible.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`
-          : `<p>Bonjour Dr. ${esc(doctorName)},</p><p><strong>${esc(patientName)}</strong> vient de réserver un rendez-vous :</p>${box("#E7F6EE", "#138257")}<p>Connectez-vous pour le confirmer.</p><p style="margin-top:18px">— L'équipe Tabibo</p>`;
-        await sendEmail(doctorEmail, `${title} — Tabibo`, shell(title, body));
+        const cfg = isCancel
+          ? { accent: "#E2546B", accentSoft: "#FCE7EE", emoji: "🗓️", title: "Rendez-vous annulé", sentence: `<strong>${esc(patientName)}</strong> a annulé son rendez-vous du <strong>${esc(dateStr)}</strong> à <strong>${esc(heureStr)}</strong>. Le créneau est de nouveau disponible.`, ctaLabel: "Voir mon agenda", subLine: "Gérez votre agenda sur" }
+          : { accent: "#16A06A", accentSoft: "#E7F6EE", emoji: "📅", title: "Nouveau rendez-vous", sentence: `<strong>${esc(patientName)}</strong> a réservé un rendez-vous le <strong>${esc(dateStr)}</strong> à <strong>${esc(heureStr)}</strong>. Connectez-vous pour le confirmer.`, ctaLabel: "Voir mon agenda", subLine: "Gérez votre agenda sur" };
+        await sendEmail(doctorEmail, `${cfg.title} — Tabibo`, apptEmail({ name: doctor, url: APP_URL, ...cfg }));
       }
 
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });

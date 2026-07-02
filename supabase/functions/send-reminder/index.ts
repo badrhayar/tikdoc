@@ -45,6 +45,74 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // falling back to the auto-injected legacy service-role key.
 const SERVICE_KEY = Deno.env.get("SB_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Email channel (Resend) — works with zero WhatsApp/Meta setup. Reminders are
+// sent by email whenever the patient has an email and RESEND_API_KEY is set.
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM = Deno.env.get("TABIBO_FROM") ?? "Tabibo <onboarding@resend.dev>";
+function esc(v: unknown) {
+  return String(v ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+const NON_DR_SPECS = new Set(["kine","psychologue","orthophoniste","orthoptiste","podologue","osteopathe","sagefemme","dieteticien","audioprothesiste","opticien","infirmier"]);
+function docTitle(name: string, spec?: string) {
+  const clean = String(name || "").replace(/^\s*(d(?:r|octeur)\.?|pr\.?)\s+/i, "").trim();
+  if (!clean) return "votre médecin";
+  return spec && NON_DR_SPECS.has(spec) ? clean : `Dr. ${clean}`;
+}
+const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
+
+// A polished, brand-consistent email (email-client-safe tables).
+function apptEmail(d: { name: string; title: string; sentence: string; ctaLabel: string; subLine: string; accent: string; accentSoft: string; emoji: string; url: string }) {
+  return `<!doctype html><html lang="fr"><body style="margin:0;padding:0;background:#F4F8F5;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F8F5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <tr><td align="center" style="padding:32px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+      <tr><td style="padding:2px 4px 16px;">
+        <img src="${d.url}/icons/icon-192.png" width="30" height="30" alt="Tabibo" style="border-radius:8px;vertical-align:middle;border:0;"/>
+        <span style="font-size:21px;font-weight:700;color:#15314A;letter-spacing:-0.4px;vertical-align:middle;margin-left:8px;">Tabib<span style="color:#16A06A;">o</span></span>
+      </td></tr>
+      <tr><td style="background:#ffffff;border:1px solid #EAEFEC;border-radius:14px;">
+        <div style="height:3px;background:${d.accent};border-radius:14px 14px 0 0;"></div>
+        <div style="padding:30px 34px 32px;">
+          <h1 style="font-size:19px;font-weight:600;color:#15314A;margin:0 0 16px;letter-spacing:-0.2px;line-height:1.35;">${d.title}</h1>
+          <p style="font-size:15px;color:#42504B;line-height:1.7;margin:0 0 26px;">Salut <strong style="color:#15314A;">${esc(d.name)}</strong>, ${d.sentence}</p>
+          <a href="${d.url}" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:600;color:#ffffff;background:#16A06A;border-radius:9px;text-decoration:none;letter-spacing:.2px;">${d.ctaLabel}</a>
+          <p style="font-size:13px;color:#7A8983;margin:16px 0 0;">${d.subLine} <a href="${d.url}" style="color:#16A06A;text-decoration:none;font-weight:600;">Tabibo.ma</a></p>
+          <div style="border-top:1px solid #EEF2F0;margin:26px 0 0;"></div>
+          <p style="font-size:13.5px;color:#7A8983;margin:18px 0 0;">Cordialement,<br/><span style="color:#15314A;font-weight:600;">L'équipe Tabibo</span></p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:16px 6px;text-align:center;font-size:12px;color:#9AA8A2;">
+        Tabibo · Plateforme de rendez-vous médicaux au Maroc
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
+
+// Reminder email. label 'j1' → "demain à {heure}"; 'j2'/other → "le {date} à {heure}".
+async function sendEmailReminder(to: string, params: string[], label: string) {
+  if (!RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY manquant" };
+  const [patient, date, heure, medecin] = params;
+  const rdv = label === "j1"
+    ? `<strong>demain</strong> à <strong>${esc(heure)}</strong> avec <strong>${esc(medecin)}</strong>`
+    : `le <strong>${esc(date)}</strong> à <strong>${esc(heure)}</strong> avec <strong>${esc(medecin)}</strong>`;
+  const html = apptEmail({
+    name: patient, url: APP_URL,
+    accent: "#E8A33D", accentSoft: "#FEF3DC", emoji: "⏰",
+    title: "Rappel de rendez-vous",
+    sentence: `n'oubliez pas votre rendez-vous ${rdv}.`,
+    ctaLabel: "Gérer mes rendez-vous",
+    subLine: "Gérez vos rendez-vous sur",
+  });
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: FROM, to, subject: "Rappel de votre rendez-vous — Tabibo", html }),
+  });
+  return { ok: res.ok, error: res.ok ? null : await res.text() };
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -110,47 +178,66 @@ async function sendTemplate(to: string, params: string[], tplName: string) {
   return { ok: res.ok, providerId, error };
 }
 
-// Send one reminder for an appointment row and record the attempt.
+// Send one reminder over every configured channel (WhatsApp + email) and record
+// each attempt. Works email-only when WhatsApp isn't set up.
 async function sendOne(
   admin: ReturnType<typeof createClient>,
-  appt: { id: string; doctor_id: string; datetime: string; patient_name: string; phone: string; doctor_name: string },
+  appt: { id: string; doctor_id: string; datetime: string; patient_name: string; phone: string; email?: string; doctor_name: string },
   template: string,
 ) {
   const when = new Date(appt.datetime);
   const params = [appt.patient_name || "patient", dateFmt.format(when), timeFmt.format(when), appt.doctor_name || "votre médecin"];
   const bodyText = `Rappel RDV — ${params.join(" · ")}`;
+  const waReady = !!(WA_TOKEN && WA_PHONE_ID);
+  const now = new Date().toISOString();
+  let waRes: any = null, mailRes: any = null;
 
-  if (!WA_TOKEN || !WA_PHONE_ID) {
+  if (waReady && appt.phone) {
+    waRes = await sendTemplate(normalizePhone(appt.phone), params, templateFor(template));
+    await admin.from("reminder_log").insert({
+      doctor_id: appt.doctor_id, appointment_id: appt.id, patient_name: appt.patient_name,
+      phone: appt.phone, channel: "whatsapp", template, body: bodyText,
+      status: waRes.ok ? "sent" : "failed", provider_id: waRes.providerId, error: waRes.error,
+      sent_at: waRes.ok ? now : null,
+    });
+  }
+  // Email only for the scheduled reminders (j1/j2/followup). Booking/confirm/
+  // cancel emails are sent by notify-verification — avoid duplicate emails here.
+  const emailTemplates = new Set(["j1", "j2", "reminder", "followup"]);
+  if (RESEND_API_KEY && appt.email && emailTemplates.has(template)) {
+    mailRes = await sendEmailReminder(appt.email, params, template);
+    await admin.from("reminder_log").insert({
+      doctor_id: appt.doctor_id, appointment_id: appt.id, patient_name: appt.patient_name,
+      phone: appt.email, channel: "email", template, body: bodyText,
+      status: mailRes.ok ? "sent" : "failed", error: mailRes.error,
+      sent_at: mailRes.ok ? now : null,
+    });
+  }
+
+  if (!waReady && !RESEND_API_KEY) {
     await admin.from("reminder_log").insert({
       doctor_id: appt.doctor_id, appointment_id: appt.id, patient_name: appt.patient_name,
       phone: appt.phone, template, body: bodyText, status: "failed",
-      error: "WhatsApp non configuré (WHATSAPP_TOKEN / WHATSAPP_PHONE_ID manquants).",
+      error: "Aucun canal configuré (WhatsApp ni Email).",
     });
     return { ok: false, error: "not_configured" };
   }
-
-  const to = normalizePhone(appt.phone);
-  const r = await sendTemplate(to, params, templateFor(template));
-  await admin.from("reminder_log").insert({
-    doctor_id: appt.doctor_id, appointment_id: appt.id, patient_name: appt.patient_name,
-    phone: appt.phone, template, body: bodyText,
-    status: r.ok ? "sent" : "failed", provider_id: r.providerId, error: r.error,
-    sent_at: r.ok ? new Date().toISOString() : null,
-  });
-  return r;
+  const ok = !!(waRes?.ok || mailRes?.ok);
+  return { ok, error: ok ? null : (waRes?.error || mailRes?.error || "échec d'envoi") };
 }
 
 // Fetch appointments whose datetime falls in [from, to], joined to patient + doctor.
 async function dueAppointments(admin: ReturnType<typeof createClient>, fromISO: string, toISO: string) {
   const { data } = await admin
     .from("appointments")
-    .select("id, doctor_id, datetime, status, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user:users!doctors_user_id_fkey(full_name))")
+    .select("id, doctor_id, datetime, status, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
     .gte("datetime", fromISO).lte("datetime", toISO)
     .in("status", ["pending", "confirmed"]);
   return (data ?? []).map((a: any) => ({
     id: a.id, doctor_id: a.doctor_id, datetime: a.datetime,
     patient_name: a.patient?.full_name ?? a.patient_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
-    doctor_name: a.doctor?.user?.full_name ?? "",
+    email: a.patient?.email ?? "",
+    doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
   }));
 }
 
@@ -168,18 +255,25 @@ Deno.serve(async (req) => {
     // 'confirmed' | 'cancelled' | 'rescheduled' — to test any template.
     if (p.type === "test") {
       if (!authz.isAdmin) return json({ ok: false, error: "forbidden" }, 403);
+      if (!p.to) return json({ ok: false, error: "Destinataire manquant (email ou numéro)." });
+      const demo = ["Ahmed", "lundi 30 juin", "14:30", "Dr. Benali"];
+      // An address with "@" → email test (works with zero WhatsApp setup).
+      if (String(p.to).includes("@")) {
+        if (!RESEND_API_KEY) return json({ ok: false, error: "RESEND_API_KEY manquant dans les secrets." });
+        const r = await sendEmailReminder(p.to, demo, p.template ?? "");
+        return json({ ...r, channel: "email" });
+      }
       if (!WA_TOKEN || !WA_PHONE_ID) return json({ ok: false, error: "WHATSAPP_TOKEN / WHATSAPP_PHONE_ID manquants dans les secrets." });
-      if (!p.to) return json({ ok: false, error: "Numéro destinataire manquant." });
       const tpl = templateFor(p.template ?? "");
-      const r = await sendTemplate(normalizePhone(p.to), ["Ahmed", "lundi 30 juin", "14:30", "Dr. Benali"], tpl);
-      return json({ ...r, template_used: tpl });
+      const r = await sendTemplate(normalizePhone(p.to), demo, tpl);
+      return json({ ...r, template_used: tpl, channel: "whatsapp" });
     }
 
     // ── send one ───────────────────────────────────────────────────────────────
     if (p.type === "send" && p.appointment_id) {
       const { data, error: qErr } = await admin
         .from("appointments")
-        .select("id, doctor_id, patient_id, datetime, patient_name, patient_phone, patient:users(full_name, phone), doctor:doctors(id, user_id, user:users!doctors_user_id_fkey(full_name))")
+        .select("id, doctor_id, patient_id, datetime, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, user_id, specialty, user:users!doctors_user_id_fkey(full_name))")
         .eq("id", p.appointment_id).maybeSingle();
       if (!data) return json({ ok: false, error: "Rendez-vous introuvable.", detail: qErr?.message ?? null }, 404);
       const a: any = data;
@@ -199,7 +293,8 @@ Deno.serve(async (req) => {
       const r = await sendOne(admin, {
         id: a.id, doctor_id: a.doctor_id, datetime: a.datetime,
         patient_name: a.patient?.full_name ?? a.patient_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
-        doctor_name: a.doctor?.user?.full_name ?? "",
+        email: a.patient?.email ?? "",
+        doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
       }, template);
       return json(r);
     }

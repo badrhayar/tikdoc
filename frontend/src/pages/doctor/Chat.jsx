@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation } from '../../lib/api';
+import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation, subscribeToInbox } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -55,16 +55,26 @@ export default function Chat({ state, setState }) {
   };
   useEffect(() => { loadConvs(); }, [isDoctor]);
 
-  // Candidate peers to start a new chat with = people you share appointments
-  // with, minus anyone you already have a conversation with.
+  // Keep the conversation list fresh: reload when any new message arrives (a
+  // patient may have started a brand-new conversation) + a slow poll fallback in
+  // case realtime is unavailable.
+  useEffect(() => {
+    const unsub = subscribeToInbox({ onMessage: () => loadConvs(false), onConversation: () => loadConvs(false) });
+    const t = setInterval(() => loadConvs(false), 15000);
+    return () => { try { unsub(); } catch (e) { /* ignore */ } clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDoctor]);
+
+  // Candidate peers to start a new chat with = the doctor's account-linked
+  // patients (roster + shared appointments), minus anyone already in a chat.
   const existingPeerIds = new Set(convs.map((c) => c.peerId).filter(Boolean));
   const appts = state?.myAppointments || [];
   const candidatesMap = new Map();
-  for (const a of appts) {
-    const id = isDoctor ? a.patientId : a.doctorId;
-    const name = isDoctor ? a.patientName : a.doctorName;
-    if (id && !existingPeerIds.has(id) && !candidatesMap.has(id)) candidatesMap.set(id, name);
-  }
+  const addCandidate = (id, name) => {
+    if (id && !existingPeerIds.has(id) && !candidatesMap.has(id)) candidatesMap.set(id, name || 'Patient');
+  };
+  for (const a of appts) addCandidate(isDoctor ? a.patientId : a.doctorId, isDoctor ? a.patientName : a.doctorName);
+  if (isDoctor) for (const p of (state?.patients || [])) addCandidate(p.userId, p.name);
   const candidates = [...candidatesMap.entries()].map(([id, name]) => ({ id, name }));
 
   const startConversation = async (peer) => {
