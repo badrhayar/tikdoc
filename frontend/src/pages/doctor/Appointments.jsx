@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, sendApptWhatsApp, notifyApptEmail, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -45,6 +45,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     const d = new Date(a.datetime);
     return {
       id: a.id,
+      patientId: a.patientId || null,
       rawStatus: a.status,
       datetime: a.datetime,
       patient: a.patientName || 'Patient',
@@ -307,7 +308,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700,
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
                         }}>∅</button>
-                        <button title="Démarrer la téléconsultation" onClick={() => setState({ teleRoom: `tabibo-appt-${appt.id}` })} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
+                        <button title="Démarrer la téléconsultation" onClick={() => { const room = `tabibo-appt-${appt.id}`; if (appt.patientId) ringPatient(appt.patientId, { room, doctorName: state?.appUser?.full_name || 'Votre médecin', spec: state?.myDoctor?.specialty }); setState({ teleRoom: room }); }} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
                           background: '#E7F6EE', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A06A',
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,

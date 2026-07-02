@@ -54,7 +54,6 @@ import Chat from './Chat';
 import BookingShare from './BookingShare';
 import Prescriptions from './Prescriptions';
 import Staff from './Staff';
-import TeleconsultRoom from '../../components/TeleconsultRoom';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -612,10 +611,6 @@ export default function DoctorApp() {
         )}
       </div>
 
-      {/* Teleconsultation video overlay — any page can launch it via setState({ teleRoom }) */}
-      {state.teleRoom && (
-        <TeleconsultRoom room={state.teleRoom} displayName={docName} onClose={() => setState({ teleRoom: null })} />
-      )}
     </div>
   );
 }

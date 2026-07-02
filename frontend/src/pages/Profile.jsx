@@ -154,8 +154,8 @@ export default function Profile() {
       </header>
 
       {/* ── Breadcrumb ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '12px 16px' : '14px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED, flexWrap: 'wrap' }}>
           <button
             onClick={() => go('search')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 13, padding: 0 }}
@@ -171,7 +171,7 @@ export default function Profile() {
       <div style={{ maxWidth: 1100, margin: '0 auto 40px', padding: isMobile ? '0 16px' : '0 24px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.1fr', gap: isMobile ? 16 : 24, alignItems: 'start' }}>
 
         {/* Left: Doctor card */}
-        <div style={{ background: '#fff', borderRadius: 20, padding: 28, border: `1px solid ${BORDER}`, boxShadow: '0 2px 14px -6px rgba(13,43,30,0.12)' }}>
+        <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 18 : 28, border: `1px solid ${BORDER}`, boxShadow: '0 2px 14px -6px rgba(13,43,30,0.12)', minWidth: 0 }}>
 
           {/* Back button */}
           <button
@@ -182,9 +182,9 @@ export default function Profile() {
           </button>
 
           {/* Avatar + name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 18, marginBottom: 18 }}>
             <div style={{
-              width: 88, height: 88, borderRadius: 20, overflow: 'hidden',
+              width: isMobile ? 72 : 88, height: isMobile ? 72 : 88, borderRadius: 20, overflow: 'hidden',
               background: `linear-gradient(135deg, ${avatarBg}, ${avatarFg}22)`,
               color: avatarFg,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -193,8 +193,8 @@ export default function Profile() {
             }}>
               {doc.avatar ? <img src={doc.avatar} alt={doc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(doc.name)}
             </div>
-            <div>
-              <div style={{ fontSize: 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{docDisplayName(doc.name, doc.spec)}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: isMobile ? 18 : 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{docDisplayName(doc.name, doc.spec)}</div>
               <div style={{ fontSize: 14, color: PRIMARY, fontWeight: 600, marginBottom: 6 }}>{si.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>

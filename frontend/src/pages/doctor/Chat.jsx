@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation, subscribeToInbox } from '../../lib/api';
+import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation, subscribeToInbox, uploadChatImage, isImageMessage } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -100,7 +100,7 @@ export default function Chat({ state, setState }) {
     (async () => {
       try {
         const list = await fetchMessages(activeId);
-        setMsgs(list.map((m) => ({ id: m.id, mine: m.sender_id === appUser?.id, type: 'text', text: m.content, time: fmtTime(m.sent_at) })));
+        setMsgs(list.map((m) => ({ id: m.id, mine: m.sender_id === appUser?.id, type: isImageMessage(m.content) ? 'image' : 'text', text: m.content, url: m.content, time: fmtTime(m.sent_at) })));
       } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
       // Append messages as they arrive (from either party), de-duplicating our
       // own optimistic bubbles and any row we already hold.
@@ -116,7 +116,7 @@ export default function Chat({ state, setState }) {
               return copy;
             }
           }
-          return [...cur, { id: m.id, mine, type: 'text', text: m.content, time: fmtTime(m.sent_at) }];
+          return [...cur, { id: m.id, mine, type: isImageMessage(m.content) ? 'image' : 'text', text: m.content, url: m.content, time: fmtTime(m.sent_at) }];
         });
       });
     })();
@@ -152,12 +152,17 @@ export default function Chat({ state, setState }) {
   };
 
   // Images/audio are session-only (the messages table stores text).
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setMsgs((m) => [...m, { id: 'img_' + Date.now(), mine: true, type: 'image', url, time: 'maintenant' }]);
     e.target.value = '';
+    if (!file || !activeId || !appUser) return;
+    try {
+      const url = await uploadChatImage(file);
+      setMsgs((m) => [...m, { id: 'tmp_' + Date.now(), mine: true, type: 'image', url, text: url, time: 'maintenant' }]);
+      await sendMessage(activeId, appUser.id, url);
+    } catch (err) {
+      setState({ toast: 'Envoi de l’image échoué : ' + (err?.message || 'erreur'), toastShow: true });
+    }
   };
   const toggleRecording = () => {
     if (isRecording) {

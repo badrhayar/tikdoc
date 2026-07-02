@@ -919,6 +919,23 @@ export async function fetchConversations() {
   }));
 }
 
+/** Upload a chat image; returns a public URL to send as the message content. */
+export async function uploadChatImage(file) {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) throw new Error('Non authentifié');
+  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${auth.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const up = await supabase.storage.from('chat-media').upload(path, file, { upsert: false, contentType: file.type || undefined });
+  if (up.error) throw up.error;
+  const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/** True if a message body is an image attachment (a chat-media URL). */
+export function isImageMessage(content) {
+  return typeof content === 'string' && /\/chat-media\/.+\.(png|jpe?g|gif|webp|heic)(\?|$)/i.test(content);
+}
+
 export async function fetchMessages(conversationId) {
   const { data, error } = await supabase
     .from('messages')
@@ -1230,6 +1247,26 @@ export async function fetchMyStaffDoctor() {
     .maybeSingle();
   if (error || !data) return null;
   return fetchDoctorById(data.doctor_id).catch(() => null);
+}
+
+// ── Teleconsultation: incoming-call signaling (Realtime broadcast) ───────────
+/** Patient subscribes to be "rung" when a doctor starts a teleconsultation. */
+export function subscribeToIncomingCalls(userId, onCall) {
+  if (!userId) return () => {};
+  const ch = supabase
+    .channel(`calls:${userId}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'incoming' }, (p) => onCall(p.payload))
+    .subscribe();
+  return () => { try { supabase.removeChannel(ch); } catch (e) { /* ignore */ } };
+}
+
+/** Doctor rings a patient: broadcasts the room to open on their side. */
+export async function ringPatient(patientUserId, payload) {
+  if (!patientUserId) return;
+  const ch = supabase.channel(`calls:${patientUserId}`);
+  await new Promise((res) => ch.subscribe((s) => { if (s === 'SUBSCRIBED') res(); }));
+  await ch.send({ type: 'broadcast', event: 'incoming', payload });
+  setTimeout(() => { try { supabase.removeChannel(ch); } catch (e) { /* ignore */ } }, 3000);
 }
 
 // ── Calls (teleconsultation) ────────────────────────────────────────────────

@@ -214,7 +214,7 @@ export default function Search() {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: 'calc(100vh - 130px)' }}>
 
         {/* Left: doctor list */}
-        <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto' }}>
+        <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto', minWidth: 0 }}>
           {/* Mobile: compact map preview above the list — tap a pin or “Agrandir” for full screen */}
           {isMobile && !mapFull && mapDoctors.some((d) => typeof d.lat === 'number') && (
             <div style={{ position: 'relative', height: 200, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 18, boxShadow: '0 6px 20px -12px rgba(13,43,30,0.3)' }}>

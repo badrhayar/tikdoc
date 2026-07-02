@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, BOOK_DAYS } from '../shared.jsx';
 import Icon from '../components/Icon';
 
@@ -12,6 +13,7 @@ const saPopKeyframes = `
 
 export default function Confirm() {
   const { state, go } = useApp();
+  const { isMobile } = useViewport();
   const doctors = state.doctors?.length ? state.doctors : DOCTORS;
   const doc = doctors.find(d => d.id === state.selDoc) || doctors[0];
   const dateLabel = state.bookDate
@@ -24,7 +26,7 @@ export default function Confirm() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '46px 16px',
+      padding: isMobile ? '28px 14px' : '46px 16px',
       background: '#F4F8F5',
     }}>
       <style>{saPopKeyframes}</style>
@@ -33,7 +35,7 @@ export default function Confirm() {
         background: '#fff',
         borderRadius: 20,
         boxShadow: '0 8px 40px rgba(21,49,74,0.13)',
-        padding: 40,
+        padding: isMobile ? 24 : 40,
         maxWidth: 460,
         width: '100%',
         textAlign: 'center',
@@ -87,7 +89,7 @@ export default function Confirm() {
             }}>
               {doc.name.replace('Dr.','').trim().split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, color: '#15314A', fontSize: 15 }}>{doc.name}</div>
               <div style={{ color: '#6B7B76', fontSize: 13 }}>
                 {doc.spec === 'gyneco' ? 'Gynécologue' :
@@ -151,7 +153,7 @@ export default function Confirm() {
         </button>
 
         {/* Side-by-side buttons */}
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
           <button
             style={{
               flex: 1,
@@ -192,9 +194,9 @@ export default function Confirm() {
 function Row({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-      <span style={{ color: '#16A06A', display: 'flex' }}><Icon name={icon} size={16} /></span>
-      <span style={{ color: '#6B7B76', minWidth: 64 }}>{label} :</span>
-      <span style={{ color: '#15314A', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: '#16A06A', display: 'flex', flexShrink: 0 }}><Icon name={icon} size={16} /></span>
+      <span style={{ color: '#6B7B76', minWidth: 64, flexShrink: 0 }}>{label} :</span>
+      <span style={{ color: '#15314A', fontWeight: 600, minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
     </div>
   );
 }

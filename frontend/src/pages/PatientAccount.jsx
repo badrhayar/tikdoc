@@ -3,9 +3,8 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, getDocumentUrl } from '../lib/api';
 import PhoneField from '../components/PhoneField';
-import TeleconsultRoom from '../components/TeleconsultRoom';
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -53,8 +52,8 @@ export default function PatientAccount() {
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
   const [patientMsgInput, setPatientMsgInput] = useState('');
-  const [teleRoom, setTeleRoom] = useState(null);
   const composeRef = useRef(null);
+  const chatImgRef = useRef(null);
   const openMessagerie = () => {
     composeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => composeRef.current?.focus(), 350);
@@ -101,7 +100,7 @@ export default function PatientAccount() {
     (async () => {
       try {
         const list = await fetchMessages(convId);
-        setThread(list.map((m) => ({ id: m.id, mine: m.sender_id === appUserId, text: m.content, time: fmtTime(m.sent_at) })));
+        setThread(list.map((m) => ({ id: m.id, mine: m.sender_id === appUserId, image: isImageMessage(m.content), text: m.content, time: fmtTime(m.sent_at) })));
       } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
       unsub = subscribeToConversation(convId, (m) => {
         setThread((cur) => {
@@ -111,7 +110,7 @@ export default function PatientAccount() {
             const i = cur.findIndex((x) => String(x.id).startsWith('tmp_') && x.text === m.content);
             if (i >= 0) { const copy = [...cur]; copy[i] = { ...copy[i], id: m.id, time: fmtTime(m.sent_at) }; return copy; }
           }
-          return [...cur, { id: m.id, mine, text: m.content, time: fmtTime(m.sent_at) }];
+          return [...cur, { id: m.id, mine, image: isImageMessage(m.content), text: m.content, time: fmtTime(m.sent_at) }];
         });
       });
     })();
@@ -195,17 +194,47 @@ export default function PatientAccount() {
     } finally { setPhotoBusy(false); }
   };
 
-  const docDoctorOpts = ['Dr. Leila Marmioui','Dr. Karim Benali','Dr. Sara Idrissi'];
+  // Real doctors the patient has consulted (no hardcoded names).
+  const docDoctorOpts = (visitedDocs || []).map((d) => d.name);
+  const docFileRef = useRef(null);
+  const [docFile, setDocFile] = useState(null);
+  const [docBusy, setDocBusy] = useState(false);
 
-  const sendDoc = () => {
-    if (!pNewDoc.name) return;
-    const newEntry = {
-      id: Date.now(), doctor: pNewDoc.doctor, type: pNewDoc.type,
-      name: pNewDoc.name,
-      date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' }),
-      url: '#', dir: 'out',
-    };
-    setState({ pdocs: [newEntry, ...(pdocs || [])], pNewDoc: { doctor: pNewDoc.doctor, type: 'Résultat', name: '' } });
+  // Load the patient's real documents from storage.
+  const loadDocs = async () => {
+    if (!state.appUser?.id) return;
+    try {
+      const rows = await listDocuments();
+      setState({ pdocs: (rows || []).map((r) => ({
+        id: r.id,
+        name: (r.file_url || '').split('/').pop()?.replace(/^\d+_/, '') || 'Document',
+        type: r.file_type || 'Document',
+        doctor: 'Mes documents',
+        date: r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' }) : '',
+        dir: 'out',
+        path: r.file_url,
+      })) });
+    } catch (e) { /* ignore */ }
+  };
+  useEffect(() => { if (state.appUser?.id) loadDocs(); /* eslint-disable-next-line */ }, [state.appUser?.id]);
+
+  const sendDoc = async () => {
+    if (!docFile || !state.appUser?.id) { setState({ toast: 'Choisissez un fichier à envoyer.', toastShow: true }); return; }
+    setDocBusy(true);
+    try {
+      await uploadDocument({ file: docFile, ownerId: state.appUser.id, fileType: pNewDoc?.type || 'Document' });
+      setDocFile(null);
+      await loadDocs();
+      setState({ toast: 'Document envoyé ✓', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Envoi du document échoué : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setDocBusy(false); }
+  };
+
+  const openDoc = async (path) => {
+    if (!path) return;
+    try { const url = await getDocumentUrl(path); if (url) window.open(url, '_blank'); }
+    catch (e) { setState({ toast: 'Ouverture du document impossible.', toastShow: true }); }
   };
 
   const sendMsg = async () => {
@@ -225,6 +254,25 @@ export default function PatientAccount() {
     } catch (e) {
       setThread((m) => m.filter((x) => !(String(x.id).startsWith('tmp_') && x.text === text)));
       setState({ toast: 'Envoi impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
+
+  const sendChatImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const docId = msgDoctorId || (state.myAppointments || [])[0]?.doctorId;
+    if (!file || !state.appUser || !docId) {
+      setState({ toast: 'Réservez un rendez-vous pour discuter avec un médecin.', toastShow: true });
+      return;
+    }
+    try {
+      const url = await uploadChatImage(file);
+      const conv = await getOrCreateConversation(state.appUser.id, docId);
+      if (conv?.id && conv.id !== convId) setConvId(conv.id);
+      setThread((m) => [...m, { id: 'tmp_' + Date.now(), mine: true, image: true, text: url, time: 'maintenant' }]);
+      await sendMessage(conv.id, state.appUser.id, url);
+    } catch (err) {
+      setState({ toast: 'Envoi de l’image échoué : ' + (err?.message || 'erreur'), toastShow: true });
     }
   };
 
@@ -408,7 +456,7 @@ export default function PatientAccount() {
                       <span style={{ fontSize:11.5, color:G }}>✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.</span>
                       {a.status !== 'cancelled' && a.status !== 'completed' && (
                         <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-                          <button onClick={() => setTeleRoom(`tabibo-appt-${a.id}`)} style={{ background:'#E7F6EE', color:'#138257', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
+                          <button onClick={() => setState({ teleRoom: `tabibo-appt-${a.id}` })} style={{ background:'#E7F6EE', color:'#138257', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                             Téléconsultation
                           </button>
@@ -496,7 +544,7 @@ export default function PatientAccount() {
                       <span style={{ fontSize:11, fontWeight:700, color: isIn ? '#138257' : '#3B6FB0', background: isIn ? '#E7F6EE' : '#E8F1FC', padding:'3px 9px', borderRadius:99, flexShrink:0 }}>
                         {isIn ? 'Reçu' : 'Envoyé'}
                       </span>
-                      <button title="Télécharger" style={{ background:BG, border:'1px solid #DCE5E0', color:DARK, cursor:'pointer', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <button title="Télécharger" onClick={() => openDoc(d.path)} style={{ background:BG, border:'1px solid #DCE5E0', color:DARK, cursor:'pointer', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
                       </button>
                     </div>
@@ -513,13 +561,14 @@ export default function PatientAccount() {
                     <select value={pNewDoc?.type || 'Résultat'} onChange={e => setState({ pNewDoc: { ...pNewDoc, type: e.target.value } })} style={{ width:130, padding:'10px 12px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>
                       {DOC_TYPE_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
-                    <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, border:'1px dashed #C9D6D1', borderRadius:9, background:'#F8FBF9', padding:'8px 11px' }}>
+                    <input ref={docFileRef} type="file" style={{ display:'none' }} onChange={e => { const f = e.target.files?.[0]; e.target.value=''; if (f) setDocFile(f); }} />
+                    <button type="button" onClick={() => docFileRef.current?.click()} style={{ flex:1, display:'flex', alignItems:'center', gap:8, border:'1px dashed #C9D6D1', borderRadius:9, background:'#F8FBF9', padding:'9px 11px', cursor:'pointer', minWidth:0 }}>
                       <span style={{ color:G, display:'flex' }}><Icon name="paperclip" size={14} /></span>
-                      <input value={pNewDoc?.name || ''} onChange={e => setState({ pNewDoc: { ...pNewDoc, name: e.target.value } })} placeholder="fichier.pdf" style={{ flex:1, minWidth:0, border:'none', outline:'none', background:'none', fontSize:12.5, direction:'ltr' }} />
-                    </div>
+                      <span style={{ flex:1, minWidth:0, fontSize:12.5, color: docFile ? DARK : '#9AA8A2', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left', direction:'ltr' }}>{docFile ? docFile.name : 'Choisir un fichier…'}</span>
+                    </button>
                   </div>
-                  <button onClick={sendDoc} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding:11, borderRadius:10, fontSize:13.5, fontWeight:700 }}>
-                    Envoyer le document
+                  <button onClick={sendDoc} disabled={docBusy || !docFile} style={{ background:G, color:'#fff', border:'none', cursor: (docBusy || !docFile) ? 'default' : 'pointer', opacity: (docBusy || !docFile) ? 0.6 : 1, padding:11, borderRadius:10, fontSize:13.5, fontWeight:700 }}>
+                    {docBusy ? 'Envoi…' : 'Envoyer le document'}
                   </button>
                 </div>
               </div>
@@ -599,10 +648,16 @@ export default function PatientAccount() {
             ) : (
               thread.map((m) => (
                 <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth:'78%', padding:'8px 12px', borderRadius:14, fontSize:13, lineHeight:1.45, background: m.mine ? G : '#fff', color: m.mine ? '#fff' : DARK, border: m.mine ? 'none' : `1px solid ${BORDER_STRONG}`, borderBottomRightRadius: m.mine ? 4 : 14, borderBottomLeftRadius: m.mine ? 14 : 4 }}>
-                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{m.text}</div>
-                    <div style={{ fontSize:10, marginTop:3, textAlign:'right', color: m.mine ? 'rgba(255,255,255,.8)' : MUT }}>{m.time}</div>
-                  </div>
+                  {m.image ? (
+                    <a href={m.text} target="_blank" rel="noreferrer" style={{ display:'block', maxWidth:'70%' }}>
+                      <img src={m.text} alt="pièce jointe" style={{ maxWidth:'100%', maxHeight:220, borderRadius:14, display:'block', border:`1px solid ${BORDER_STRONG}` }} />
+                    </a>
+                  ) : (
+                    <div style={{ maxWidth:'78%', padding:'8px 12px', borderRadius:14, fontSize:13, lineHeight:1.45, background: m.mine ? G : '#fff', color: m.mine ? '#fff' : DARK, border: m.mine ? 'none' : `1px solid ${BORDER_STRONG}`, borderBottomRightRadius: m.mine ? 4 : 14, borderBottomLeftRadius: m.mine ? 14 : 4 }}>
+                      <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{m.text}</div>
+                      <div style={{ fontSize:10, marginTop:3, textAlign:'right', color: m.mine ? 'rgba(255,255,255,.8)' : MUT }}>{m.time}</div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -632,6 +687,10 @@ export default function PatientAccount() {
 
           {/* Compose mini-bar */}
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+            <input ref={chatImgRef} type="file" accept="image/*" style={{ display:'none' }} onChange={sendChatImage} />
+            <button onClick={() => chatImgRef.current?.click()} disabled={!convId && visitedDocs.length === 0} title="Joindre une image" style={{ width:38, height:38, borderRadius:'50%', background:BG, border:`1px solid ${BORDER_STRONG}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:MUT, flexShrink:0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </button>
             <input
               ref={composeRef}
               value={patientMsgInput}
@@ -671,9 +730,6 @@ export default function PatientAccount() {
         </div>
       )}
 
-      {teleRoom && (
-        <TeleconsultRoom room={teleRoom} displayName={patient?.name || 'Patient'} onClose={() => setTeleRoom(null)} />
-      )}
     </div>
   );
 }
