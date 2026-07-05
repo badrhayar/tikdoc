@@ -28,6 +28,7 @@ const DoctorBlocked  = lazy(() => import('./pages/DoctorBlocked'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
 const Contact        = lazy(() => import('./pages/Contact'));
+const PatientMessages = lazy(() => import('./pages/PatientMessages'));
 
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
@@ -55,6 +56,7 @@ const SCREEN_MAP = {
   forgotpw:    ForgotPassword,
   resetpw:     ResetPassword,
   contact:     Contact,
+  pmessages:   PatientMessages,
 };
 
 function AppShell() {

@@ -65,7 +65,8 @@ export default function BookingInfo() {
     // When connected to Supabase, persist the appointment for the signed-in patient.
     if (isSupabaseConfigured) {
       if (!appUser) {
-        setState({ toast: 'Connectez-vous pour confirmer votre rendez-vous.', toastShow: true });
+        // Remember the booking so we return here (not the account page) after login.
+        setState({ postLoginScreen: 'pinfo', toast: 'Connectez-vous pour confirmer votre rendez-vous.', toastShow: true });
         go('plogin');
         return;
       }

@@ -25,7 +25,14 @@ function initials(name) {
   if (words.length === 1) return words[0][0].toUpperCase();
   return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
-const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+const fmtTime = (iso) => {
+  try {
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? `Aujourd'hui ${time}` : `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} · ${time}`;
+  } catch { return ''; }
+};
 
 export default function Chat({ state, setState }) {
   const appUser = state?.appUser;
@@ -60,7 +67,7 @@ export default function Chat({ state, setState }) {
   // case realtime is unavailable.
   useEffect(() => {
     const unsub = subscribeToInbox({ onMessage: () => loadConvs(false), onConversation: () => loadConvs(false) });
-    const t = setInterval(() => loadConvs(false), 15000);
+    const t = setInterval(() => loadConvs(false), 6000);
     return () => { try { unsub(); } catch (e) { /* ignore */ } clearInterval(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDoctor]);
@@ -97,11 +104,22 @@ export default function Chat({ state, setState }) {
   useEffect(() => {
     if (!activeId) { setMsgs([]); return; }
     let unsub = () => {};
-    (async () => {
+    // Re-fetch from the server, keeping any not-yet-persisted optimistic bubbles.
+    const refetch = async () => {
       try {
         const list = await fetchMessages(activeId);
-        setMsgs(list.map((m) => ({ id: m.id, mine: m.sender_id === appUser?.id, type: isImageMessage(m.content) ? 'image' : 'text', text: m.content, url: m.content, time: fmtTime(m.sent_at) })));
-      } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
+        const server = list.map((m) => ({ id: m.id, mine: m.sender_id === appUser?.id, type: isImageMessage(m.content) ? 'image' : 'text', text: m.content, url: m.content, time: fmtTime(m.sent_at) }));
+        setMsgs((cur) => {
+          const pending = cur.filter((x) => String(x.id).startsWith('tmp_') && !server.some((s) => s.text === x.text));
+          return [...server, ...pending];
+        });
+      } catch (e) { /* keep current on transient error */ }
+    };
+    refetch();
+    // Poll as a reliability fallback so messages always show even if realtime is off.
+    const poll = setInterval(refetch, 5000);
+    const clearPoll = () => clearInterval(poll);
+    (async () => {
       // Append messages as they arrive (from either party), de-duplicating our
       // own optimistic bubbles and any row we already hold.
       unsub = subscribeToConversation(activeId, (m) => {
@@ -120,7 +138,7 @@ export default function Chat({ state, setState }) {
         });
       });
     })();
-    return () => unsub();
+    return () => { unsub(); clearPoll(); };
   }, [activeId, appUser?.id]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length, activeId]);

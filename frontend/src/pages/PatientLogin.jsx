@@ -12,7 +12,7 @@ const INPUT_BG = '#F8FBF9';
 const INPUT_BORDER = '#DCE5E0';
 
 export default function PatientLogin() {
-  const { go, authSignIn, isSupabaseConfigured } = useApp();
+  const { go, authSignIn, isSupabaseConfigured, state, setState } = useApp();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +33,12 @@ export default function PatientLogin() {
       // Route by role so admins/doctors don't land on the patient account.
       if (u?.role === 'admin') go('admin');
       else if (u?.role === 'doctor' || u?.isStaff) go('doctor');
-      else go('paccount');
+      else {
+        // If the patient was mid-booking, send them back to finish it.
+        const dest = state?.postLoginScreen;
+        if (dest) { setState({ postLoginScreen: null }); go(dest); }
+        else go('paccount');
+      }
     } catch (e) {
       setError(e?.message === 'Invalid login credentials'
         ? 'Email ou mot de passe incorrect.'

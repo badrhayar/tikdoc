@@ -50,7 +50,9 @@ export default function PatientRegister() {
         captchaToken: captcha,
       });
       if (res.session) {
-        go('paccount');           // logged in immediately (email confirmation off)
+        const dest = state?.postLoginScreen;   // resume a booking if one was pending
+        if (dest) { setState({ postLoginScreen: null }); go(dest); }
+        else go('paccount');       // logged in immediately (email confirmation off)
       } else {
         setNeedConfirm(true);     // confirmation email required
       }

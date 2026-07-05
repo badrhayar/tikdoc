@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, BOOK_DAYS } from '../shared.jsx';
+import { DOCTORS, BOOK_DAYS, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 
 const saPopKeyframes = `
@@ -19,6 +19,29 @@ export default function Confirm() {
   const dateLabel = state.bookDate
     ? new Date(`${state.bookDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
     : 'Date confirmée';
+  const drName = docDisplayName(doc.name, doc.spec);
+
+  // Download an .ics so the patient can add the appointment to their calendar.
+  const addToCalendar = () => {
+    const slot = state.bookSlot || '09:00';
+    if (!state.bookDate) return;
+    const start = new Date(`${state.bookDate}T${slot}:00`);
+    const end = new Date(start.getTime() + 30 * 60000);
+    const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Tabibo//FR//', 'BEGIN:VEVENT',
+      `UID:${state.selDoc}-${state.bookDate}-${slot}@tabibo.ma`,
+      `DTSTAMP:${fmt(new Date())}`, `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
+      `SUMMARY:Rendez-vous — ${drName}`,
+      `LOCATION:${(doc.clinic || '')}${doc.city ? ', ' + doc.city : ''}`,
+      `DESCRIPTION:Consultation avec ${drName} via Tabibo`,
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'rendez-vous-tabibo.ics'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <div style={{
@@ -133,9 +156,9 @@ export default function Confirm() {
           Une confirmation WhatsApp a été envoyée au patient
         </div>
 
-        {/* Invoice button */}
+        {/* Primary: view my appointments (payment happens at the cabinet — no invoice) */}
         <button
-          onClick={() => go('invoice')}
+          onClick={() => go('paccount')}
           style={{
             width: '100%',
             padding: '13px 0',
@@ -149,12 +172,13 @@ export default function Confirm() {
             marginBottom: 12,
           }}
         >
-          Voir la facture
+          Voir mes rendez-vous
         </button>
 
         {/* Side-by-side buttons */}
         <div style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
           <button
+            onClick={addToCalendar}
             style={{
               flex: 1,
               padding: '11px 0',

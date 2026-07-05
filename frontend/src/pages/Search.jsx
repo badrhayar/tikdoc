@@ -210,11 +210,12 @@ export default function Search() {
         </>
       )}
 
-      {/* ── Split content ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', minHeight: 'calc(100vh - 130px)' }}>
+      {/* ── Split content ── On desktop the list scrolls INSIDE its column while
+           the map stays fixed alongside it (page itself doesn't scroll). ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', height: isMobile ? 'auto' : 'calc(100vh - 130px)', overflow: isMobile ? 'visible' : 'hidden' }}>
 
-        {/* Left: doctor list */}
-        <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto', minWidth: 0 }}>
+        {/* Left: doctor list (scrolls internally on desktop) */}
+        <div style={{ padding: isMobile ? '16px 16px 32px' : '22px 24px', overflowY: 'auto', height: isMobile ? 'auto' : '100%', minWidth: 0 }}>
           {/* Mobile: compact map preview above the list — tap a pin or “Agrandir” for full screen */}
           {isMobile && !mapFull && mapDoctors.some((d) => typeof d.lat === 'number') && (
             <div style={{ position: 'relative', height: 200, borderRadius: 16, overflow: 'hidden', border: `1px solid ${BORDER}`, marginBottom: 18, boxShadow: '0 6px 20px -12px rgba(13,43,30,0.3)' }}>
@@ -296,8 +297,8 @@ export default function Search() {
 
         {/* Right: live map (desktop only) */}
         {!isMobile && (
-        <div style={{ position: 'sticky', top: 130, height: 'calc(100vh - 130px)', padding: '22px 24px 22px 0' }}>
-          <div style={{ height: '100%', minHeight: 560, borderRadius: 20, position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
+        <div style={{ height: '100%', padding: '22px 24px 22px 0' }}>
+          <div style={{ height: '100%', borderRadius: 20, position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER}`, boxShadow: '0 10px 40px -18px rgba(13,43,30,0.3)' }}>
             <NearbyMap doctors={mapDoctors} selectedId={state.selPin} onSelect={(id) => setState({ selPin: id })} />
             {pinCard}
           </div>
