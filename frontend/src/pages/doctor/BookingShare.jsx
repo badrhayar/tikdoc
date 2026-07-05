@@ -16,9 +16,11 @@ export default function BookingShare() {
   const rawDocName = state.myDoctor?.name || state.appUser?.full_name || '';
   const docSpec = state.myDoctor?.specialty || state.myDoctor?.spec;
   const docName = docDisplayName(rawDocName, docSpec) || 'votre médecin';
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://tabibo.ma';
-  // Prefer the clean vanity slug (tabibo.ma/dr-aya-chakkour); fall back to the id.
-  const link = slug ? `${origin}/${slug}` : (doctorId ? `${origin}/?doc=${doctorId}` : '');
+  // Always the PUBLIC production domain (not the Vercel preview), so the shared
+  // link + QR point to tabibo.ma/dr-… wherever the doctor generated them.
+  const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/\/$/, '');
+  const link = slug ? `${PUBLIC_BASE}/${slug}` : (doctorId ? `${PUBLIC_BASE}/?doc=${doctorId}` : '');
+  const prettyLink = 'www.' + link.replace(/^https?:\/\//, '').replace(/^www\./, '');
 
   const [qr, setQr] = useState('');
   useEffect(() => {
@@ -37,18 +39,22 @@ export default function BookingShare() {
     if (!qr) return;
     const w = window.open('', '_blank');
     if (!w) { toast('Autorisez les pop-ups pour imprimer l’affiche.'); return; }
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Affiche Tabibo</title></head>
-      <body style="margin:0;font-family:Inter,Arial,sans-serif;color:#15314A">
-        <div style="width:100%;max-width:720px;margin:0 auto;padding:56px 48px;text-align:center;box-sizing:border-box">
-          <div style="font-size:38px;font-weight:800;color:${G};letter-spacing:-1px;margin-bottom:8px">Tabibo</div>
-          <div style="font-size:22px;font-weight:700;margin-bottom:6px">${docName}</div>
-          <h1 style="font-size:34px;line-height:1.2;margin:26px 0 10px">Réservez votre rendez-vous en ligne</h1>
-          <p style="font-size:18px;color:#6B7B76;margin:0 0 30px">Scannez ce QR code avec l'appareil photo de votre téléphone</p>
-          <img src="${qr}" style="width:320px;height:320px"/>
-          <p style="font-size:18px;font-weight:700;margin:26px 0 0">${link.replace(/^https?:\/\//, '')}</p>
-          <p style="font-size:15px;color:#6B7B76;margin-top:34px">Plus d'attente au téléphone — choisissez votre créneau en quelques secondes.</p>
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Affiche Tabibo</title>
+      <style>@page{margin:0} html,body{height:100%} body{margin:0}</style></head>
+      <body style="font-family:'Segoe UI',Arial,sans-serif;color:#15314A">
+        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <img src="${PUBLIC_BASE}/icons/icon-192.png" style="width:52px;height:52px;border-radius:14px" alt="Tabibo"/>
+            <span style="font-size:40px;font-weight:800;letter-spacing:-1px;color:#15314A">Tabib<span style="color:${G}">o</span></span>
+          </div>
+          <div style="font-size:34px;font-weight:800;margin:16px 0 30px">${docName}</div>
+          <h1 style="font-size:34px;line-height:1.2;margin:0 0 12px">Réservez votre rendez-vous en ligne</h1>
+          <p style="font-size:18px;color:#6B7B76;margin:0 0 28px">Scannez ce QR code avec l'appareil photo de votre téléphone</p>
+          <img src="${qr}" style="width:300px;height:300px"/>
+          <p style="font-size:20px;font-weight:800;color:${G};margin:26px 0 0">${prettyLink}</p>
+          <p style="font-size:15px;color:#6B7B76;margin-top:26px">Plus d'attente au téléphone — choisissez votre créneau en quelques secondes.</p>
         </div>
-        <script>window.onload=function(){setTimeout(function(){window.print()},250)}</script>
+        <script>window.onload=function(){setTimeout(function(){window.print()},350)}</script>
       </body></html>`);
     w.document.close();
   };

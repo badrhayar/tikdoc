@@ -4,6 +4,8 @@ import { useViewport } from '../hooks/useViewport';
 import { fetchCompanyContact } from '../lib/api';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import SecurityTrust from '../components/SecurityTrust';
+import MarketingHeader from '../components/MarketingHeader';
+import MarketingFooter from '../components/MarketingFooter';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -85,14 +87,7 @@ export default function Contact() {
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
-      {/* Header */}
-      <header style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${BORDER}`, height: isMobile ? 60 : 66, display: 'flex', alignItems: 'center', padding: isMobile ? '0 16px' : '0 28px', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 31, height: 31, borderRadius: 9 }} />
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
-        </button>
-        <button onClick={() => go('home')} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 15px', fontSize: 13, fontWeight: 600, color: DARK, cursor: 'pointer' }}>Accueil</button>
-      </header>
+      <MarketingHeader activeKey="contact" audience="patient" />
 
       {/* Hero */}
       <div style={{ background: GRAD, color: '#fff', padding: isMobile ? '40px 16px' : '56px 24px', textAlign: 'center' }}>
@@ -150,14 +145,7 @@ export default function Contact() {
       {/* Security & confidentiality */}
       <SecurityTrust />
 
-      {/* Footer */}
-      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.55)', padding: '26px 24px', textAlign: 'center', fontSize: 13 }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => go('home')}>Accueil</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => go('about')}>À propos</span>
-          <span>© {new Date().getFullYear()} {company.brand}. Tous droits réservés.</span>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

@@ -340,15 +340,7 @@ export default function ForPatients() {
 
       <SecurityTrust />
 
-      {/* Footer */}
-      <footer style={{ background: '#0E2336', color: 'rgba(255,255,255,0.5)', padding: '26px 24px', textAlign: 'center', fontSize: 13 }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 18, height: 18, borderRadius: 4, opacity: 0.75 }} />
-          <span style={{ cursor: 'pointer' }} onClick={() => go('about')}>À propos</span>
-          <span style={{ cursor: 'pointer' }} onClick={() => go('contact')}>Contact</span>
-          <span>© {new Date().getFullYear()} Tabibo. Tous droits réservés.</span>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
