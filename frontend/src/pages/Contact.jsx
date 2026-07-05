@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
+import { fetchCompanyContact } from '../lib/api';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import SecurityTrust from '../components/SecurityTrust';
 
@@ -62,18 +63,23 @@ export default function Contact() {
   const { go } = useApp();
   const { isMobile } = useViewport();
   const [form, setForm] = useState({ name: '', email: '', message: '' });
+  // Admin-editable contact info (falls back to the defaults above while loading).
+  const [company, setCompany] = useState(COMPANY);
+  useEffect(() => {
+    fetchCompanyContact().then((c) => { if (c) setCompany((prev) => ({ ...prev, ...c })); }).catch(() => {});
+  }, []);
 
   const submit = (e) => {
     e.preventDefault();
     const subject = encodeURIComponent(`Contact Tabibo — ${form.name || 'Message'}`);
     const body = encodeURIComponent(`Nom : ${form.name}\nEmail : ${form.email}\n\n${form.message}`);
-    window.location.href = `mailto:${COMPANY.email}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${company.email}?subject=${subject}&body=${body}`;
   };
 
   const legal = [
-    ['Raison sociale', COMPANY.legalName], ['Capital social', COMPANY.capital],
-    ['RC', COMPANY.rc], ['ICE', COMPANY.ice], ['IF', COMPANY.ifisc],
-    ['Patente', COMPANY.patente], ['CNSS', COMPANY.cnss], ['Déclaration CNDP', COMPANY.cndp],
+    ['Raison sociale', company.legalName], ['Capital social', company.capital],
+    ['RC', company.rc], ['ICE', company.ice], ['IF', company.ifisc],
+    ['Patente', company.patente], ['CNSS', company.cnss], ['Déclaration CNDP', company.cndp],
   ];
   const input = { width: '100%', boxSizing: 'border-box', padding: '11px 13px', borderRadius: 10, border: `1.5px solid #DCE5E0`, background: '#F8FBF9', fontSize: 14, color: DARK, outline: 'none' };
 
@@ -99,20 +105,20 @@ export default function Contact() {
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '28px 16px' : '48px 24px' }}>
         {/* Contact info cards */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 14, marginBottom: 20 }}>
-          <InfoCard icon={IC.pin} label="Adresse" value={COMPANY.address} />
-          <InfoCard icon={IC.clock} label="Horaires" value={COMPANY.hours} />
-          <InfoCard icon={IC.phone} label="Téléphone" value={COMPANY.phone} href={`tel:${COMPANY.phone.replace(/\s/g, '')}`} />
-          <InfoCard icon={IC.fax} label="Fax" value={COMPANY.fax} />
-          <InfoCard icon={IC.mail} label="Email" value={COMPANY.email} href={`mailto:${COMPANY.email}`} />
-          <InfoCard icon={IC.mail} label="Support" value={COMPANY.support} href={`mailto:${COMPANY.support}`} />
+          <InfoCard icon={IC.pin} label="Adresse" value={company.address} />
+          <InfoCard icon={IC.clock} label="Horaires" value={company.hours} />
+          <InfoCard icon={IC.phone} label="Téléphone" value={company.phone} href={`tel:${company.phone.replace(/\s/g, '')}`} />
+          <InfoCard icon={IC.fax} label="Fax" value={company.fax} />
+          <InfoCard icon={IC.mail} label="Email" value={company.email} href={`mailto:${company.email}`} />
+          <InfoCard icon={IC.mail} label="Support" value={company.support} href={`mailto:${company.support}`} />
         </div>
 
         {/* Map + form */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 20 }}>
           <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', fontSize: 14, fontWeight: 800, color: DARK, borderBottom: `1px solid ${BORDER}` }}>Nous trouver</div>
-            <DoctorLocationMap lat={COMPANY.lat} lng={COMPANY.lng} height={isMobile ? 240 : 300} />
-            <div style={{ padding: '12px 18px', fontSize: 13, color: MUTED }}>{COMPANY.address}</div>
+            <DoctorLocationMap lat={company.lat} lng={company.lng} height={isMobile ? 240 : 300} />
+            <div style={{ padding: '12px 18px', fontSize: 13, color: MUTED }}>{company.address}</div>
           </div>
 
           <form onSubmit={submit} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isMobile ? 18 : 22 }}>
@@ -129,7 +135,7 @@ export default function Contact() {
         {/* Legal / company info */}
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isMobile ? 18 : 24 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 4 }}>Informations légales</div>
-          <div style={{ fontSize: 13, color: MUTED, marginBottom: 18 }}>{COMPANY.legalName} — société immatriculée au Maroc.</div>
+          <div style={{ fontSize: 13, color: MUTED, marginBottom: 18 }}>{company.legalName} — société immatriculée au Maroc.</div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '14px 24px' }}>
             {legal.map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderBottom: `1px solid #F2F5F3`, paddingBottom: 8 }}>
@@ -149,7 +155,7 @@ export default function Contact() {
         <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={{ cursor: 'pointer' }} onClick={() => go('home')}>Accueil</span>
           <span style={{ cursor: 'pointer' }} onClick={() => go('about')}>À propos</span>
-          <span>© {new Date().getFullYear()} {COMPANY.brand}. Tous droits réservés.</span>
+          <span>© {new Date().getFullYear()} {company.brand}. Tous droits réservés.</span>
         </div>
       </footer>
     </div>

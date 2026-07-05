@@ -34,6 +34,7 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
     { key: 'forpatients', label: t.navPatients },
     { key: 'fordoctors', label: t.navDoctors },
     { key: 'about', label: t.navAbout },
+    { key: 'contact', label: tr('Contact', 'Contact', 'اتصل بنا') },
   ];
 
   // Auth routing depends on the audience of the page.

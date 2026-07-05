@@ -520,16 +520,23 @@ export async function fetchAppSettings() {
   return data || { rib: '', bank: '' };
 }
 
-/** Admin only — update the platform RIB / bank shown on invoices. */
-export async function saveAppSettings({ rib, bank }) {
+/** Admin only — update platform settings (RIB / bank / company contact). */
+export async function saveAppSettings(fields = {}) {
+  const patch = { updated_at: new Date().toISOString() };
+  if ('rib' in fields) patch.rib = fields.rib;
+  if ('bank' in fields) patch.bank = fields.bank;
+  if ('contact' in fields) patch.contact = fields.contact;
   const { data, error } = await supabase
-    .from('app_settings')
-    .update({ rib, bank, updated_at: new Date().toISOString() })
-    .eq('id', 1)
-    .select()
-    .single();
+    .from('app_settings').update(patch).eq('id', 1).select().single();
   if (error) throw error;
   return data;
+}
+
+/** Public — the company contact details for the Contact page (no RIB exposed). */
+export async function fetchCompanyContact() {
+  const { data, error } = await supabase.from('company_contact').select('contact').maybeSingle();
+  if (error || !data) return null;
+  return data.contact || null;
 }
 
 // ── Admin: account management ─────────────────────────────────────────────────

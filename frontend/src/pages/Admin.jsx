@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment } from '../lib/api';
+import LocationPicker from '../components/LocationPicker';
 import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState, renewalInfo } from '../shared.jsx';
 
 const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
@@ -31,6 +32,17 @@ export default function Admin() {
   const [rib, setRib] = useState(state?.appSettings?.rib || '');
   const [bank, setBank] = useState(state?.appSettings?.bank || '');
   const [busy, setBusy] = useState(false);
+  const [company, setCompany] = useState({ legalName: '', address: '', phone: '', fax: '', email: '', support: '', hours: '', rc: '', ice: '', ifisc: '', patente: '', cnss: '', capital: '', cndp: '', lat: 33.5731, lng: -7.5898 });
+  const setC = (k, v) => setCompany((p) => ({ ...p, [k]: v }));
+  const saveCompany = async () => {
+    setBusy(true);
+    try {
+      const saved = await saveAppSettings({ contact: company });
+      setState({ appSettings: saved, toast: 'Informations de contact enregistrées ✓', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Échec : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setBusy(false); }
+  };
 
   // Doctor verification
   const [reviewList, setReviewList] = useState([]);
@@ -58,7 +70,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
     fetchAllAccounts().then(setAccounts).catch((e) => setState({ toast: 'Chargement comptes échoué : ' + (e?.message || ''), toastShow: true }));
-    fetchAppSettings().then((s) => { setRib(s.rib || ''); setBank(s.bank || ''); }).catch(() => {});
+    fetchAppSettings().then((s) => { setRib(s.rib || ''); setBank(s.bank || ''); if (s.contact) setCompany((p) => ({ ...p, ...s.contact })); }).catch(() => {});
     setTestTo(state.appUser?.email || '');
     loadReview();
   }, [isAdmin]);
@@ -185,7 +197,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BORDER}`, marginBottom: 24 }}>
-          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)']].map(([k, label]) => (
+          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)'], ['company', 'Société']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>
               {label}
               {k === 'review' && pendingCount > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#E2748A', borderRadius: 99, padding: '1px 7px' }}>{pendingCount}</span>}
@@ -507,6 +519,49 @@ export default function Admin() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {tab === 'company' && (
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24, maxWidth: 720 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, margin: '0 0 6px' }}>Informations de la société</h2>
+            <p style={{ fontSize: 13, color: MUTED, margin: '0 0 18px' }}>Ces informations s'affichent sur la page Contact (accessible au public).</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 18px' }}>
+              {[
+                ['legalName', 'Raison sociale', 'Tabibo SARL', false, false],
+                ['capital', 'Capital social', '100 000 MAD', false, false],
+                ['address', 'Adresse', 'Boulevard…, Casablanca', false, true],
+                ['phone', 'Téléphone', '+212 5 22 00 00 00', false, false],
+                ['fax', 'Fax', '+212 5 22 00 00 01', false, false],
+                ['email', 'Email', 'contact@tabibo.ma', false, false],
+                ['support', 'Support', 'support@tabibo.ma', false, false],
+                ['hours', 'Horaires', 'Lundi – Vendredi : 9h00 – 18h00', false, true],
+                ['rc', 'RC', '000000', true, false],
+                ['ice', 'ICE', '000000000000000', true, false],
+                ['ifisc', 'IF (Identifiant Fiscal)', '00000000', true, false],
+                ['patente', 'Patente', '00000000', true, false],
+                ['cnss', 'CNSS', '0000000', true, false],
+                ['cndp', 'N° déclaration CNDP', '0-0000/2026', true, false],
+              ].map(([k, label, ph, mono, wide]) => (
+                <div key={k} style={{ minWidth: 0, gridColumn: (wide && !isMobile) ? '1 / -1' : 'auto' }}>
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 6 }}>{label}</label>
+                  <input value={company[k] || ''} onChange={(e) => setC(k, e.target.value)} placeholder={ph} style={{ ...inputStyle, marginBottom: 14, direction: 'ltr', fontFamily: mono ? 'monospace' : undefined }} />
+                </div>
+              ))}
+            </div>
+
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, margin: '8px 0 8px' }}>Emplacement du siège — saisissez l'adresse ou déplacez le repère</label>
+            <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+              <LocationPicker
+                value={{ lat: company.lat, lng: company.lng }}
+                initialQuery={company.address}
+                onChange={(v) => setCompany((p) => ({ ...p, lat: v.lat, lng: v.lng }))}
+                onResolvePlace={(label) => { if (label) setC('address', label); }}
+              />
+            </div>
+
+            <button onClick={saveCompany} disabled={busy} style={{ marginTop: 20, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 22px', fontWeight: 700, fontSize: 14, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Enregistrement…' : 'Enregistrer les informations'}</button>
           </div>
         )}
       </div>
