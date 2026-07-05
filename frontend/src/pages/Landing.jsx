@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../shared.jsx';
 import Icon from '../components/Icon';
+import SecurityTrust from '../components/SecurityTrust';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -475,6 +476,8 @@ export default function Landing() {
         </div>
       </section>
 
+      <SecurityTrust />
+
       {/* ── Footer — 2 cols on mobile ── */}
       <footer style={{ background: DARK, color: 'rgba(255,255,255,0.62)', padding: isPhone ? '40px 16px 24px' : '52px 24px 28px' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -491,15 +494,15 @@ export default function Landing() {
               </p>
             </div>
             {[
-              { h: tr('Patients', 'Patients', 'المرضى'), items: [t.navPatients, tr('Trouver un médecin', 'Find a doctor', 'ابحث عن طبيب'), tr('Mon compte', 'My account', 'حسابي')] },
-              { h: tr('Médecins', 'Doctors', 'الأطباء'), items: [t.navDoctors, tr('Inscription', 'Register', 'التسجيل'), tr('Tarifs', 'Pricing', 'الأسعار')] },
-              { h: tr('Société', 'Company', 'الشركة'), items: [t.navAbout, tr('Confidentialité', 'Privacy', 'الخصوصية'), tr('Contact', 'Contact', 'اتصل بنا')] },
+              { h: tr('Patients', 'Patients', 'المرضى'), items: [[t.navPatients, 'forpatients'], [tr('Trouver un médecin', 'Find a doctor', 'ابحث عن طبيب'), 'search'], [tr('Mon compte', 'My account', 'حسابي'), 'plogin']] },
+              { h: tr('Médecins', 'Doctors', 'الأطباء'), items: [[t.navDoctors, 'fordoctors'], [tr('Inscription', 'Register', 'التسجيل'), 'docregister'], [tr('Se connecter', 'Sign in', 'تسجيل الدخول'), 'login']] },
+              { h: tr('Société', 'Company', 'الشركة'), items: [[t.navAbout, 'about'], [tr('Confidentialité', 'Privacy', 'الخصوصية'), 'contact'], [tr('Contact', 'Contact', 'اتصل بنا'), 'contact']] },
             ].map((col, i) => (
               <div key={i}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 14 }}>{col.h}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {col.items.map((it, j) => (
-                    <span key={j} style={{ fontSize: 13.5, cursor: 'pointer' }}>{it}</span>
+                  {col.items.map(([label, to], j) => (
+                    <span key={j} onClick={() => go(to)} style={{ fontSize: 13.5, cursor: 'pointer' }}>{label}</span>
                   ))}
                 </div>
               </div>
