@@ -196,39 +196,64 @@ export const CREDENTIAL_DOCS = [
   { key: 'specialite',   label: 'Diplôme de spécialité (si spécialiste)',    required: false },
 ];
 
-// Derive a doctor's subscription state (trial countdown, blocked, expired…).
+// Derive a doctor's subscription state from a CONCRETE period end. A subscription
+// is usable until `current_period_end` (trial → trial_ends_at); past that it
+// lapses exactly like an expired account. Nothing renews on its own — only an
+// admin extends the period (see admin_renew_subscription). `daysLeft` counts
+// down to the real period end, never a recomputed 1st-of-month.
 export function subscriptionState(d) {
-  if (!d) return { canUse: true, status: 'active', daysLeft: null, blocked: false, expired: false, trial: false, active: true };
+  if (!d) return { canUse: true, status: 'active', daysLeft: null, blocked: false, expired: false, trial: false, active: true, periodEnd: null };
   const blocked = !!d.blocked;
   let status = d.subscription_status || 'active';
-  let daysLeft = null, trial = false, expired = false;
-  if (status === 'trial' && d.trial_ends_at) {
-    const ms = new Date(d.trial_ends_at).getTime() - Date.now();
-    daysLeft = Math.max(0, Math.ceil(ms / 86400000));
-    trial = true;
-    if (ms <= 0) { expired = true; status = 'expired'; }
+  const endRaw = d.current_period_end || (status === 'trial' ? d.trial_ends_at : null);
+  const endMs = endRaw ? new Date(endRaw).getTime() : null;
+  let daysLeft = null, trial = status === 'trial', expired = status === 'expired';
+
+  if ((status === 'trial' || status === 'active') && endMs != null) {
+    daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86400000));
+    if (endMs <= Date.now()) { expired = true; status = 'expired'; }
   }
   if (status === 'expired') expired = true;
-  return { canUse: !blocked && !expired, status, daysLeft, blocked, expired, trial: trial && !expired, active: status === 'active' };
+
+  return {
+    canUse: !blocked && !expired,
+    status, daysLeft, blocked, expired,
+    trial: trial && !expired,
+    active: status === 'active' && !expired,
+    periodEnd: endMs,
+  };
 }
 
-// Next renewal date + days left. Monthly → 1st of next month; yearly → the
-// anniversary of period_start.
+// Renewal date + days left, straight from the concrete period end (no cycle math).
 export function renewalInfo(d) {
-  if (!d) return null;
-  const cycle = d.billing_cycle || 'monthly';
-  const now = new Date();
-  let next;
-  if (cycle === 'yearly') {
-    const start = d.period_start ? new Date(`${d.period_start}T00:00:00`) : now;
-    next = new Date(now.getFullYear(), start.getMonth(), start.getDate());
-    if (next <= now) next = new Date(now.getFullYear() + 1, start.getMonth(), start.getDate());
-  } else {
-    next = new Date(now.getFullYear(), now.getMonth() + 1, 1);   // 1st of next month
-  }
-  const daysLeft = Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 86400000));
+  const s = subscriptionState(d);
+  if (s.periodEnd == null) return null;
+  const next = new Date(s.periodEnd);
   const dateStr = `${String(next.getDate()).padStart(2, '0')}/${String(next.getMonth() + 1).padStart(2, '0')}/${next.getFullYear()}`;
-  return { cycle, date: next, dateStr, daysLeft };
+  return { date: next, dateStr, daysLeft: s.daysLeft };
+}
+
+// Should the doctor see the "payment due" bar? Only for an ACTIVE (paid) doctor
+// within DUE_WINDOW days of their period end, or once they've declared payment
+// for the current month (so the bar shows "En vérification" until the admin
+// renews). Trials use their own bar; lapsed accounts hit the blocked screen.
+export const DUE_WINDOW_DAYS = 5;
+export function billingDue(d, payments = null) {
+  const s = subscriptionState(d);
+  if (!s.active || s.blocked || s.periodEnd == null) return null;
+  const list = payments || d?.payments || d?.doctor_payments || [];
+  const period = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+  const declared = list.some((p) => p.status === 'declared' && (!p.period || fmtPeriod(p.period) === fmtPeriod(period)));
+  if (s.daysLeft > DUE_WINDOW_DAYS && !declared) return null;
+  return { daysLeft: s.daysLeft, declared, periodEnd: s.periodEnd };
+}
+
+const FR_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+// Render a payment period label: 'YYYY-MM' → 'Juillet 2026'; free text kept as-is.
+export function fmtPeriod(period) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(period || '').trim());
+  if (!m) return period || '';
+  return `${FR_MONTHS[Number(m[2]) - 1] || ''} ${m[1]}`.trim();
 }
 
 // Payment reference a doctor mentions on the bank transfer (doctor + month).

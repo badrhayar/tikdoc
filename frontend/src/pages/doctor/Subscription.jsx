@@ -216,8 +216,8 @@ export default function Subscription({ state, setState, go }) {
           : sub.blocked ? "Contactez l'administration pour réactiver votre compte."
           : sub.expired ? 'Choisissez une formule ci-dessous et réglez pour réactiver.'
           : sub.trial ? 'Choisissez une formule pour continuer après la période d\'essai.'
-          : renew ? `Renouvellement ${renew.cycle === 'yearly' ? 'annuel' : 'mensuel'} le ${renew.dateStr} — dans ${renew.daysLeft} jour(s).`
-          : 'Facturé le 1er de chaque mois.';
+          : renew ? `Abonnement payé jusqu'au ${renew.dateStr} — dans ${renew.daysLeft} jour(s).`
+          : 'Facturé chaque mois.';
         return (
           <div style={{ background: grad, borderRadius: 16, padding: isMobile ? '18px 20px' : '24px 30px', marginBottom: 28, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>

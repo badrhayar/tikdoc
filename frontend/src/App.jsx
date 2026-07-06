@@ -30,6 +30,7 @@ const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
 const Contact        = lazy(() => import('./pages/Contact'));
 const PatientMessages = lazy(() => import('./pages/PatientMessages'));
 const Confidentialite = lazy(() => import('./pages/Confidentialite'));
+const PrescriptionVerify = lazy(() => import('./pages/PrescriptionVerify'));
 
 const DOCTOR_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs',
@@ -59,6 +60,7 @@ const SCREEN_MAP = {
   contact:     Contact,
   pmessages:   PatientMessages,
   confidentialite: Confidentialite,
+  rxverify:    PrescriptionVerify,
 };
 
 function AppShell() {

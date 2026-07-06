@@ -232,16 +232,25 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   const [slugBusy, setSlugBusy] = useState(false);
-  const bookingOrigin = typeof window !== 'undefined' ? window.location.origin.replace(/^https?:\/\//, '') : 'tabibo.ma';
+  const [slugError, setSlugError] = useState('');
+  // Public booking origin — always the live domain, never the Vercel preview URL.
+  const bookingOrigin = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/^https?:\/\//, '').replace(/\/$/, '');
   const saveSlug = async () => {
     if (!myDoctor?.id) return;
     setSlugBusy(true);
+    setSlugError('');
     try {
       const saved = await setMySlug(myDoctor.id, form.slug);
       setForm(p => ({ ...p, slug: saved }));
       setState({ myDoctor: { ...myDoctor, slug: saved }, toast: 'Lien personnalisé enregistré ✓', toastShow: true });
     } catch (e) {
-      setState({ toast: e?.message || 'Identifiant indisponible.', toastShow: true });
+      const msg = e?.message || '';
+      // Uniqueness conflict → inline red error under the field (not just a toast).
+      if (/déjà pris|already|unique|duplicate|23505/i.test(msg)) {
+        setSlugError('Ce lien existe déjà, essayez-en un autre.');
+      } else {
+        setSlugError(msg || 'Identifiant indisponible.');
+      }
     } finally { setSlugBusy(false); }
   };
 
@@ -293,14 +302,20 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
             <span style={{ fontSize: 13.5, color: MUTED, whiteSpace: 'nowrap', direction: 'ltr' }}>{bookingOrigin}/</span>
             <input
               value={form.slug}
-              onChange={e => updateForm('slug', e.target.value)}
+              onChange={e => { updateForm('slug', e.target.value); if (slugError) setSlugError(''); }}
               placeholder="dr-aya-chakkour"
-              style={{ flex: '1 1 200px', minWidth: 0, padding: '10px 12px', border: `1.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13.5, color: DARK, outline: 'none', direction: 'ltr' }}
+              style={{ flex: '1 1 200px', minWidth: 0, padding: '10px 12px', border: `1.5px solid ${slugError ? '#E0596F' : BORDER}`, borderRadius: 10, fontSize: 13.5, color: DARK, outline: 'none', direction: 'ltr', background: slugError ? '#FEF2F4' : '#fff' }}
             />
             <button onClick={saveSlug} disabled={slugBusy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: slugBusy ? 'default' : 'pointer', opacity: slugBusy ? 0.7 : 1 }}>
               {slugBusy ? '…' : 'Enregistrer'}
             </button>
           </div>
+          {slugError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12.5, fontWeight: 600, color: '#C2415C' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+              {slugError}
+            </div>
+          )}
         </div>
       )}
 

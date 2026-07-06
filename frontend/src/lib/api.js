@@ -583,7 +583,7 @@ export async function fetchDoctorsForReview(status = null) {
   // `doctors` has two FKs to users (user_id, reviewed_by) → disambiguate the embed.
   let q = supabase
     .from('doctors')
-    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, plan, subscription_status, blocked, trial_ends_at, billing_cycle, period_start, user:users!doctors_user_id_fkey(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url), payments:doctor_payments(id, period, amount, status, declared_at, confirmed_at, created_at)')
+    .select('id, specialty, city, clinic_address, cnom, verification_status, rejection_reason, rejection_note, submitted_at, reviewed_at, plan, subscription_status, blocked, trial_ends_at, billing_cycle, period_start, current_period_end, user:users!doctors_user_id_fkey(id, full_name, email, phone, cin_or_inpe), docs:doctor_documents(id, doc_type, file_url), payments:doctor_payments(id, period, amount, status, declared_at, confirmed_at, created_at)')
     .order('submitted_at', { ascending: false });
   if (status) q = q.eq('verification_status', status);
   const { data, error } = await q;
@@ -625,6 +625,31 @@ export async function fetchDoctorPayments(doctorId) {
 /** Doctor declares a payment as made ("J'ai payé") — secured RPC. */
 export async function declarePayment(paymentId) {
   const { error } = await supabase.rpc('declare_payment', { p_id: paymentId });
+  if (error) throw error;
+  return true;
+}
+
+/**
+ * Doctor declares the CURRENT month's subscription payment ("J'ai payé" on the
+ * profile bar). Creates the month's due row if needed and flags it 'declared'.
+ * Returns the payment row so the UI can switch the button to "En vérification".
+ */
+export async function declareCurrentPayment() {
+  const { data, error } = await supabase.rpc('declare_current_payment');
+  if (error) throw error;
+  return data;
+}
+
+/** Admin: confirm the transfer + extend the subscription one month (manual renew). */
+export async function adminRenewSubscription(doctorId, months = 1) {
+  const { error } = await supabase.rpc('admin_renew_subscription', { p_doctor_id: doctorId, p_months: months });
+  if (error) throw error;
+  return true;
+}
+
+/** Admin: stop a doctor's subscription immediately. */
+export async function adminStopSubscription(doctorId) {
+  const { error } = await supabase.rpc('admin_stop_subscription', { p_doctor_id: doctorId });
   if (error) throw error;
   return true;
 }
@@ -1200,6 +1225,55 @@ export async function deletePrescriptionTemplate(id) {
   const { error } = await supabase.from('prescription_templates').delete().eq('id', id);
   if (error) throw error;
   return true;
+}
+
+/** Doctor "sends" an ordonnance to the patient's Tabibo space (marks sent_at). */
+export async function sendPrescriptionToPatient(id) {
+  const { data, error } = await supabase
+    .from('prescriptions').update({ sent_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+/** Delete an ordonnance (e.g. a mistake). */
+export async function deletePrescription(id) {
+  const { error } = await supabase.from('prescriptions').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+/**
+ * Ordonnances the signed-in patient has RECEIVED (sent_at set). Doctor letterhead
+ * (name / specialty / city / clinic) is resolved from the public directory so the
+ * patient can regenerate the exact same PDF on their side.
+ */
+export async function fetchMyPrescriptions() {
+  const { data, error } = await supabase
+    .from('prescriptions')
+    .select('id, doctor_id, patient_name, items, notes, ref, created_at, sent_at')
+    .not('sent_at', 'is', null)
+    .order('sent_at', { ascending: false });
+  if (error) throw error;
+  const rows = data || [];
+  const ids = [...new Set(rows.map((r) => r.doctor_id))];
+  let dir = {};
+  if (ids.length) {
+    const { data: docs } = await supabase
+      .from('doctor_directory')
+      .select('id, full_name, specialty, city, clinic_address')
+      .in('id', ids);
+    dir = Object.fromEntries((docs || []).map((d) => [d.id, d]));
+  }
+  return rows.map((r) => ({ ...r, doctor: dir[r.doctor_id] || null }));
+}
+
+/** Public QR verification of an ordonnance reference (no patient / drug data). */
+export async function verifyPrescription(ref) {
+  if (!ref) return null;
+  const { data, error } = await supabase.rpc('verify_prescription', { p_ref: ref });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row || null;
 }
 
 // ── Staff (secretary / assistant) ──────────────────────────────────────────

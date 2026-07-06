@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment } from '../lib/api';
+import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment, adminRenewSubscription, adminStopSubscription } from '../lib/api';
 import LocationPicker from '../components/LocationPicker';
-import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState, renewalInfo } from '../shared.jsx';
+import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState, renewalInfo, fmtPeriod } from '../shared.jsx';
 
 const DOC_LABEL = Object.fromEntries(CREDENTIAL_DOCS.map((d) => [d.key, d.label]));
 
@@ -80,6 +80,11 @@ export default function Admin() {
   const detail = reviewList.find((d) => d.id === detailId) || null;   // live snapshot
   // Approved doctors that are blocked or whose subscription has lapsed.
   const expiredList = reviewList.filter((d) => d.verification_status === 'approved' && (d.blocked || subscriptionState(d).expired));
+  // "Notifications paiement": every payment a doctor declared ("Dr X a payé"),
+  // newest first — the admin verifies the transfer then renews the subscription.
+  const paymentNotifs = reviewList
+    .flatMap((d) => (d.payments || []).filter((p) => p.status === 'declared').map((p) => ({ doc: d, p })))
+    .sort((a, b) => new Date(b.p.declared_at || 0) - new Date(a.p.declared_at || 0));
   // Map a user id → their doctor record (subscription + payments) for the Comptes tab.
   const docByUser = {};
   reviewList.forEach((d) => { if (d.user?.id) docByUser[d.user.id] = d; });
@@ -87,7 +92,10 @@ export default function Admin() {
   const refreshDetail = () => loadReview();
   const blockToggle = async (doc) => { try { await adminSetBlocked(doc.id, !doc.blocked); loadReview(); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
   const setSub = async (doc, status) => { try { await adminSetSubscription(doc.id, status); loadReview(); setState({ toast: status === 'active' ? 'Abonnement réactivé ✓' : 'Marqué comme expiré', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
-  const confirmPay = async (doc, p) => { try { await adminConfirmPayment(p.id, doc.id); loadReview(); setState({ toast: 'Paiement confirmé — compte réactivé ✓', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  // Confirm the transfer was received + extend the subscription one month (manual renewal).
+  const renewSub = async (doc) => { try { await adminRenewSubscription(doc.id); loadReview(); setState({ toast: `Abonnement renouvelé (+1 mois) pour ${doc.user?.full_name || 'le médecin'} ✓`, toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  const stopSub = async (doc) => { if (!window.confirm(`Arrêter l'abonnement de ${doc.user?.full_name || 'ce médecin'} ? Son espace sera suspendu.`)) return; try { await adminStopSubscription(doc.id); loadReview(); setState({ toast: 'Abonnement arrêté', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
+  const confirmPay = async (doc, p) => { try { await adminRenewSubscription(doc.id); loadReview(); setState({ toast: 'Paiement confirmé — abonnement renouvelé ✓', toastShow: true }); } catch (e) { setState({ toast: e?.message || 'Erreur', toastShow: true }); } };
   const addDue = async (doc) => {
     if (!newPay.period.trim()) { setState({ toast: 'Indiquez la période (ex. Juin 2026).', toastShow: true }); return; }
     try { await adminAddPayment(doc.id, newPay); setNewPay({ period: '', amount: 299 }); loadReview(); setState({ toast: 'Paiement dû ajouté', toastShow: true }); }
@@ -197,10 +205,11 @@ export default function Admin() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BORDER}`, marginBottom: 24 }}>
-          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)'], ['company', 'Société']].map(([k, label]) => (
+          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['payments', 'Paiements'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)'], ['company', 'Société']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>
               {label}
               {k === 'review' && pendingCount > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#E2748A', borderRadius: 99, padding: '1px 7px' }}>{pendingCount}</span>}
+              {k === 'payments' && paymentNotifs.length > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#0E7C52', borderRadius: 99, padding: '1px 7px' }}>{paymentNotifs.length}</span>}
               {k === 'subs' && expiredList.length > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#C28A1B', borderRadius: 99, padding: '1px 7px' }}>{expiredList.length}</span>}
             </button>
           ))}
@@ -241,14 +250,14 @@ export default function Admin() {
                       const s = doc ? subscriptionState(doc) : null;
                       const declared = doc ? (doc.payments || []).find((p) => p.status === 'declared') : null;
                       const rnw = doc ? renewalInfo(doc) : null;
-                      const dueSoon = rnw && rnw.daysLeft <= (rnw.cycle === 'yearly' ? 30 : 7);
+                      const dueSoon = rnw && rnw.daysLeft <= 5;
                       const chip = !doc ? null
                         : declared ? { bg: '#FEF6E7', c: '#C28A1B', t: 'A payé — à valider' }
                         : doc.blocked ? { bg: '#FCE7EE', c: '#C2466A', t: 'Bloqué' }
                         : s.expired ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Expiré' }
-                        : s.trial ? { bg: s.daysLeft <= 14 ? '#FEF6E7' : '#E7F6EE', c: s.daysLeft <= 14 ? '#C28A1B' : '#0E7C52', t: `Essai · paiement dû ${s.daysLeft}j` }
+                        : s.trial ? { bg: s.daysLeft <= 14 ? '#FEF6E7' : '#E7F6EE', c: s.daysLeft <= 14 ? '#C28A1B' : '#0E7C52', t: `Essai · ${s.daysLeft}j` }
                         : dueSoon ? { bg: '#FEF6E7', c: '#C28A1B', t: `Paiement dû · ${rnw.daysLeft}j` }
-                        : { bg: '#E7F6EE', c: '#0E7C52', t: `Actif · renouv. ${rnw ? rnw.daysLeft + 'j' : ''}` };
+                        : { bg: '#E7F6EE', c: '#0E7C52', t: rnw ? `Actif — expire le ${rnw.dateStr}` : 'Actif' };
                       return (
                         <tr key={a.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                           <td style={{ padding: '12px 16px' }}>
@@ -375,30 +384,37 @@ export default function Admin() {
                         : s.trial ? { bg: '#E7F6EE', c: '#0E7C52', t: `Essai — ${s.daysLeft} j restants` }
                         : { bg: '#E7F6EE', c: '#0E7C52', t: 'Abonnement actif' };
                       const pays = detail.payments || [];
+                      const rnw = renewalInfo(detail);
                       return (
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '18px 0 10px' }}>
                             <span style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>Abonnement &amp; paiements</span>
                             <span style={{ background: pill.bg, color: pill.c, borderRadius: 20, padding: '3px 11px', fontSize: 12, fontWeight: 700 }}>{pill.t}</span>
                           </div>
+                          {rnw && !s.expired && (
+                            <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 10 }}>
+                              {s.trial ? "Essai jusqu'au" : 'Abonnement payé jusqu\'au'} <strong style={{ color: DARK }}>{rnw.dateStr}</strong> · {rnw.daysLeft} j restant{rnw.daysLeft > 1 ? 's' : ''}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                            <button onClick={() => blockToggle(detail)} style={{ background: detail.blocked ? '#E7F6EE' : '#FCE8EC', color: detail.blocked ? '#0E7C52' : '#C2415C', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{detail.blocked ? 'Débloquer' : 'Bloquer'}</button>
-                            {s.expired
-                              ? <button onClick={() => setSub(detail, 'active')} style={{ background: '#E7F6EE', color: '#0E7C52', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Réactiver l'abonnement</button>
-                              : <button onClick={() => setSub(detail, 'expired')} style={{ background: '#FEF6E7', color: '#C28A1B', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Marquer expiré</button>}
+                            <button onClick={() => renewSub(detail)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Renouveler l'abonnement (+1 mois)</button>
+                            <button onClick={() => blockToggle(detail)} style={{ background: detail.blocked ? '#E7F6EE' : '#FEF6E7', color: detail.blocked ? '#0E7C52' : '#C28A1B', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{detail.blocked ? 'Débloquer' : 'Bloquer'}</button>
+                            {!s.expired && (
+                              <button onClick={() => stopSub(detail)} style={{ background: '#FCE8EC', color: '#C2415C', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Arrêter l'abonnement</button>
+                            )}
                           </div>
-                          {/* Payments */}
+                          {/* Payments — which month the doctor marked as paid */}
                           {pays.length === 0 && <div style={{ fontSize: 13, color: MUTED, marginBottom: 8 }}>Aucun paiement enregistré.</div>}
                           {pays.map((p) => {
-                            const pp = p.status === 'paid' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Payé ✓' } : p.status === 'declared' ? { bg: '#FEF6E7', c: '#C28A1B', t: 'Signalé par le médecin' } : { bg: '#F3F4F6', c: '#6B7B76', t: 'Dû' };
+                            const pp = p.status === 'paid' ? { bg: '#E7F6EE', c: '#0E7C52', t: 'Payé ✓' } : p.status === 'declared' ? { bg: '#FEF6E7', c: '#C28A1B', t: 'A signalé « J\'ai payé »' } : { bg: '#F3F4F6', c: '#6B7B76', t: 'Dû' };
                             return (
                               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{p.period} · {p.amount} MAD</div>
+                                  <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{fmtPeriod(p.period)} · {p.amount} MAD</div>
                                   <span style={{ display: 'inline-block', marginTop: 3, background: pp.bg, color: pp.c, borderRadius: 99, padding: '2px 9px', fontSize: 11.5, fontWeight: 700 }}>{pp.t}</span>
                                 </div>
                                 {p.status !== 'paid' && (
-                                  <button onClick={() => confirmPay(detail, p)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Confirmer reçu</button>
+                                  <button onClick={() => confirmPay(detail, p)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Confirmer &amp; renouveler</button>
                                 )}
                               </div>
                             );
@@ -442,6 +458,33 @@ export default function Admin() {
                 </div>
               </div>
             )}
+
+        {tab === 'payments' && (
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}` }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: DARK }}>Notifications de paiement</h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Médecins ayant signalé « J'ai payé ». Vérifiez la réception du virement, puis renouvelez leur abonnement.</p>
+            </div>
+            <div>
+              {paymentNotifs.length === 0 && (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: MUTED, fontSize: 14 }}>Aucun paiement en attente de validation.</div>
+              )}
+              {paymentNotifs.map(({ doc, p }) => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 20px', borderTop: `1px solid ${BORDER}` }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{initials(doc.user?.full_name)}</div>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>
+                      <span style={{ color: PRIMARY }}>{doc.user?.full_name || 'Médecin'}</span> a payé
+                    </div>
+                    <div style={{ fontSize: 12.5, color: MUTED }}>{fmtPeriod(p.period)} · {p.amount} MAD · signalé le {p.declared_at ? new Date(p.declared_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+                  </div>
+                  <button onClick={() => setDetailId(doc.id)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Voir le profil</button>
+                  <button onClick={() => renewSub(doc)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Paiement reçu — renouveler</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {tab === 'subs' && (
           <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>

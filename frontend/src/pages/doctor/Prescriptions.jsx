@@ -3,14 +3,19 @@ import QRCode from 'qrcode';
 import { useViewport } from '../../hooks/useViewport';
 import { useApp } from '../../context/AppContext';
 import { docDisplayName } from '../../shared.jsx';
-import { buildPrescriptionPDF, pdfOpen, pdfDownload } from '../../lib/pdf';
+import { buildPrescriptionPDF, pdfOpen, pdfDownload, loadBrandLogo } from '../../lib/pdf';
 import {
   createPrescription,
   fetchPrescriptions,
   fetchPrescriptionTemplates,
   savePrescriptionTemplate,
   deletePrescriptionTemplate,
+  sendPrescriptionToPatient,
+  deletePrescription,
 } from '../../lib/api';
+
+// The QR/verification link always points at the live domain, never a preview URL.
+const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/\/$/, '');
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -200,7 +205,7 @@ export default function Prescriptions() {
     return refMap.current.ref;
   };
   const makeQr = async (ref) => {
-    try { return await QRCode.toDataURL(`${window.location.origin}/?rx=${ref}`, { width: 240, margin: 0 }); }
+    try { return await QRCode.toDataURL(`${PUBLIC_BASE}/verifier-ordonnance?rx=${ref}`, { width: 240, margin: 0 }); }
     catch { return ''; }
   };
 
@@ -224,15 +229,15 @@ export default function Prescriptions() {
   const generatePDF = async () => {
     const its = ensureReady(); if (!its) return;
     const ref = currentRef(its);
-    const qr = await makeQr(ref);
-    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr }));
+    const [qr, logo] = await Promise.all([makeQr(ref), loadBrandLogo()]);
+    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr, logo }));
     persist(its, ref);                           // auto-save so nothing is lost
   };
   const downloadPDF = async () => {
     const its = ensureReady(); if (!its) return;
     const ref = currentRef(its);
-    const qr = await makeQr(ref);
-    pdfDownload(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr }), `ordonnance-${patientName.trim() || 'patient'}.pdf`);
+    const [qr, logo] = await Promise.all([makeQr(ref), loadBrandLogo()]);
+    pdfDownload(buildPrescriptionPDF({ ...buildDoctorDoc(its, patientName.trim(), notes.trim()), ref, qr, logo }), `ordonnance-${patientName.trim() || 'patient'}.pdf`);
     setDownloaded(true);
     persist(its, ref);                           // auto-save
   };
@@ -247,8 +252,35 @@ export default function Prescriptions() {
 
   const openRecent = async (p) => {
     const its = Array.isArray(p.items) ? p.items : [];
-    const qr = p.ref ? await makeQr(p.ref) : '';
-    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, p.patient_name || '', p.notes || ''), ref: p.ref || '', qr }));
+    const [qr, logo] = await Promise.all([p.ref ? makeQr(p.ref) : Promise.resolve(''), loadBrandLogo()]);
+    pdfOpen(buildPrescriptionPDF({ ...buildDoctorDoc(its, p.patient_name || '', p.notes || ''), ref: p.ref || '', qr, logo }));
+  };
+
+  // Send a saved ordonnance to the patient's Tabibo space (needs a linked account).
+  const [sendBusyId, setSendBusyId] = useState(null);
+  const sendToPatient = async (p) => {
+    if (!p.patient_id) {
+      setState({ toast: "Ordonnance non liée à un compte patient. Sélectionnez un patient enregistré (« Fiche liée ») pour pouvoir l'envoyer.", toastShow: true });
+      return;
+    }
+    setSendBusyId(p.id);
+    try {
+      await sendPrescriptionToPatient(p.id);
+      await refreshRecent();
+      setState({ toast: 'Ordonnance envoyée au patient ✓', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Envoi échoué : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setSendBusyId(null); }
+  };
+  const removeRecent = async (p) => {
+    if (!window.confirm('Supprimer cette ordonnance ? Cette action est définitive.')) return;
+    try {
+      await deletePrescription(p.id);
+      await refreshRecent();
+      setState({ toast: 'Ordonnance supprimée', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Suppression échouée : ' + (e?.message || 'erreur'), toastShow: true });
+    }
   };
 
   const dropRef = useRef(null);
@@ -443,25 +475,46 @@ export default function Prescriptions() {
               )}
               {recent.map((p, idx) => (
                 <div key={p.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: idx < recent.length - 1 ? `1px solid ${BORDER}` : 'none', background: '#fff' }}
+                  style={{ padding: '14px 16px', borderBottom: idx < recent.length - 1 ? `1px solid ${BORDER}` : 'none', background: '#fff' }}
                   onMouseEnter={e => e.currentTarget.style.background = BG}
                   onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.patient_name || 'Patient'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.patient_name || 'Patient'}
+                        {p.sent_at && <span style={{ marginLeft: 7, fontSize: 10.5, fontWeight: 700, color: '#138257', background: '#E7F6EE', borderRadius: 99, padding: '1px 7px' }}>Envoyée ✓</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+                        {fmtDate(p.created_at)} · {Array.isArray(p.items) ? p.items.length : 0} médicament{(Array.isArray(p.items) ? p.items.length : 0) !== 1 ? 's' : ''}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-                      {fmtDate(p.created_at)} · {Array.isArray(p.items) ? p.items.length : 0} médicament{(Array.isArray(p.items) ? p.items.length : 0) !== 1 ? 's' : ''}
-                    </div>
+                    <button
+                      onClick={() => openRecent(p)}
+                      title="Ouvrir le PDF"
+                      style={{ height: 32, padding: '0 12px', borderRadius: 8, border: `1.5px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      PDF
+                    </button>
                   </div>
-                  <button
-                    onClick={() => openRecent(p)}
-                    title="Ouvrir le PDF"
-                    style={{ height: 32, padding: '0 12px', borderRadius: 8, border: `1.5px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    PDF
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button
+                      onClick={() => sendToPatient(p)}
+                      disabled={sendBusyId === p.id || !!p.sent_at}
+                      title={p.patient_id ? 'Envoyer au patient' : 'Patient non lié à un compte'}
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, borderRadius: 8, border: 'none', background: p.sent_at ? '#EDF3F0' : PRIMARY, color: p.sent_at ? MUTED : '#fff', fontSize: 12.5, fontWeight: 700, cursor: (sendBusyId === p.id || p.sent_at) ? 'default' : 'pointer', opacity: sendBusyId === p.id ? 0.7 : 1 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                      {p.sent_at ? 'Envoyée' : (sendBusyId === p.id ? 'Envoi…' : 'Envoyer au patient')}
+                    </button>
+                    <button
+                      onClick={() => removeRecent(p)}
+                      title="Supprimer l'ordonnance"
+                      style={{ width: 40, height: 34, borderRadius: 8, border: `1.5px solid ${BORDER}`, background: '#fff', color: '#D14343', fontSize: 15, cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

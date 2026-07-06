@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
-import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, docDisplayName } from '../../shared.jsx';
+import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, billingDue, docDisplayName } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
-import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox } from '../../lib/api';
+import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox, fetchDoctorPayments, declareCurrentPayment, notifyVerification } from '../../lib/api';
 import PhoneField from '../../components/PhoneField';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
@@ -60,6 +60,25 @@ const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUT = '#6B7B76';
+
+// Payment-due bar copy, in the three site languages.
+const PAY_T = {
+  fr: {
+    dueIn: (n) => n <= 0 ? "Votre abonnement arrive à échéance aujourd'hui" : `Paiement dû dans ${n} jour${n > 1 ? 's' : ''}`,
+    pay: "J'ai payé", review: 'En vérification', manage: 'Régler mon abonnement',
+    declared: 'Paiement signalé — en attente de confirmation par Tabibo.',
+  },
+  en: {
+    dueIn: (n) => n <= 0 ? 'Your subscription is due today' : `Payment due in ${n} day${n > 1 ? 's' : ''}`,
+    pay: "I've paid", review: 'Under review', manage: 'Manage my subscription',
+    declared: 'Payment reported — awaiting confirmation by Tabibo.',
+  },
+  ar: {
+    dueIn: (n) => n <= 0 ? 'اشتراكك مستحق اليوم' : `الدفع مستحق خلال ${n} ${n > 1 ? 'أيام' : 'يوم'}`,
+    pay: 'لقد دفعت', review: 'قيد المراجعة', manage: 'إدارة اشتراكي',
+    declared: 'تم الإبلاغ عن الدفع — في انتظار تأكيد Tabibo.',
+  },
+};
 
 const IC = {
   doctor:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -159,6 +178,33 @@ export default function DoctorApp() {
   const docAvatar = state.appUser?.avatar_url || '';
   const sub = subscriptionState(state.myDoctor);
   const todayISO = moroccoNow().dateISO;
+
+  // ── Monthly payment-due bar (manual renewal; NO auto-renew) ─────────────────
+  const lang = state.lang || 'fr';
+  const [payments, setPayments] = useState([]);
+  const [payBusy, setPayBusy] = useState(false);
+  const doctorRowId = state.myDoctor?.id;
+  // Only an active (paid) doctor nearing their period end needs the bar.
+  const duePeek = sub.active && sub.daysLeft != null && sub.daysLeft <= 5;
+  useEffect(() => {
+    if (!doctorRowId || (!duePeek)) return;
+    fetchDoctorPayments(doctorRowId).then(setPayments).catch(() => {});
+  }, [doctorRowId, duePeek]);
+  const due = billingDue(state.myDoctor, payments);
+  const declarePay = async () => {
+    setPayBusy(true);
+    try {
+      const row = await declareCurrentPayment();
+      if (row) setPayments((list) => {
+        const rest = list.filter((p) => p.id !== row.id);
+        return [row, ...rest];
+      });
+      notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: state.myDoctor?.plan || '', amount: row?.amount });
+      setState({ toast: PAY_T[lang].declared, toastShow: true });
+    } catch (e) {
+      setState({ toast: (e?.message || 'Erreur'), toastShow: true });
+    } finally { setPayBusy(false); }
+  };
   // The motif list must mirror exactly the services the doctor defined (Settings).
   const motifOpts = (state.services?.length ? state.services.map(s => s.name).filter(Boolean) : MOTIF_OPTS);
 
@@ -399,6 +445,28 @@ export default function DoctorApp() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             Essai gratuit — {sub.daysLeft} jour{sub.daysLeft > 1 ? 's' : ''} restant{sub.daysLeft > 1 ? 's' : ''}
             <span style={{ textDecoration:'underline', fontWeight:700 }}>Gérer mon abonnement</span>
+          </div>
+        )}
+
+        {/* Monthly payment-due bar — appears ~5 days before the period end. The
+            "J'ai payé" button flips to "En vérification" until the admin renews. */}
+        {due && (
+          <div dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', padding:'9px 16px', fontSize:13, fontWeight:600, color: due.daysLeft <= 2 ? '#9A6510' : '#0E7C52', background: due.daysLeft <= 2 ? '#FEF6E7' : '#E7F6EE', borderBottom:`1px solid ${due.daysLeft <= 2 ? '#F6E0AE' : '#CDE7DA'}` }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:8 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>
+              {PAY_T[lang].dueIn(due.daysLeft)}
+            </span>
+            {due.declared ? (
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#fff', color:'#C28A1B', border:'1px solid #F0D18A', borderRadius:99, padding:'5px 14px', fontSize:12.5, fontWeight:700 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                {PAY_T[lang].review}
+              </span>
+            ) : (
+              <button onClick={declarePay} disabled={payBusy} style={{ background: G, color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>
+                {PAY_T[lang].pay}
+              </button>
+            )}
+            <span onClick={() => goNav('dabo')} style={{ textDecoration:'underline', fontWeight:700, cursor:'pointer' }}>{PAY_T[lang].manage}</span>
           </div>
         )}
 

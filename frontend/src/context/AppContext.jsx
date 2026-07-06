@@ -273,7 +273,12 @@ export function AppProvider({ children }) {
         const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
         const slug = params.get('dr') || (/^dr-[a-z0-9-]+$/i.test(path) ? path : null);
         const doc = params.get('doc');
-        if (slug) {
+        const rx = params.get('rx');
+        if (rx) {
+          // Scanned ordonnance QR → public verification screen.
+          dispatch({ rxRef: rx, screen: 'rxverify' });
+          window.history.replaceState({}, '', '/');
+        } else if (slug) {
           const d = await fetchDoctorBySlug(slug);
           if (d?.id) dispatch({ selDoc: d.id, screen: 'profile' });
           window.history.replaceState({}, '', '/');

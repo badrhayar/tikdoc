@@ -3,8 +3,12 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, getDocumentUrl } from '../lib/api';
+import QRCode from 'qrcode';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, getDocumentUrl, fetchMyPrescriptions } from '../lib/api';
+import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
 import PhoneField from '../components/PhoneField';
+
+const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/\/$/, '');
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
@@ -235,6 +239,28 @@ export default function PatientAccount() {
     if (!path) return;
     try { const url = await getDocumentUrl(path); if (url) window.open(url, '_blank'); }
     catch (e) { setState({ toast: 'Ouverture du document impossible.', toastShow: true }); }
+  };
+
+  // ── Ordonnances the patient has received from their doctors ─────────────────
+  const [myRx, setMyRx] = useState([]);
+  useEffect(() => {
+    if (!state.appUser?.id) return;
+    fetchMyPrescriptions().then(setMyRx).catch(() => {});
+  }, [state.appUser?.id]);
+  // Rebuild the exact same branded PDF on the patient's side (from the shared row).
+  const openMyRx = async (p) => {
+    const d = p.doctor || {};
+    const [qr, logo] = await Promise.all([
+      p.ref ? QRCode.toDataURL(`${PUBLIC_BASE}/verifier-ordonnance?rx=${p.ref}`, { width: 240, margin: 0 }).catch(() => '') : Promise.resolve(''),
+      loadBrandLogo(),
+    ]);
+    pdfOpen(buildPrescriptionPDF({
+      doctorName: docDisplayName(d.full_name, d.specialty),
+      specialty: SPEC_LABEL(d.specialty), city: d.city, clinic: d.clinic_address,
+      patientName: p.patient_name || state.appUser?.full_name || '',
+      dateLabel: new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+      items: Array.isArray(p.items) ? p.items : [], notes: p.notes || '', ref: p.ref || '', qr, logo,
+    }));
   };
 
   const sendMsg = async () => {
@@ -519,6 +545,44 @@ export default function PatientAccount() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Ordonnances received from doctors */}
+            <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK, display:'flex', alignItems:'center', gap:8 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A06A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>
+                  Mes ordonnances
+                </h2>
+                <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{myRx.length}</span>
+              </div>
+              <p style={{ margin:'0 0 14px', fontSize:12.5, color:MUT, lineHeight:1.5 }}>Les ordonnances que vos médecins vous ont envoyées.</p>
+              {myRx.length === 0 ? (
+                <div style={{ border:`1px dashed ${BORDER_STRONG}`, borderRadius:12, padding:'18px 14px', textAlign:'center', color:MUT, fontSize:12.5 }}>
+                  Aucune ordonnance reçue pour le moment.
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+                  {myRx.map((p, i) => {
+                    const [tBg, tFg] = tint(i % 6);
+                    const count = Array.isArray(p.items) ? p.items.length : 0;
+                    return (
+                      <div key={p.id} style={{ display:'flex', alignItems:'center', gap:11, border:`1px solid ${BORDER}`, borderRadius:12, padding:'11px 13px' }}>
+                        <span style={{ width:36, height:36, borderRadius:10, background:tBg, color:tFg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          <Icon name="clipboard" size={18} />
+                        </span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docDisplayName(p.doctor?.full_name, p.doctor?.specialty) || 'Ordonnance'}</div>
+                          <div style={{ fontSize:11.5, color:'#9AA8A2' }}>{new Date(p.sent_at || p.created_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })} · {count} médicament{count !== 1 ? 's' : ''}</div>
+                        </div>
+                        <button title="Ouvrir le PDF" onClick={() => openMyRx(p)} style={{ background:BG, border:'1px solid #DCE5E0', color:DARK, cursor:'pointer', height:34, padding:'0 12px', borderRadius:9, fontSize:12.5, fontWeight:700, flexShrink:0 }}>
+                          PDF
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Documents */}

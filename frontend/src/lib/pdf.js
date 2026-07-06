@@ -8,6 +8,33 @@ const GREEN = [22, 160, 106];
 const DARK = [21, 49, 74];
 const MUT = [107, 123, 118];
 
+// Load the Tabibo brand icon once and cache it as a PNG data URL so it can be
+// embedded in generated PDFs (same-origin → the canvas never taints). Resolves
+// to null if unavailable, and the letterhead falls back to the wordmark alone.
+let _logoPromise = null;
+export function loadBrandLogo() {
+  if (_logoPromise) return _logoPromise;
+  _logoPromise = new Promise((resolve) => {
+    try {
+      if (typeof document === 'undefined') { resolve(null); return; }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth || 192;
+          c.height = img.naturalHeight || 192;
+          c.getContext('2d').drawImage(img, 0, 0);
+          resolve(c.toDataURL('image/png'));
+        } catch { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = '/icons/icon-192.png';
+    } catch { resolve(null); }
+  });
+  return _logoPromise;
+}
+
 // Shared header: brand + doctor identity block. Returns the y to continue from.
 function header(doc, d) {
   const W = doc.internal.pageSize.getWidth();
@@ -30,11 +57,22 @@ function header(doc, d) {
   if (loc) { doc.text(loc, 14, y); y += 5; }
   if (d.phone) { doc.text(String(d.phone), 14, y); y += 5; }
 
-  // Tabibo mark (top-right)
+  // Tabibo brand mark (icon + two-tone wordmark), top-right — matches the site.
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(15);
+  const tw1 = doc.getTextWidth('Tabib');
+  const tw2 = doc.getTextWidth('o');
+  const logoSz = d.logo ? 7.4 : 0;
+  const gap = d.logo ? 2.4 : 0;
+  const total = logoSz + gap + tw1 + tw2;
+  const bx = W - 14 - total;
+  const by = 19.5;
+  if (d.logo) { try { doc.addImage(d.logo, 'PNG', bx, by - 6, logoSz, logoSz); } catch (e) { /* ignore */ } }
+  const tx = bx + logoSz + gap;
+  doc.setTextColor(...DARK);
+  doc.text('Tabib', tx, by);
   doc.setTextColor(...GREEN);
-  doc.text('Tabibo', W - 14, 20, { align: 'right' });
+  doc.text('o', tx + tw1, by);
 
   doc.setDrawColor(225, 232, 228);
   doc.line(14, y + 1, W - 14, y + 1);
