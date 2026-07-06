@@ -68,8 +68,16 @@ export default function Contact() {
   // Admin-editable contact info (falls back to the defaults above while loading).
   const [company, setCompany] = useState(COMPANY);
   useEffect(() => {
-    fetchCompanyContact().then((c) => { if (c) setCompany((prev) => ({ ...prev, ...c })); }).catch(() => {});
+    // Merge only the keys the admin actually set (ignore null/undefined) so a
+    // partially-filled contact record never wipes out a default with `null`.
+    fetchCompanyContact().then((c) => {
+      if (!c || typeof c !== 'object') return;
+      const clean = Object.fromEntries(Object.entries(c).filter(([, v]) => v != null));
+      setCompany((prev) => ({ ...prev, ...clean }));
+    }).catch(() => {});
   }, []);
+  // Never call string methods on a possibly-null field (crashed the whole page).
+  const telHref = company.phone ? `tel:${String(company.phone).replace(/\s/g, '')}` : undefined;
 
   const submit = (e) => {
     e.preventDefault();
@@ -102,7 +110,7 @@ export default function Contact() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 14, marginBottom: 20 }}>
           <InfoCard icon={IC.pin} label="Adresse" value={company.address} />
           <InfoCard icon={IC.clock} label="Horaires" value={company.hours} />
-          <InfoCard icon={IC.phone} label="Téléphone" value={company.phone} href={`tel:${company.phone.replace(/\s/g, '')}`} />
+          <InfoCard icon={IC.phone} label="Téléphone" value={company.phone} href={telHref} />
           <InfoCard icon={IC.fax} label="Fax" value={company.fax} />
           <InfoCard icon={IC.mail} label="Email" value={company.email} href={`mailto:${company.email}`} />
           <InfoCard icon={IC.mail} label="Support" value={company.support} href={`mailto:${company.support}`} />
