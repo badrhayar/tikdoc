@@ -110,7 +110,7 @@ export default function Confirm() {
               fontSize: 15,
               flexShrink: 0,
             }}>
-              {doc.name.replace('Dr.','').trim().split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+              {(doc.name || '').replace('Dr.','').trim().split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, color: '#15314A', fontSize: 15 }}>{doc.name}</div>

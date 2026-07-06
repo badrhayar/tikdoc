@@ -3,6 +3,7 @@ import { useViewport } from '../hooks/useViewport';
 import { I18N, CITY_OPTS } from '../shared.jsx';
 import Icon from '../components/Icon';
 import MarketingHeader from '../components/MarketingHeader';
+import MarketingFooter from '../components/MarketingFooter';
 import SecurityTrust from '../components/SecurityTrust';
 
 const PRIMARY = '#16A06A';
@@ -259,10 +260,10 @@ export default function ForPatients() {
       {/* Features Grid */}
       <section style={{ padding: '56px 24px 72px', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: isMobile ? 'normal' : 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'كل ما تحتاجه في مكان واحد' : lang === 'en' ? 'Everything you need, in one place' : 'Tout ce dont vous avez besoin, en un seul endroit'}
           </h2>
-          <p style={{ textAlign: 'center', whiteSpace: 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
+          <p style={{ textAlign: 'center', whiteSpace: isMobile ? 'normal' : 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
             {lang === 'ar' ? 'مزايا مصممة لتجربة صحية أفضل' : lang === 'en' ? 'Features designed for a better health experience' : 'Des fonctionnalités pensées pour une meilleure expérience santé'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>

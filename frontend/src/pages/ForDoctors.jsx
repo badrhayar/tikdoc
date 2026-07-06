@@ -267,10 +267,10 @@ export default function ForDoctors() {
       {/* Features Grid */}
       <section style={{ padding: '56px 24px 72px', background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: DARK, textAlign: 'center', whiteSpace: isMobile ? 'normal' : 'nowrap', marginBottom: 10, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'كل ما تحتاجه لإدارة عيادتك' : lang === 'en' ? 'Everything you need to run your practice' : 'Tout ce qu\'il faut pour gérer votre cabinet'}
           </h2>
-          <p style={{ textAlign: 'center', whiteSpace: 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
+          <p style={{ textAlign: 'center', whiteSpace: isMobile ? 'normal' : 'nowrap', color: MUTED, fontSize: 15, marginBottom: 40 }}>
             {lang === 'ar' ? 'مزايا مصممة لتوفير وقتك وتنمية نشاطك' : lang === 'en' ? 'Features designed to save you time and grow your practice' : 'Des fonctionnalités pensées pour vous faire gagner du temps et développer votre activité'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 14 : 24 }}>

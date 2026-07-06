@@ -29,7 +29,7 @@ export default function Search() {
   /* ── filter ── */
   let list = doctors.filter((d) => {
     const q = scQ.toLowerCase();
-    if (q && ![d.name, d.spec, d.clinic].some((s) => s.toLowerCase().includes(q))) return false;
+    if (q && ![d.name, d.spec, d.clinic].some((s) => (s || '').toLowerCase().includes(q))) return false;
     if (scSpec !== 'all' && d.spec !== scSpec) return false;
     if (scCity !== 'all' && d.city !== scCity) return false;
     if (scType === 'cabinet' && d.tele) return false;
