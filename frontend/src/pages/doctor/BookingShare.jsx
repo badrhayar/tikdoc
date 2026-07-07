@@ -30,6 +30,8 @@ export default function BookingShare() {
   }, [link]);
 
   const toast = (msg) => setState({ toast: msg, toastShow: true });
+  // Escape anything interpolated into the poster HTML (defense-in-depth).
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); toast('Lien copié ✓'); }
     catch { toast('Copie impossible — sélectionnez le lien manuellement.'); }
@@ -47,7 +49,7 @@ export default function BookingShare() {
             <img src="${PUBLIC_BASE}/icons/icon-192.png" style="width:52px;height:52px;border-radius:14px" alt="Tabibo"/>
             <span style="font-size:40px;font-weight:800;letter-spacing:-1px;color:#15314A">Tabib<span style="color:${G}">o</span></span>
           </div>
-          <div style="font-size:34px;font-weight:800;margin:16px 0 30px">${docName}</div>
+          <div style="font-size:34px;font-weight:800;margin:16px 0 30px">${esc(docName)}</div>
           <h1 style="font-size:34px;line-height:1.2;margin:0 0 12px">Réservez votre rendez-vous en ligne</h1>
           <p style="font-size:18px;color:#6B7B76;margin:0 0 28px">Scannez ce QR code avec l'appareil photo de votre téléphone</p>
           <img src="${qr}" style="width:300px;height:300px"/>

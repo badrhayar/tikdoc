@@ -79,15 +79,23 @@ export default function DoctorRegister() {
         bio: '',
         cnom: dreg.ordre,
       });
-      // Upload each submitted credential document.
+      // Upload each submitted credential document — track failures instead of
+      // swallowing them (a silently missing document stalls the review).
+      const failedDocs = [];
       for (const d of CREDENTIAL_DOCS) {
         const file = docFiles[d.key];
-        if (file) { try { await uploadCredential({ file, userId: res.appUser.id, doctorId: doctorRow.id, docType: d.key }); } catch (_) {} }
+        if (file) {
+          try { await uploadCredential({ file, userId: res.appUser.id, doctorId: doctorRow.id, docType: d.key }); }
+          catch (_) { failedDocs.push(d.label); }
+        }
       }
       // Email the admins that a doctor is awaiting review.
       notifyVerification({ type: 'new_registration', doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre });
       // Show the doctor the "pending review" screen.
-      setState({ myDoctor: doctorRow });
+      setState({
+        myDoctor: doctorRow,
+        ...(failedDocs.length ? { toast: `⚠ Document(s) non téléversé(s) : ${failedDocs.join(', ')}. Renvoyez-les depuis votre espace.`, toastShow: true } : {}),
+      });
       go('doctor');
     } catch (e) {
       setError(e?.message || 'Inscription impossible.');

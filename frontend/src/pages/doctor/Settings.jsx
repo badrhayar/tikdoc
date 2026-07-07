@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { SPEC_INFO, CITY_OPTS } from '../../shared.jsx';
+import { SPEC_INFO, SPEC_OPTS, CITY_OPTS } from '../../shared.jsx';
 import LocationPicker from '../../components/LocationPicker';
-import { saveDoctorServices, updateDoctorFields, uploadAvatar, setMySlug } from '../../lib/api';
+import { saveDoctorServices, updateDoctorFields, updateMyProfile, uploadAvatar, setMySlug } from '../../lib/api';
+import { signIn, updatePassword } from '../../lib/auth';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 const villes = CITY_OPTS.map((c) => (typeof c === 'string' ? c : c.label));
@@ -11,11 +12,6 @@ const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
-
-const specialites = [
-  'Cardiologue', 'Dermatologue', 'Généraliste', 'Gynécologue',
-  'Neurologue', 'Ophtalmologue', 'ORL', 'Pédiatre', 'Psychiatre', 'Radiologue',
-];
 
 
 function Toggle({ checked, onChange }) {
@@ -100,6 +96,7 @@ function InputField({ label, value, onChange, type = 'text' }) {
   );
 }
 
+// Accepts flat strings or { key, label } pairs as options.
 function SelectField({ label, value, onChange, options }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -122,7 +119,9 @@ function SelectField({ label, value, onChange, options }) {
           cursor: 'pointer',
         }}
       >
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => (typeof o === 'string'
+          ? <option key={o} value={o}>{o}</option>
+          : <option key={o.key} value={o.key}>{o.label}</option>))}
       </select>
     </div>
   );
@@ -136,13 +135,12 @@ function formFromProfile(appUser, myDoctor) {
   const parts = full.split(/\s+/);
   const prenom = parts.shift() || '';
   const nom = parts.join(' ');
-  const specLabel = myDoctor?.specialty ? (SPEC_INFO[myDoctor.specialty]?.label || myDoctor.specialty) : '';
   return {
     prenom,
     nom,
     inpe: appUser?.cin_or_inpe || '',
     cnom: myDoctor?.cnom || '',
-    specialite: specLabel,
+    specialite: myDoctor?.specialty || '',   // the specialty KEY (e.g. 'cardio')
     ville: myDoctor?.city || '',
     telephone: appUser?.phone || '',
     email: appUser?.email || '',
@@ -169,6 +167,43 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     next: '',
     confirm: '',
   });
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState(null); // { ok: bool, text: string }
+
+  // Real password change: verify the current password, then update via Supabase.
+  const changePassword = async () => {
+    setPwMsg(null);
+    if (!passwords.current || !passwords.next || !passwords.confirm) {
+      setPwMsg({ ok: false, text: 'Remplissez les trois champs.' }); return;
+    }
+    if (passwords.next.length < 8) {
+      setPwMsg({ ok: false, text: 'Le nouveau mot de passe doit contenir au moins 8 caractères.' }); return;
+    }
+    if (passwords.next !== passwords.confirm) {
+      setPwMsg({ ok: false, text: 'La confirmation ne correspond pas au nouveau mot de passe.' }); return;
+    }
+    setPwBusy(true);
+    try {
+      // Verify the current password by re-authenticating. If CAPTCHA is enforced
+      // on sign-in we can't re-verify silently — the active session is already
+      // proof of identity, so we proceed to the update in that case only.
+      try {
+        await signIn({ email: appUser?.email, password: passwords.current });
+      } catch (e) {
+        if (!/captcha/i.test(e?.message || '')) {
+          setPwMsg({ ok: false, text: 'Mot de passe actuel incorrect.' });
+          setPwBusy(false);
+          return;
+        }
+      }
+      await updatePassword(passwords.next);
+      setPasswords({ current: '', next: '', confirm: '' });
+      setPwMsg({ ok: true, text: 'Mot de passe modifié ✓' });
+      setState({ toast: 'Mot de passe modifié ✓', toastShow: true });
+    } catch (e) {
+      setPwMsg({ ok: false, text: e?.message || 'Échec de la modification.' });
+    } finally { setPwBusy(false); }
+  };
 
   // Services are the single source of truth shared across the app.
   const services = state.services || [];
@@ -197,12 +232,37 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   async function saveAll() {
-    // Persist services + bio + city + clinic address + coordinates.
+    // Persist EVERYTHING the form edits: identity (users row), doctor profile
+    // (doctors row), services, and the insurance/notification preferences.
     if (isSupabaseConfigured && myDoctor?.id) {
       try {
+        const fullName = [form.prenom, form.nom].filter(Boolean).join(' ').trim();
         const saved = await saveDoctorServices(myDoctor.id, services);
-        await updateDoctorFields(myDoctor.id, { bio: form.bio || null, city: form.ville || null, clinic_address: form.adresse || null, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null });
-        setState({ services: saved, myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, clinic_address: form.adresse, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null }, toast: 'Modifications enregistrées ✓', toastShow: true });
+        await updateDoctorFields(myDoctor.id, {
+          bio: form.bio || null,
+          city: form.ville || null,
+          clinic_address: form.adresse || null,
+          lat: form.loc?.lat ?? null,
+          lng: form.loc?.lng ?? null,
+          cnom: form.cnom || null,
+          ...(form.specialite ? { specialty: form.specialite } : {}),
+          preferences: { insurances, notifications },
+        });
+        // Identity fields live on the users row.
+        let savedUser = null;
+        if (appUser?.id) {
+          savedUser = await updateMyProfile(appUser.id, {
+            ...(fullName ? { full_name: fullName } : {}),
+            phone: form.telephone || null,
+            cin_or_inpe: form.inpe || null,
+          }).catch(() => null);
+        }
+        setState({
+          services: saved,
+          myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, clinic_address: form.adresse, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null, cnom: form.cnom, specialty: form.specialite || myDoctor.specialty, preferences: { insurances, notifications } },
+          ...(savedUser ? { appUser: { ...appUser, ...savedUser } } : {}),
+          toast: 'Modifications enregistrées ✓', toastShow: true,
+        });
         return true;
       } catch (e) {
         setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
@@ -213,19 +273,14 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
     return true;
   }
 
-  const [insurances, setInsurances] = useState({
-    cnss: true,
-    cnops: true,
-    rma: false,
-    wafa: false,
-  });
-
-  const [notifications, setNotifications] = useState({
-    nouveauxRdv: true,
-    annulations: true,
-    rappels: true,
-    rapport: false,
-  });
+  // Persisted in doctors.preferences (jsonb) — loaded here, saved by saveAll().
+  const [insurances, setInsurances] = useState({ cnss: true, cnops: true, rma: false, wafa: false });
+  const [notifications, setNotifications] = useState({ nouveauxRdv: true, annulations: true, rappels: true, rapport: false });
+  useEffect(() => {
+    const p = myDoctor?.preferences;
+    if (p?.insurances) setInsurances((prev) => ({ ...prev, ...p.insurances }));
+    if (p?.notifications) setNotifications((prev) => ({ ...prev, ...p.notifications }));
+  }, [myDoctor?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateForm(key, value) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -360,7 +415,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 label="Spécialité"
                 value={form.specialite}
                 onChange={v => updateForm('specialite', v)}
-                options={specialites}
+                options={SPEC_OPTS}
               />
               <SelectField
                 label="Ville"
@@ -369,7 +424,11 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 options={villes}
               />
               <InputField label="Téléphone cabinet" value={form.telephone} onChange={v => updateForm('telephone', v)} type="tel" />
-              <InputField label="Email professionnel" value={form.email} onChange={v => updateForm('email', v)} type="email" />
+              {/* Email = login identity; changing it requires the auth email-change flow. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>Email professionnel</label>
+                <input type="email" value={form.email} disabled style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px', fontSize: 14, color: MUTED, background: '#F4F6F5', width: '100%', boxSizing: 'border-box', direction: 'ltr' }} />
+              </div>
             </div>
           </Card>
 
@@ -438,7 +497,12 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 onChange={v => setPasswords(p => ({ ...p, confirm: v }))}
                 type="password"
               />
-              <button style={{
+              {pwMsg && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: pwMsg.ok ? '#0E7C52' : '#C2415C' }}>
+                  {pwMsg.text}
+                </div>
+              )}
+              <button onClick={changePassword} disabled={pwBusy} style={{
                 background: 'transparent',
                 color: PRIMARY,
                 border: `2px solid ${PRIMARY}`,
@@ -446,10 +510,11 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 padding: '10px 0',
                 fontWeight: 600,
                 fontSize: 14,
-                cursor: 'pointer',
+                cursor: pwBusy ? 'default' : 'pointer',
+                opacity: pwBusy ? 0.6 : 1,
                 marginTop: 4,
               }}>
-                Changer le mot de passe
+                {pwBusy ? 'Modification…' : 'Changer le mot de passe'}
               </button>
             </div>
           </Card>

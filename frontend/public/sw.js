@@ -2,7 +2,7 @@
    Tabibo service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tabibo-v29";
+const CACHE_VERSION = "tabibo-v30";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -120,21 +120,10 @@ async function cacheFirst(request) {
   }
 }
 
-// Network-first (fresh data, fall back to cache) — for Supabase API calls.
-async function networkFirst(request) {
-  try {
-    const res = await fetch(request);
-    if (res && res.ok) {
-      const c = await caches.open(RUNTIME_CACHE);
-      c.put(request, res.clone());
-    }
-    return res;
-  } catch (err) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    throw err;
-  }
-}
+// NOTE: Supabase API responses are deliberately NOT cached. They contain
+// authenticated medical data (appointments, messages, patient records); writing
+// them to Cache Storage would leave PII readable at rest on shared devices and
+// could serve one user's cached data to another. Privacy > offline data.
 
 // ── Fetch routing ───────────────────────────────────────────────────────────
 self.addEventListener("fetch", (event) => {
@@ -149,11 +138,8 @@ self.addEventListener("fetch", (event) => {
   // (Intercepting /.well-known/vercel/* broke the preview auth handshake.)
   if (url.pathname.startsWith("/.well-known/")) return;
 
-  // Supabase API → network-first
-  if (isSupabase(url)) {
-    event.respondWith(networkFirst(request));
-    return;
-  }
+  // Supabase API → never intercepted, never cached (see privacy note above).
+  if (isSupabase(url)) return;
 
   // SPA navigations → ALWAYS network-first. On failure show the offline page.
   // We never serve a cached index.html: a stale shell can reference asset hashes
@@ -177,7 +163,15 @@ self.addEventListener("fetch", (event) => {
   // Everything else (e.g. third-party requests): don't intercept at all.
 });
 
-// Allow the page to trigger an immediate activation after an update.
+// Allow the page to trigger an immediate activation after an update, and to
+// purge the runtime cache on sign-out (removes any previously cached API data).
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+  if (event.data === "CLEAR_RUNTIME") {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(
+        keys.filter((k) => k.endsWith("-runtime")).map((k) => caches.delete(k))
+      ))
+    );
+  }
 });

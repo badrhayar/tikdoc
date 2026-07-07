@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { subscriptionState, paymentRef } from '../shared.jsx';
-import { fetchDoctorPayments, declarePayment, notifyVerification } from '../lib/api';
+import { subscriptionState, paymentRef, fmtPeriod } from '../shared.jsx';
+import { fetchDoctorPayments, declarePayment, declareCurrentPayment, notifyVerification } from '../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -13,8 +13,9 @@ export default function DoctorBlocked() {
   const { state, setState, authSignOut } = useApp();
   const d = state?.myDoctor;
   const sub = subscriptionState(d);
-  const rib = state?.appSettings?.rib || '230 810 0000000000000000 12';
-  const bank = state?.appSettings?.bank || 'Attijariwafa Bank — Tabibo SAS';
+  // NEVER show a placeholder RIB — a doctor could wire real money to it.
+  const rib = state?.appSettings?.rib || '';
+  const bank = state?.appSettings?.bank || '';
 
   const [payments, setPayments] = useState([]);
   const [busyId, setBusyId] = useState(null);
@@ -28,6 +29,21 @@ export default function DoctorBlocked() {
       await declarePayment(p.id);
       notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: d?.plan || '', amount: p.amount });
       setPayments((list) => list.map((x) => x.id === p.id ? { ...x, status: 'declared', declared_at: new Date().toISOString() } : x));
+      setState({ toast: 'Paiement signalé — en attente de confirmation par Tabibo.', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setBusyId(null); }
+  };
+
+  // No due row yet (expired without ever declaring) → declare the current month
+  // directly; the RPC creates the row. Without this the doctor was stuck waiting
+  // for an admin to add a due manually.
+  const declareNow = async () => {
+    setBusyId('now');
+    try {
+      const row = await declareCurrentPayment();
+      if (row) setPayments((list) => [row, ...list.filter((x) => x.id !== row.id)]);
+      notifyVerification({ type: 'payment_declared', doctorName: state.appUser?.full_name, doctorEmail: state.appUser?.email, plan: d?.plan || '', amount: row?.amount });
       setState({ toast: 'Paiement signalé — en attente de confirmation par Tabibo.', toastShow: true });
     } catch (e) {
       setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
@@ -58,19 +74,39 @@ export default function DoctorBlocked() {
         {/* Pay-by-transfer instructions */}
         <div style={{ background: BG, borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Régler par virement</div>
-          <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{rib}</span></div>
-          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{bank}</div>
-          <div style={{ marginTop: 8, fontSize: 13, color: DARK }}><strong>Référence à mentionner :</strong> <span style={{ fontFamily: 'monospace', color: PRIMARY, fontWeight: 700 }}>{paymentRef(d?.id, new Date().toISOString().slice(0, 7))}</span></div>
-          <div style={{ fontSize: 12.5, color: MUTED, marginTop: 8 }}>Après le virement, cliquez sur « J'ai payé » ci-dessous. Votre compte est réactivé dès que Tabibo confirme la réception.</div>
+          {rib ? (
+            <>
+              <div style={{ fontSize: 13.5, color: DARK }}><strong>RIB :</strong> <span style={{ fontFamily: 'monospace' }}>{rib}</span></div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{bank}</div>
+              <div style={{ marginTop: 8, fontSize: 13, color: DARK }}><strong>Référence à mentionner :</strong> <span style={{ fontFamily: 'monospace', color: PRIMARY, fontWeight: 700 }}>{paymentRef(d?.id, new Date().toISOString().slice(0, 7))}</span></div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 8 }}>Après le virement, cliquez sur « J'ai payé » ci-dessous. Votre compte est réactivé dès que Tabibo confirme la réception.</div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: '#C28A1B', lineHeight: 1.6 }}>
+              Les coordonnées bancaires ne sont pas encore configurées. Contactez le support Tabibo pour obtenir le RIB avant tout virement.
+            </div>
+          )}
         </div>
 
         {/* Dues */}
         <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Paiements à régler</div>
-        {dues.length === 0 && <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Aucun paiement en attente. Si vous venez de régler, patientez la confirmation de Tabibo.</div>}
+        {dues.length === 0 && (
+          sub.blocked ? (
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Aucun paiement en attente. Contactez l'administration Tabibo.</div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 14px', marginBottom: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{fmtPeriod(new Date().toISOString().slice(0, 7))} · {d?.plan === 'premium' ? 499 : 299} MAD</div>
+                <div style={{ fontSize: 12, color: MUTED }}>Abonnement du mois en cours</div>
+              </div>
+              <button onClick={declareNow} disabled={busyId === 'now'} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: busyId === 'now' ? 0.7 : 1 }}>J'ai payé</button>
+            </div>
+          )
+        )}
         {dues.map((p) => (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 14px', marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{p.period} · {p.amount} MAD</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{fmtPeriod(p.period)} · {p.amount} MAD</div>
               <div style={{ fontSize: 12, color: MUTED }}>{p.status === 'declared' ? 'Paiement signalé — en attente de confirmation' : 'À régler'}</div>
             </div>
             {p.status === 'declared' ? (

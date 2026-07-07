@@ -106,7 +106,7 @@ export default function PatientLogin() {
               outline: 'none',
             }}
           />
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4, whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
             International ? Ajoutez l'indicatif (ex&nbsp;: +33, +49…).
           </div>
         </div>

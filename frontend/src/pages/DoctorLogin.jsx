@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
+import { signOut as sbSignOut } from '../lib/auth';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -33,7 +34,13 @@ export default function DoctorLogin() {
       const u = await authSignIn(email.trim(), password, captcha);
       if (u?.role === 'admin') { go('admin'); return; }
       // Doctors and their secretaries (staff) both land in the cabinet.
-      if (u && u.role !== 'doctor' && !u.isStaff) { setError('Ce compte n’est pas un espace médecin.'); return; }
+      if (u && u.role !== 'doctor' && !u.isStaff) {
+        // Wrong space — don't leave the session silently signed in.
+        try { await sbSignOut(); } catch (_) { /* ignore */ }
+        setError('Ce compte n’est pas un espace médecin. Utilisez l’espace patient.');
+        resetCaptcha();
+        return;
+      }
       go('doctor');
     } catch (e) {
       setError(e?.message === 'Invalid login credentials'
@@ -104,7 +111,7 @@ export default function DoctorLogin() {
               onKeyDown={(e) => e.key === 'Enter' && doctorLogin()}
               style={{ ...inputStyle, fontSize: 13 }}
             />
-            <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
               International ? Ajoutez l'indicatif (ex&nbsp;: +33, +49…).
             </div>
           </div>

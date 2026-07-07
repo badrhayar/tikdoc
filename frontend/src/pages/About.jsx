@@ -19,10 +19,11 @@ export default function About() {
   const dir = t.dir || 'ltr';
   const { isMobile } = useViewport();
 
+  // Keep these aligned with the Landing page claims (one voice, site-wide).
   const stats = [
-    { num: '1 200+', label: lang === 'ar' ? 'طبيب' : 'Médecins partenaires', icon: 'stethoscope' },
-    { num: '85 000+', label: lang === 'ar' ? 'مريض' : 'Patients accompagnés', icon: 'users' },
-    { num: `${CITY_OPTS.length}`, label: lang === 'ar' ? 'مدينة' : 'Villes au Maroc', icon: 'buildings' },
+    { num: '2 500+', label: lang === 'ar' ? 'طبيب' : lang === 'en' ? 'Partner doctors' : 'Médecins partenaires', icon: 'stethoscope' },
+    { num: '10 000+', label: lang === 'ar' ? 'مريض' : lang === 'en' ? 'Patients served' : 'Patients accompagnés', icon: 'users' },
+    { num: `${CITY_OPTS.length}`, label: lang === 'ar' ? 'مدينة' : lang === 'en' ? 'Cities in Morocco' : 'Villes au Maroc', icon: 'buildings' },
   ];
 
   const features = [

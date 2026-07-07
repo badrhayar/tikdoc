@@ -65,7 +65,12 @@ export async function fetchDoctors(f = {}) {
   if (f.city && f.city !== 'all') query = query.eq('city', f.city);
   if (f.type === 'tele') query = query.eq('teleconsultation', true);
   if (f.conv) query = query.eq('cnss_cnopss', true);
-  if (f.q) query = query.or(`full_name.ilike.%${f.q}%,clinic_address.ilike.%${f.q}%`);
+  if (f.q) {
+    // Strip PostgREST filter metacharacters so user input can't inject
+    // additional .or() conditions (defense-in-depth; the view is public-safe).
+    const q = String(f.q).replace(/[(),]/g, ' ').trim();
+    if (q) query = query.or(`full_name.ilike.%${q}%,clinic_address.ilike.%${q}%`);
+  }
 
   if (f.sort === 'rating') query = query.order('rating', { ascending: false });
   else if (f.sort === 'price_asc') query = query.order('fee_mad', { ascending: true });
@@ -430,7 +435,7 @@ export async function createDoctorProfile(appUserId, p) {
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 
 /** Resolve the current app user's profile row (public.users) from the session. */
-/** Update the signed-in user's own profile (name, phone, cin, sex, dob). */
+/** Update the signed-in user's own profile (name, phone, cin, sex, dob, medical). */
 export async function updateMyProfile(userId, fields) {
   if (!userId) return null;
   const patch = {};
@@ -439,6 +444,9 @@ export async function updateMyProfile(userId, fields) {
   if ('cin_or_inpe' in fields) patch.cin_or_inpe = fields.cin_or_inpe;
   if ('sex' in fields) patch.sex = fields.sex || null;
   if ('dob' in fields) patch.dob = fields.dob || null;
+  if ('blood' in fields) patch.blood = fields.blood || null;
+  if ('allergies' in fields) patch.allergies = fields.allergies || null;
+  if ('chronic' in fields) patch.chronic = fields.chronic || null;
   const { data, error } = await supabase.from('users').update(patch).eq('id', userId).select().maybeSingle();
   if (error) throw error;
   return data;
@@ -746,7 +754,10 @@ export async function sendTestEmail(to) {
 /** Upload a profile photo and store its public URL on the user row. */
 export async function uploadAvatar(file, userId) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  const path = `${userId}/avatar_${Date.now()}.${ext}`;
+  // Storage RLS scopes the folder to auth.uid() (NOT the public.users id).
+  const { data: auth } = await supabase.auth.getUser();
+  const folder = auth?.user?.id || userId;
+  const path = `${folder}/avatar_${Date.now()}.${ext}`;
   const up = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
   if (up.error) throw up.error;
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);

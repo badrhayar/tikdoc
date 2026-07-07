@@ -154,7 +154,7 @@ export default function PatientAccount() {
   const [pfSaving, setPfSaving] = useState(false);
   useEffect(() => {
     const u = state.appUser;
-    if (u && !pf) setPf({ full_name: u.full_name || '', cin_or_inpe: u.cin_or_inpe || '', phone: u.phone || '', email: u.email || '', sex: u.sex || '', dob: u.dob || '' });
+    if (u && !pf) setPf({ full_name: u.full_name || '', cin_or_inpe: u.cin_or_inpe || '', phone: u.phone || '', email: u.email || '', sex: u.sex || '', dob: u.dob || '', blood: u.blood || '', allergies: u.allergies || '', chronic: u.chronic || '' });
   }, [state.appUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setPF = (k, v) => setPf((p) => ({ ...p, [k]: v }));
 
@@ -419,7 +419,7 @@ export default function PatientAccount() {
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
                 <div key={field}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
-                  <input defaultValue={patient?.[field] || ''} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                  <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                 </div>
               ))}
             </div>

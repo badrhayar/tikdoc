@@ -330,7 +330,10 @@ export function AppProvider({ children }) {
   };
   const authSignOut = async () => {
     try { await sbSignOut(); } catch (e) { /* ignore */ }
-    dispatch({ appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home' });
+    // Purge any runtime-cached API data so nothing personal survives on a
+    // shared device after logout (the SW also no longer caches API responses).
+    try { navigator.serviceWorker?.controller?.postMessage('CLEAR_RUNTIME'); } catch (e) { /* ignore */ }
+    dispatch({ appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home', myDoctor: null, isStaff: false });
   };
   const reloadAppointments = async () => {
     try {

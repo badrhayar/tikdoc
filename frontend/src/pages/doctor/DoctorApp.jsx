@@ -132,7 +132,7 @@ const NAV_GROUPS = [
 const STAFF_HIDDEN = new Set(['dabo', 'dstaff', 'dprescribe']);
 
 export default function DoctorApp() {
-  const { state, setState, go, reloadAppointments } = useApp();
+  const { state, setState, go, reloadAppointments, authSignOut } = useApp();
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
 
   const [popAvatar, setPopAvatar] = useState(false);
@@ -370,7 +370,7 @@ export default function DoctorApp() {
             <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docName}</div>
             <div style={{ fontSize:11.5, color:MUT, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', direction:'ltr' }}>{docEmail || 'Médecin'}</div>
           </div>
-          <button onClick={() => go('home')} title="Déconnexion" style={{ background:'#fff', border:'1px solid #E2EBE6', borderRadius:9, cursor:'pointer', color:'#9AA8A2', padding:7, display:'flex' }}>
+          <button onClick={() => authSignOut()} title="Déconnexion" style={{ background:'#fff', border:'1px solid #E2EBE6', borderRadius:9, cursor:'pointer', color:'#9AA8A2', padding:7, display:'flex' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
           </button>
         </div>
@@ -430,7 +430,7 @@ export default function DoctorApp() {
                   <button onClick={() => { go('dsettings'); setPopAvatar(false); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:DARK, textAlign:'start' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7B76" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> Mon profil
                   </button>
-                  <button onClick={() => { go('home'); setPopAvatar(false); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', borderTop:'1px solid #F0F3F2', cursor:'pointer', fontSize:13, fontWeight:700, color:'#D9536B', textAlign:'start' }}>
+                  <button onClick={() => { setPopAvatar(false); authSignOut(); }} style={{ width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 14px', background:'none', border:'none', borderTop:'1px solid #F0F3F2', cursor:'pointer', fontSize:13, fontWeight:700, color:'#D9536B', textAlign:'start' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Déconnexion
                   </button>
                 </div>

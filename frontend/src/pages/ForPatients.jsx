@@ -307,10 +307,10 @@ export default function ForPatients() {
           </h2>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 32, lineHeight: 1.6 }}>
             {lang === 'ar'
-              ? 'انضم إلى أكثر من 85,000 مريض يثقون في تيك دوك.'
+              ? 'انضم إلى آلاف المرضى الذين يثقون في Tabibo.'
               : lang === 'en'
-              ? 'Join over 85,000 patients who trust Tabibo.'
-              : 'Rejoignez plus de 85 000 patients qui font confiance à Tabibo.'}
+              ? 'Join the thousands of patients who trust Tabibo.'
+              : 'Rejoignez les milliers de patients qui font confiance à Tabibo.'}
           </p>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 14, maxWidth: isMobile ? 300 : 480, margin: '0 auto' }}>
             <button

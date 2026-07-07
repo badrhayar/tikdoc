@@ -26,9 +26,18 @@ export default function DoctorPending() {
     if (!state.appUser?.id || !d?.id) return;
     setBusy(true);
     try {
+      const failedDocs = [];
       for (const c of CREDENTIAL_DOCS) {
         const file = docFiles[c.key];
-        if (file) { try { await uploadCredential({ file, userId: state.appUser.id, doctorId: d.id, docType: c.key }); } catch (_) {} }
+        if (file) {
+          try { await uploadCredential({ file, userId: state.appUser.id, doctorId: d.id, docType: c.key }); }
+          catch (_) { failedDocs.push(c.label); }
+        }
+      }
+      if (failedDocs.length) {
+        setState({ toast: `Téléversement échoué : ${failedDocs.join(', ')}. Réessayez.`, toastShow: true });
+        setBusy(false);
+        return;   // don't resubmit a dossier with missing documents
       }
       await doctorResubmit();
       notifyVerification({ type: 'new_registration', doctorName: name, doctorEmail: state.appUser.email, specialty: d.specialty, city: d.city, inpe: state.appUser.cin_or_inpe, cnom: d.cnom });
