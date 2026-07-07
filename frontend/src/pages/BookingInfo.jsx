@@ -25,8 +25,10 @@ export default function BookingInfo() {
   const col2 = isMobile ? '1fr' : '1fr 1fr';
   const { info = {}, payMethod = 'cash', selDoc, bookSlot, bookDate, patient, appUser } = state;
 
-  const doctors = state.doctors?.length ? state.doctors : DOCTORS;
+  const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
+  // Empty directory (fresh launch) → nothing to book; back to search.
+  if (!doc) { go('search'); return null; }
 
   // Motif list = exactly the services this doctor offers (falls back to the
   // generic list only if the doctor hasn't defined any).

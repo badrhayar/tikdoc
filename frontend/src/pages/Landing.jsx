@@ -6,6 +6,7 @@ import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../sha
 import Icon from '../components/Icon';
 import SecurityTrust from '../components/SecurityTrust';
 import MarketingFooter from '../components/MarketingFooter';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -53,7 +54,8 @@ export default function Landing() {
   }, [sugOpen, cityOpen]);
   const barRect = () => barRef.current?.getBoundingClientRect();
 
-  const doctorsList = state.doctors?.length ? state.doctors : DOCTORS;
+  // Mock doctors are demo-only; in production an empty directory stays empty.
+  const doctorsList = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const q = searchQ.trim().toLowerCase();
   const specMatches = q ? SPEC_OPTS.filter((s) => s.label.toLowerCase().includes(q)).slice(0, 5) : [];
   const docMatches = q ? doctorsList.filter((d) => (d.name || '').toLowerCase().includes(q)).slice(0, 5) : [];

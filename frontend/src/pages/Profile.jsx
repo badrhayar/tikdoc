@@ -26,8 +26,10 @@ export default function Profile() {
   const { isMobile } = useViewport();
   const { selDoc, bookSlot, bookDate, patient } = state;
 
-  const doctors = state.doctors?.length ? state.doctors : DOCTORS;
+  const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
+  // Empty directory (fresh launch) → nothing to show; back to search.
+  if (!doc) { go('search'); return null; }
   const si  = SPEC_INFO[doc.spec] || {};
   const [avatarBg, avatarFg] = tint(doctors.indexOf(doc));
   const docLoc = doctorCoords(doc);

@@ -439,6 +439,20 @@ export default function DoctorApp() {
           </div>
         </header>
 
+        {/* Demo mode banner — shown when browsing the dashboard without an account */}
+        {!state.appUser && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', padding:'9px 16px', fontSize:13, fontWeight:600, color:'#3B6FB0', background:'#E8F1FC', borderBottom:'1px solid #CDDEF2' }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z"/></svg>
+              Mode démonstration — données fictives
+            </span>
+            <button onClick={() => go('docregister')} style={{ background:'#3B6FB0', color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor:'pointer' }}>
+              Créer mon compte gratuit (14 j)
+            </button>
+            <span onClick={() => go('fordoctors')} style={{ textDecoration:'underline', cursor:'pointer', fontWeight:700 }}>Quitter la démo</span>
+          </div>
+        )}
+
         {/* Free-trial / subscription status bar */}
         {sub.trial && (
           <div onClick={() => goNav('dabo')} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', padding:'7px 14px', fontSize:12.5, fontWeight:600, color: sub.daysLeft <= 3 ? '#9A6510' : '#0E7C52', background: sub.daysLeft <= 3 ? '#FEF6E7' : '#E7F6EE', borderBottom:`1px solid ${sub.daysLeft <= 3 ? '#F6E0AE' : '#CDE7DA'}` }}>

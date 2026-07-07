@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -22,9 +23,11 @@ export default function Search() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = (scSpec !== 'all' ? 1 : 0) + (scCity !== 'all' ? 1 : 0) + (scType !== 'all' ? 1 : 0) + (scConv ? 1 : 0);
 
-  // Doctors come from Supabase (loaded into global state); fall back to the
-  // bundled mock list while they load or if the DB is unreachable.
-  const doctors = state.doctors?.length ? state.doctors : DOCTORS;
+  // Doctors come from Supabase (loaded into global state). The bundled mock
+  // list is ONLY for local demo mode (no Supabase configured) — in production
+  // an empty directory must show a real empty state, never fake bookable
+  // doctors that real patients would try to reserve.
+  const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
 
   /* ── filter ── */
   let list = doctors.filter((d) => {
@@ -235,10 +238,30 @@ export default function Search() {
           </p>
 
           {list.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: MUTED }}>
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: MUTED }}>
               <div style={{ marginBottom: 16, color: "#CBD5D0", display:"flex", justifyContent:"center" }}><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 8 }}>Aucun médecin trouvé</div>
-              <div style={{ fontSize: 14 }}>Modifiez vos critères de recherche</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 8 }}>
+                {(scCity !== 'all' || scSpec !== 'all' || scQ) ? 'Aucun médecin trouvé pour ces critères' : 'Aucun médecin disponible pour le moment'}
+              </div>
+              <div style={{ fontSize: 14, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
+                Tabibo est tout nouveau — de nouveaux médecins nous rejoignent chaque semaine.
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
+                {(scCity !== 'all' || scSpec !== 'all' || scQ) && (
+                  <button onClick={() => setState({ scQ: '', scCity: 'all', scSpec: 'all', scType: 'all', scConv: false })} style={{ background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+                    Élargir la recherche
+                  </button>
+                )}
+                {/* Turn the dead-end into growth: the patient recruits their own doctor. */}
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent("Bonjour Docteur, j'aimerais pouvoir prendre rendez-vous avec vous en ligne. Découvrez Tabibo (essai gratuit) : https://tabibo.ma/fordoctors")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.68-1.62-.93-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.1 4.49.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.3a8.3 8.3 0 0 1-4.2-1.2l-.3-.18-2.9.9.9-2.8-.2-.3A8.3 8.3 0 1 1 12 20.3z"/></svg>
+                  Inviter mon médecin sur Tabibo
+                </a>
+              </div>
             </div>
           )}
 

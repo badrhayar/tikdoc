@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, BOOK_DAYS, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const saPopKeyframes = `
 @keyframes saPop {
@@ -14,8 +15,10 @@ const saPopKeyframes = `
 export default function Confirm() {
   const { state, go } = useApp();
   const { isMobile } = useViewport();
-  const doctors = state.doctors?.length ? state.doctors : DOCTORS;
+  const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find(d => d.id === state.selDoc) || doctors[0];
+  // Restored session with an empty directory → nothing to confirm here.
+  if (!doc) { go('home'); return null; }
   const dateLabel = state.bookDate
     ? new Date(`${state.bookDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
     : 'Date confirmée';

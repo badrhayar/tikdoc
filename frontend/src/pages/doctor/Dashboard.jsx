@@ -1,5 +1,6 @@
 import { STATUS_FR } from '../../lib/api';
 import { useViewport } from '../../hooks/useViewport';
+import OnboardingChecklist from '../../components/OnboardingChecklist';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -107,6 +108,9 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
 
   return (
     <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+
+      {/* First-run activation checklist (auto-hides once every step is done) */}
+      <OnboardingChecklist state={state} go={go} />
 
       {/* Header */}
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
