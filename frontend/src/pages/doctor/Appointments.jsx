@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -62,10 +62,13 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       amountPaid: a.amountPaid || 0,
       payMethod: a.payMethod || null,
       paid: !!a.paid,
+      arrivedAt: a.arrivedAt || a.arrived_at || null,
+      consultNote: a.consultNote || '',
     };
   });
 
-  const isLocal = (id) => String(id).startsWith('local_');
+  // Local rows = manual (no DB) + sales-demo seeds; both mutate state only.
+  const isLocal = (id) => String(id).startsWith('local_') || String(id).startsWith('demo_');
   // Update a manual (local) appointment in state, or a DB-backed one via the API.
   const setStatus = async (id, status, frConsultStatus) => {
     if (isLocal(id)) {
@@ -88,28 +91,52 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   const confirmAppt  = async (id) => { if (await setStatus(id, 'confirmed')) { sendApptWhatsApp(id, 'confirmed'); notifyApptEmail(id, 'confirmed'); } };
   const noShowAppt   = (id) => setStatus(id, 'no_show', 'Absent');
 
+  // Waiting room: toggle the patient's check-in (arrived ↔ not arrived).
+  const toggleArrived = async (appt) => {
+    const arrived = !appt.arrivedAt;
+    const ts = arrived ? new Date().toISOString() : null;
+    if (isLocal(appt.id)) {
+      setState({ manualAppts: (state.manualAppts || []).map(a => a.id === appt.id ? { ...a, arrivedAt: ts } : a) });
+      return;
+    }
+    try {
+      await markArrived(appt.id, arrived);
+      setState({ myAppointments: (state.myAppointments || []).map(a => a.id === appt.id ? { ...a, arrivedAt: ts } : a) });
+    } catch (e) {
+      setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
+
   // ── Record payment on completion (terminé) — amount collected + method ───────
-  const [payModal, setPayModal] = useState(null); // { id, amount, method, isLocal }
-  const openPay = (appt) => setPayModal({ id: appt.id, amount: String(appt.fee || ''), method: 'cash', isLocal: isLocal(appt.id) });
+  const [payModal, setPayModal] = useState(null); // { id, amount, method, note, isLocal }
+  const openPay = (appt) => setPayModal({ id: appt.id, amount: String(appt.fee || ''), method: 'cash', note: appt.consultNote || '', isLocal: isLocal(appt.id) });
   const recordPayment = async () => {
     const p = payModal; if (!p) return;
     const amount = Number(p.amount) || 0;
     const payFr = PAY_METHOD_FR[p.method] || 'Espèces';
+    const note = (p.note || '').trim();
     if (p.isLocal) {
-      // Local/manual appointment: reflect in state only.
+      // Local/manual appointment: reflect in state only. If no consult row
+      // exists yet (e.g. demo seeds), create one so history stays coherent.
+      const hasConsult = (state.manualConsults || []).some(c => c.id === p.id);
+      const src = (state.manualAppts || []).find(a => a.id === p.id);
+      const d = src ? new Date(src.datetime) : new Date();
+      const consultPatch = hasConsult
+        ? (state.manualConsults || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr, consultNote: note } : c)
+        : [{ id: p.id, patient: src?.patientName || 'Patient', age: '—', sex: '', service: src?.reason || 'Consultation', date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, amount, pay: payFr, status: 'Payé', notes: '', consultNote: note }, ...(state.manualConsults || [])];
       setState({
-        manualAppts: (state.manualAppts || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method } : a),
-        manualConsults: (state.manualConsults || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr } : c),
+        manualAppts: (state.manualAppts || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method, consultNote: note } : a),
+        manualConsults: consultPatch,
         toast: 'Paiement enregistré ✓', toastShow: true,
       });
       setPayModal(null);
       return;
     }
     try {
-      await markAppointmentPaid(p.id, { amount, method: p.method });
+      await markAppointmentPaid(p.id, { amount, method: p.method, consultNote: note });
       setState({
-        myAppointments: (state.myAppointments || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method } : a),
-        consultations: (state.consultations || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr } : c),
+        myAppointments: (state.myAppointments || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method, consultNote: note } : a),
+        consultations: (state.consultations || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr, consultNote: note } : c),
         toast: 'Paiement enregistré ✓', toastShow: true,
       });
       setPayModal(null);
@@ -267,6 +294,14 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                         background: STATUS_CONFIG[appt.statut]?.bg,
                         color: STATUS_CONFIG[appt.statut]?.color,
                       }}>{appt.statut}</span>
+                      {appt.arrivedAt && appt.rawStatus !== 'completed' && appt.rawStatus !== 'cancelled' && (
+                        <div style={{ marginTop: 4 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#E7F6EE', color: '#0E7C52' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A06A' }} />
+                            En salle · {Math.max(1, Math.round((Date.now() - new Date(appt.arrivedAt).getTime()) / 60000))} min
+                          </span>
+                        </div>
+                      )}
                     </td>
                     {/* Paiement */}
                     <td style={{ padding: '14px 16px' }}>
@@ -280,6 +315,19 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                     {/* Actions */}
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          title={appt.arrivedAt ? 'Annuler l\'arrivée' : 'Patient arrivé (salle d\'attente)'}
+                          onClick={() => toggleArrived(appt)}
+                          disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'}
+                          style={{
+                            background: appt.arrivedAt ? '#16A06A' : '#E7F6EE', border: 'none', borderRadius: 8,
+                            width: 32, height: 32, cursor: 'pointer', color: appt.arrivedAt ? '#fff' : '#0E7C52',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                          }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6"/><path d="M16 11l2 2 4-4"/></svg>
+                        </button>
                         <button title="Confirmer" onClick={() => confirmAppt(appt.id)} disabled={appt.rawStatus === 'confirmed' || appt.rawStatus === 'cancelled'} style={{
                           background: '#F0FDF4', border: 'none', borderRadius: 8,
                           width: 32, height: 32, cursor: 'pointer', fontSize: 15,
@@ -380,6 +428,16 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                   }}>{label}</button>
                 ))}
               </div>
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Note de consultation <span style={{ fontWeight: 400 }}>(optionnel — visible par vous seul)</span></label>
+              <textarea
+                value={payModal.note}
+                onChange={(e) => setPayModal({ ...payModal, note: e.target.value })}
+                placeholder="Diagnostic, traitement, suivi prévu…"
+                rows={3}
+                style={{ width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+              />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>

@@ -100,6 +100,16 @@ export default function Chat({ state, setState }) {
     } finally { setCreating(false); }
   };
 
+  // Deep-link: "Message" buttons elsewhere (fiche patient) land here with the
+  // patient's conversation already open (created on the fly if needed).
+  useEffect(() => {
+    const peerId = state?.chatOpenPeer;
+    if (!peerId || !appUser) return;
+    setState({ chatOpenPeer: null });
+    startConversation({ id: peerId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.chatOpenPeer, appUser?.id]);
+
   // Load messages for the active conversation, then live-stream new ones.
   useEffect(() => {
     if (!activeId) { setMsgs([]); return; }

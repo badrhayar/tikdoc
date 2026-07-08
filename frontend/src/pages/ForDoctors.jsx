@@ -53,7 +53,8 @@ export default function ForDoctors() {
       patients: DEMO_PATIENTS,
       manualAppts: [
         mkAppt(1, '09:00', 'Fatima Zahra Benali', '+212 6 12 34 56 78', 'Consultation générale', 'confirmed'),
-        mkAppt(2, '10:00', 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed'),
+        // One patient checked in 12 min ago → the demo shows the live waiting room.
+        { ...mkAppt(2, '10:00', 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed'), arrivedAt: new Date(now.getTime() - 12 * 60000).toISOString() },
         mkAppt(3, '11:30', 'Amina Tazi', '+212 6 78 90 12 34', 'Bilan complet', 'pending'),
         mkAppt(4, '15:00', 'Hassan Berrada', '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed'),
       ],

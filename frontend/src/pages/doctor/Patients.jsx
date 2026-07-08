@@ -387,7 +387,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
               <button onClick={() => newApptFor(viewPatient)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>+ Rendez-vous</button>
               <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Ordonnance</button>
               {viewPatient.userId && (
-                <button onClick={() => { setViewPatient(null); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Message</button>
+                <button onClick={() => { const uid = viewPatient.userId; setViewPatient(null); setState({ chatOpenPeer: uid }); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Message</button>
               )}
               {viewPatient.phone && viewPatient.phone !== '—' && (
                 <a href={`tel:${String(viewPatient.phone).replace(/\s/g, '')}`} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>Appeler</a>
@@ -430,13 +430,20 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
               ) : (
                 <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 18 }}>
                   {patientHistory.slice(0, 5).map((c, i) => (
-                    <div key={c.id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i > 0 ? `1px solid ${BORDER}` : 'none', background: i % 2 ? ROW_ALT : '#fff' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{c.service || 'Consultation'}</div>
-                        <div style={{ fontSize: 11.5, color: MUTED }}>{c.date} · {c.time}</div>
+                    <div key={c.id || i} style={{ padding: '10px 14px', borderTop: i > 0 ? `1px solid ${BORDER}` : 'none', background: i % 2 ? ROW_ALT : '#fff' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{c.service || 'Consultation'}</div>
+                          <div style={{ fontSize: 11.5, color: MUTED }}>{c.date} · {c.time}</div>
+                        </div>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{c.amount ? `${c.amount} MAD` : ''}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 9px', background: c.status === 'Payé' ? '#E7F6EE' : c.status === 'Annulé' ? '#FCE7EE' : '#FEF3DC', color: c.status === 'Payé' ? '#0E7C52' : c.status === 'Annulé' ? '#C2466A' : '#9A6510' }}>{c.status}</span>
                       </div>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{c.amount ? `${c.amount} MAD` : ''}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 9px', background: c.status === 'Payé' ? '#E7F6EE' : c.status === 'Annulé' ? '#FCE7EE' : '#FEF3DC', color: c.status === 'Payé' ? '#0E7C52' : c.status === 'Annulé' ? '#C2466A' : '#9A6510' }}>{c.status}</span>
+                      {c.consultNote && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#4A5E57', background: '#F2F7F4', borderRadius: 8, padding: '7px 10px', lineHeight: 1.5 }}>
+                          <span style={{ fontWeight: 700, color: MUTED }}>Note : </span>{c.consultNote}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

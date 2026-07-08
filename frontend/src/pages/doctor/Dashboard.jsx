@@ -94,6 +94,20 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const parse = (iso) => new Date(`${iso}T00:00:00`);
   const todayCount = allAppts.filter((a) => sameDay(new Date(a.datetime))).length;
+
+  // ── "Ma journée" : waiting room + live end-of-day summary ───────────────────
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNowTick(Date.now()), 60000); return () => clearInterval(t); }, []);
+  const todayAppts = allAppts.filter((a) => sameDay(new Date(a.datetime)) && a.status !== 'cancelled');
+  const waiting = todayAppts
+    .filter((a) => (a.arrivedAt || a.arrived_at) && a.status !== 'completed' && a.status !== 'no_show')
+    .sort((a, b) => new Date(a.arrivedAt || a.arrived_at) - new Date(b.arrivedAt || b.arrived_at));
+  const seenToday = todayAppts.filter((a) => a.status === 'completed').length;
+  const collectedToday = todayAppts.filter((a) => a.paid).reduce((s, a) => s + (a.amountPaid || a.fee || 0), 0)
+    + (state?.manualConsults || []).filter((c) => c.status === 'Payé' && c.date && sameDay(parse(c.date)) && !todayAppts.some((a) => a.id === c.id)).reduce((s, c) => s + (c.amount || 0), 0);
+  const expectedToday = todayAppts.filter((a) => a.status !== 'no_show').reduce((s, a) => s + (a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0)), 0);
+  const remainingToday = todayAppts.filter((a) => a.status !== 'completed' && a.status !== 'no_show' && !(a.arrivedAt || a.arrived_at)).length;
+  const waitMin = (a) => Math.max(1, Math.round((nowTick - new Date(a.arrivedAt || a.arrived_at).getTime()) / 60000));
   const monthConsults = consults.filter((c) => c.date && sameMonth(parse(c.date)));
   const monthRevenue = monthConsults.filter((c) => c.status === 'Payé').reduce((s, c) => s + (c.amount || 0), 0);
   const monthPatients = new Set(monthConsults.map((c) => (c.patient || '').toLowerCase()).filter(Boolean)).size;
@@ -132,6 +146,50 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
           <span style={{ fontSize: 17, lineHeight: 1 }}>+</span> Nouveau rendez-vous
         </button>
       </div>
+
+      {/* Ma journée — waiting room + live end-of-day summary */}
+      {todayAppts.length > 0 && (
+        <div style={{ background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, boxShadow: CARD_SHADOW, marginBottom: isMobile ? 16 : 26, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, fontSize: 15.5, color: DARK, letterSpacing: '-0.3px' }}>Ma journée</span>
+            <div style={{ display: 'flex', gap: isMobile ? 10 : 22, flexWrap: 'wrap', alignItems: 'center' }}>
+              {[
+                ['Vus', `${seenToday}/${todayAppts.length}`, DARK],
+                ['En salle', String(waiting.length), waiting.length ? '#0E7C52' : MUTED],
+                ['À venir', String(remainingToday), DARK],
+                ['Encaissé', `${collectedToday.toLocaleString('fr-FR')} MAD`, '#0E7C52'],
+                ['Attendu', `${expectedToday.toLocaleString('fr-FR')} MAD`, MUTED],
+              ].map(([label, val, color]) => (
+                <span key={label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                  <span className="sa-num" style={{ fontSize: 17, fontWeight: 800, color, letterSpacing: '-0.5px' }}>{val}</span>
+                  <span style={{ fontSize: 11.5, color: MUTED, fontWeight: 600 }}>{label}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          {waiting.length > 0 && (
+            <div style={{ borderTop: `1px solid #F0F5F2`, padding: '10px 22px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 10px' }}>Salle d'attente</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {waiting.map((a) => {
+                  const min = waitMin(a);
+                  return (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F7FBF9', border: `1px solid #E4EEE9`, borderRadius: 11, padding: '9px 13px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: min >= 30 ? '#E2748A' : min >= 15 ? '#E8B34B' : '#16A06A', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{a.patientName || 'Patient'}</span>
+                        <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>{a.reason || ''}</span>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: min >= 30 ? '#C2466A' : min >= 15 ? '#9A6510' : '#0E7C52', flexShrink: 0 }}>attend depuis {min} min</span>
+                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Row 1: KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 18, marginBottom: isMobile ? 16 : 26 }}>

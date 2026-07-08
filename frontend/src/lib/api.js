@@ -244,7 +244,22 @@ export function mapAppointment(row, nameById = {}) {
     paid: !!row.paid,
     amountPaid: row.amount_paid != null ? Number(row.amount_paid) || 0 : 0,
     payMethod: row.pay_method || null,
+    // Daily cabinet flow (see 20260707120000_daily_flow.sql).
+    arrivedAt: row.arrived_at || null,
+    consultNote: row.consult_note || null,
   };
+}
+
+/** Waiting room: mark the patient as arrived (or undo with arrived=false). */
+export async function markArrived(id, arrived = true) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({ arrived_at: arrived ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 // French labels for the captured payment method.
@@ -282,6 +297,7 @@ export function apptToConsultation(a) {
     pay: a.paid && a.payMethod ? (PAY_METHOD_FR[a.payMethod] || a.payMethod) : '—',
     status,
     notes: a.notes || '',
+    consultNote: a.consultNote || '',
   };
 }
 
@@ -302,7 +318,7 @@ export async function updateAppointmentStatus(id, status) {
  * cancelled/no_show, which stay as-is). amount/method are normalised.
  * @param {object} opts { amount (MAD), method ('cash'|'card'|'wallet') }
  */
-export async function markAppointmentPaid(id, { amount, method } = {}) {
+export async function markAppointmentPaid(id, { amount, method, consultNote } = {}) {
   // Resolve the current status so we never resurrect a cancelled/no_show visit.
   let nextStatus = 'completed';
   const { data: cur } = await supabase.from('appointments').select('status').eq('id', id).maybeSingle();
@@ -314,6 +330,7 @@ export async function markAppointmentPaid(id, { amount, method } = {}) {
     pay_method: method || null,
     status: nextStatus,
   };
+  if (consultNote !== undefined) patch.consult_note = consultNote || null;
   const { data, error } = await supabase
     .from('appointments')
     .update(patch)
