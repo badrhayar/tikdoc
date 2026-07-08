@@ -91,7 +91,6 @@ export default function Landing() {
     { key: 'ar', label: 'العربية (AR)' },
   ];
 
-  const trustAvatars = ['#7C3AED', '#0EA5E9', '#F59E0B', '#EC4899'];
 
   const padX = isPhone ? 16 : 24;
   const goMobile = (key) => { setMenuOpen(false); go(key); };
@@ -266,8 +265,10 @@ export default function Landing() {
           {/* Left */}
           <div className="sa-in">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #D8EDE2', borderRadius: 99, padding: '6px 14px 6px 8px', marginBottom: 22, boxShadow: '0 2px 10px -4px rgba(13,43,30,0.12)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#E7F6EE', color: '#0E7C52', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '3px 9px' }}>★ 4.9</span>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: DARK }}>{tr('La plateforme santé n°1 au Maroc', 'Morocco’s #1 health platform', 'منصة الصحة رقم 1 في المغرب')}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#E7F6EE', color: '#0E7C52', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '3px 9px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              </span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: DARK }}>{tr('Médecins vérifiés · Réservation 24h/24', 'Verified doctors · 24/7 booking', 'أطباء موثوقون · حجز 24/24')}</span>
             </div>
 
             <h1 style={{ fontSize: isPhone ? 30 : (isMobile ? 38 : 47), fontWeight: 800, color: DARK, lineHeight: 1.12, marginBottom: 18, letterSpacing: '-1px' }}>
@@ -367,15 +368,17 @@ export default function Landing() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {trustAvatars.map((c, i) => (
-                  <div key={i} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: '2.5px solid #fff', marginInlineStart: i ? -10 : 0, boxShadow: '0 2px 6px -2px rgba(0,0,0,0.25)' }} />
-                ))}
-              </div>
-              <div style={{ fontSize: 13.5, color: BODY }}>
-                <strong style={{ color: DARK }}>10 000+</strong> {tr('patients déjà accompagnés', 'patients already cared for', 'مريض موثوق')}
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+              {[
+                [tr('Médecins vérifiés', 'Verified doctors', 'أطباء موثوقون'), 'shieldCheck'],
+                [tr('Données sécurisées', 'Secure data', 'بيانات آمنة'), 'lock'],
+                [tr('Rappels automatiques', 'Automatic reminders', 'تذكير تلقائي'), 'bell'],
+              ].map(([label]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: BODY, fontWeight: 600 }}>
+                  <span style={{ display: 'inline-flex', color: PRIMARY }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                  {label}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -399,12 +402,12 @@ export default function Landing() {
                     <div style={{ fontSize: 11.5, color: MUTED }}>{tr('Aujourd’hui · 14:00', 'Today · 2:00 PM', 'اليوم · 14:00')}</div>
                   </div>
                 </div>
-                <div style={{ position: 'absolute', bottom: 30, [rtl ? 'left' : 'right']: -30, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.7)', borderRadius: 16, padding: '12px 15px', boxShadow: '0 16px 40px -14px rgba(13,43,30,0.3)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: '#F59E0B', fontSize: 14, letterSpacing: 1 }}>★★★★★</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: DARK }}>4.9</span>
+                <div style={{ position: 'absolute', bottom: 30, [rtl ? 'left' : 'right']: -30, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.7)', borderRadius: 16, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 11, boxShadow: '0 16px 40px -14px rgba(13,43,30,0.3)' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: '#E7F6EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PRIMARY }}><Icon name="bell" size={20} /></div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: DARK }}>{tr('Rappel envoyé', 'Reminder sent', 'تم إرسال التذكير')}</div>
+                    <div style={{ fontSize: 11.5, color: MUTED }}>{tr('Fini les oublis', 'No more missed visits', 'لا مزيد من النسيان')}</div>
                   </div>
-                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>{tr('+12 000 avis vérifiés', '12,000+ verified reviews', 'أكثر من 12000 تقييم')}</div>
                 </div>
               </>
             )}
@@ -414,10 +417,10 @@ export default function Landing() {
         {/* Stats strip — 2 cols on mobile */}
         <div style={{ position: 'relative', maxWidth: 1180, margin: `${isMobile ? 36 : 60}px auto 0`, display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isPhone ? 12 : 18 }}>
           {[
-            { v: '2 500+', l: tr('Médecins partenaires', 'Partner doctors', 'طبيب شريك') },
+            { v: `${CITY_OPTS.length}`, l: tr('Villes couvertes', 'Cities covered', 'مدينة') },
             { v: '50+', l: tr('Spécialités', 'Specialties', 'تخصص') },
             { v: '24/7', l: tr('Prise de rendez-vous', 'Booking availability', 'حجز المواعيد') },
-            { v: '4.9★', l: tr('Satisfaction patients', 'Patient satisfaction', 'رضا المرضى') },
+            { v: tr('Gratuit', 'Free', 'مجاني'), l: tr('Pour les patients', 'For patients', 'للمرضى') },
           ].map((s, i) => (
             <div key={i} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isPhone ? '14px 14px' : '18px 22px', textAlign: 'center', boxShadow: '0 1px 3px rgba(13,43,30,0.05)' }}>
               <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: isPhone ? 22 : 26, fontWeight: 800, color: PRIMARY, letterSpacing: '-0.5px' }}>{s.v}</div>

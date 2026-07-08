@@ -35,22 +35,6 @@ const CARD_SHADOW = '0 2px 12px rgba(21,49,74,0.08)';
 const TINTS = [['#E7F6EE','#138257'],['#E8F1FC','#3B6FB0'],['#FEF3DC','#C28A1B'],['#FCE7EE','#C2466A'],['#EFEAFB','#6B57A6'],['#E4F2F4','#1B7E86']];
 const DOC_ICONS = { Ordonnance:'clipboard', Résultat:'flask', 'Compte-rendu':'hospital', Facture:'wallet', Radiographie:'activity', Certificat:'file', Échographie:'volume' };
 
-const PAST_APPTS = [
-  { doctor:'Dr. Karim Benali', spec:'Cardiologie', when:'02 Mai 2024', ci:1 },
-  { doctor:'Dr. Sara Idrissi', spec:'Dermatologie', when:'18 Avr 2024', ci:2 },
-];
-
-const FAV_DOCS = [
-  { name:'Dr. Leila Marmioui', spec:'Gynécologue', ci:0 },
-  { name:'Dr. Karim Benali',   spec:'Cardiologie',  ci:1 },
-];
-
-const NOTIFS = [
-  { icon:'calendar', title:'Rappel rendez-vous', text:'Dr. Marmioui demain à 14:00', ago:'il y a 2 h', ci:0 },
-  { icon:'checkCircle', title:'Confirmation',       text:'Rdv confirmé le 15 Mai à 14:00', ago:'il y a 1 jour', ci:3 },
-  { icon:'info', title:'Annulation possible', text:'Annulation possible jusqu\'au 14 Mai 13:00', ago:'il y a 1 jour', ci:5 },
-];
-
 export default function PatientAccount() {
   const { state, setState, go, authSignOut } = useApp();
   const { isMobile } = useViewport();
@@ -68,9 +52,9 @@ export default function PatientAccount() {
   const visitedDocs = (() => {
     const m = new Map();
     for (const a of (state.myAppointments || [])) {
-      if (a.doctorId && !m.has(a.doctorId)) m.set(a.doctorId, a.doctorName || 'Médecin');
+      if (a.doctorId && !m.has(a.doctorId)) m.set(a.doctorId, { id: a.doctorId, name: a.doctorName || 'Médecin', spec: a.spec || '' });
     }
-    return [...m.entries()].map(([id, name]) => ({ id, name }));
+    return [...m.values()];
   })();
   const [msgDoctorId, setMsgDoctorId] = useState('');
   // Default to the first visited doctor once appointments are loaded.
@@ -134,6 +118,17 @@ export default function PatientAccount() {
     .filter(a => new Date(a.datetime).getTime() < nowMs || a.status === 'completed' || a.status === 'cancelled')
     .sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
   const nextAppt = upcoming[0] || null;
+
+  // Real notifications derived from the patient's own appointments (no mock data).
+  const realNotifs = upcoming.slice(0, 4).map((a) => {
+    const confirmed = a.status === 'confirmed';
+    return {
+      icon: confirmed ? 'checkCircle' : 'calendar',
+      ci: confirmed ? 0 : 3,
+      title: confirmed ? 'Rendez-vous confirmé' : 'Rendez-vous à venir',
+      text: `${docDisplayName(a.doctorName, a.spec)} · ${fmtDate(a.datetime)} à ${fmtTime(a.datetime)}`,
+    };
+  });
 
   const myConsultations = past.slice(0, 5);
   const totalPaid = appts.filter(c => c.status === 'completed').reduce((s, c) => s + (c.fee || 0), 0);
@@ -429,27 +424,32 @@ export default function PatientAccount() {
             </button>
           </div>
 
-          {/* Notifications */}
+          {/* Notifications — derived from the patient's real appointments */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
               <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>Notifications</h2>
-              <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>3 nouvelles</span>
+              {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}
             </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
-              {NOTIFS.map((n, i) => {
-                const [bg, fg] = tint(n.ci);
-                return (
-                  <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start' }}>
-                    <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Icon name={n.icon} size={16} /></span>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{n.title}</div>
-                      <div style={{ fontSize:12, color:MUT, lineHeight:1.4 }}>{n.text}</div>
-                      <div style={{ fontSize:11, color:'#9AA8A2', marginTop:2 }}>{n.ago}</div>
+            {realNotifs.length === 0 ? (
+              <div style={{ fontSize:13, color:MUT, lineHeight:1.5, padding:'6px 2px' }}>
+                Vos rappels et confirmations de rendez-vous apparaîtront ici.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                {realNotifs.map((n, i) => {
+                  const [bg, fg] = tint(n.ci);
+                  return (
+                    <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start' }}>
+                      <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Icon name={n.icon} size={16} /></span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{n.title}</div>
+                        <div style={{ fontSize:12, color:MUT, lineHeight:1.4 }}>{n.text}</div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Appointments column */}
@@ -526,27 +526,29 @@ export default function PatientAccount() {
               )}
             </div>
 
-            {/* Favorites */}
-            <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
-              <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>Médecins favoris</h2>
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {FAV_DOCS.map((f, i) => {
-                  const [bg, fg] = tint(f.ci);
-                  return (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:11 }}>
-                      <div style={{ width:38, height:38, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12.5, fontWeight:800 }}>
-                        {initials(f.name)}
+            {/* Mes médecins — the doctors this patient has actually consulted */}
+            {visitedDocs.length > 0 && (
+              <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
+                <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>Mes médecins</h2>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {visitedDocs.map((d, i) => {
+                    const [bg, fg] = tint(i);
+                    return (
+                      <div key={d.id} style={{ display:'flex', alignItems:'center', gap:11 }}>
+                        <div style={{ width:38, height:38, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12.5, fontWeight:800 }}>
+                          {initials(d.name)}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{docDisplayName(d.name, d.spec)}</div>
+                          {d.spec && <div style={{ fontSize:12, color:MUT }}>{SPEC_LABEL(d.spec)}</div>}
+                        </div>
+                        <button onClick={() => setState({ selDoc: d.id, screen: 'profile' })} style={{ background:'#E7F6EE', color:G, border:'none', cursor:'pointer', padding:'7px 13px', borderRadius:8, fontSize:12, fontWeight:700 }}>Réserver</button>
                       </div>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{f.name}</div>
-                        <div style={{ fontSize:12, color:MUT }}>{f.spec}</div>
-                      </div>
-                      <button onClick={() => go('profile')} style={{ background:'#E7F6EE', color:G, border:'none', cursor:'pointer', padding:'7px 13px', borderRadius:8, fontSize:12, fontWeight:700 }}>Réserver</button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Ordonnances received from doctors */}
             <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>

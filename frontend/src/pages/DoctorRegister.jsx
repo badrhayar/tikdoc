@@ -478,36 +478,6 @@ export default function DoctorRegister() {
               {busy ? 'Création…' : 'Créer mon compte médecin'}
             </button>
 
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ flex: 1, height: 1, background: BORDER }} />
-              <span style={{ fontSize: 12, color: MUTED, fontWeight: 500 }}>ou</span>
-              <div style={{ flex: 1, height: 1, background: BORDER }} />
-            </div>
-
-            {/* Google */}
-            <button
-              onClick={() => setError('L’inscription Google sera bientôt disponible. Utilisez votre email pour le moment.')}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#fff',
-                color: DARK,
-                border: `1.5px solid ${INPUT_BORDER}`,
-                borderRadius: 11,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                marginBottom: 24,
-              }}
-            >
-              {GOOGLE_SVG}
-              Continuer avec Google
-            </button>
 
             <p style={{ textAlign: 'center', fontSize: 13, color: MUTED, margin: 0 }}>
               Déjà inscrit ?{' '}

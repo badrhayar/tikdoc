@@ -135,8 +135,7 @@ export default function Confirm() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Row icon="calendar" label="Date" value={dateLabel} />
             <Row icon="clock" label="Heure" value={state.bookSlot || '14:00'} />
-            <Row icon="pin" label="Lieu" value={doc.clinic + ', ' + doc.city} />
-            <Row icon="phone" label="Téléphone" value="05 39 00 11 22" />
+            {(doc.clinic || doc.city) && <Row icon="pin" label="Lieu" value={[doc.clinic, doc.city].filter(Boolean).join(', ')} />}
           </div>
         </div>
 
@@ -156,7 +155,7 @@ export default function Confirm() {
           gap: 8,
         }}>
           <Icon name="smartphone" size={15} />
-          Une confirmation WhatsApp a été envoyée au patient
+          Une confirmation vous a été envoyée par email
         </div>
 
         {/* Primary: view my appointments (payment happens at the cabinet — no invoice) */}
