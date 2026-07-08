@@ -52,6 +52,9 @@ export default function Prescriptions() {
   const myDoctor = state?.myDoctor;
   const appUser = state?.appUser;
   const doctorId = myDoctor?.id;
+  // Sales demo: the editor + PDF generation are fully client-side, so they work
+  // without an account. Only persistence is disabled (with a friendly nudge).
+  const isDemo = !doctorId && !!state?.demoDoctor;
 
   // ── Patient ───────────────────────────────────────────────────────────────
   const [patientName, setPatientName] = useState('');
@@ -101,7 +104,19 @@ export default function Prescriptions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctorId]);
 
-  if (!doctorId) {
+  // Deep-link prefill: "Ordonnance" buttons elsewhere (rendez-vous, fiche
+  // patient) land here with the patient already selected.
+  useEffect(() => {
+    const p = state?.rxPrefill;
+    if (!p) return;
+    setPatientName(p.name || '');
+    setPatientSearch(p.name || '');
+    setPatientId(p.patientId || null);
+    setState({ rxPrefill: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.rxPrefill]);
+
+  if (!doctorId && !isDemo) {
     return (
       <div style={{ padding: isMobile ? 16 : 32, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Segoe UI', sans-serif" }}>
         <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${BORDER}`, padding: '40px 32px', textAlign: 'center', maxWidth: 420, color: MUTED, fontSize: 15 }}>
@@ -125,7 +140,7 @@ export default function Prescriptions() {
   const buildDoctorDoc = (itemsArg, nameArg, notesArg) => ({
     // state.myDoctor is the RAW doctors row (specialty / clinic_address / cnom);
     // fall back to the mapped names just in case the shape varies.
-    doctorName: docDisplayName(appUser?.full_name, myDoctor?.specialty || myDoctor?.spec),
+    doctorName: docDisplayName(appUser?.full_name, myDoctor?.specialty || myDoctor?.spec) || (isDemo ? 'Dr. Démonstration' : ''),
     specialty: myDoctor?.specialty || myDoctor?.spec,
     cnom: myDoctor?.cnom,
     inpe: appUser?.cin_or_inpe,
@@ -162,6 +177,7 @@ export default function Prescriptions() {
     setState({ toast: `Modèle « ${tpl.name} » chargé`, toastShow: true });
   };
   const saveAsTemplate = async () => {
+    if (isDemo) { setState({ toast: 'Mode démo — créez votre compte pour enregistrer des modèles.', toastShow: true }); return; }
     const its = cleanItems();
     if (!its.length) { setState({ toast: 'Ajoutez au moins un médicament.', toastShow: true }); return; }
     const name = window.prompt('Nom du modèle :');
@@ -211,6 +227,7 @@ export default function Prescriptions() {
 
   // Save the ordonnance unless this exact content was already saved this session.
   const persist = async (its, ref) => {
+    if (isDemo) { setState({ toast: 'Mode démo — créez votre compte pour enregistrer vos ordonnances.', toastShow: true }); return 'skip'; }
     const sig = JSON.stringify({ p: patientName.trim(), i: its, n: notes.trim() });
     if (sig === savedSigRef.current) return 'skip';   // unchanged → already archived
     savedSigRef.current = sig;

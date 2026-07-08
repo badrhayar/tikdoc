@@ -962,6 +962,29 @@ export async function fetchConversations() {
   }));
 }
 
+/**
+ * Compact inbox preview for the dashboard: the current user's most recent
+ * conversations with their last message. Two round-trips total.
+ */
+export async function fetchConversationPreviews(limit = 4) {
+  const convs = await fetchConversations().catch(() => []);
+  if (!convs.length) return [];
+  const ids = convs.map((c) => c.id);
+  const { data: msgs } = await supabase
+    .from('messages')
+    .select('conversation_id, content, sent_at, sender_id')
+    .in('conversation_id', ids)
+    .order('sent_at', { ascending: false })
+    .limit(60);
+  const lastByConv = {};
+  (msgs || []).forEach((m) => { if (!lastByConv[m.conversation_id]) lastByConv[m.conversation_id] = m; });
+  return convs
+    .map((c) => ({ ...c, last: lastByConv[c.id] || null }))
+    .filter((c) => c.last)
+    .sort((a, b) => new Date(b.last.sent_at) - new Date(a.last.sent_at))
+    .slice(0, limit);
+}
+
 /** Upload a chat image; returns a public URL to send as the message content. */
 export async function uploadChatImage(file) {
   const { data: auth } = await supabase.auth.getUser();

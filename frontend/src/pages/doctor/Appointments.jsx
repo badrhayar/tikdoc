@@ -308,6 +308,12 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700,
                           opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
                         }}>∅</button>
+                        <button title="Rédiger une ordonnance" onClick={() => { setState({ rxPrefill: { name: appt.patient, patientId: appt.patientId || null } }); go('dprescribe'); }} style={{
+                          background: '#EFEAFB', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B57A6',
+                        }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>
+                        </button>
                         <button title="Démarrer la téléconsultation" onClick={() => { const room = `tabibo-appt-${appt.id}`; if (appt.patientId) ringPatient(appt.patientId, { room, doctorName: state?.appUser?.full_name || 'Votre médecin', spec: state?.myDoctor?.specialty }); setState({ teleRoom: room }); }} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
                           background: '#E7F6EE', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A06A',

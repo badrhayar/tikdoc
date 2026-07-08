@@ -1,5 +1,7 @@
-import { STATUS_FR } from '../../lib/api';
+import { useEffect, useState } from 'react';
+import { STATUS_FR, fetchConversationPreviews, isImageMessage } from '../../lib/api';
 import { useViewport } from '../../hooks/useViewport';
+import { initials as initialsOf, tint } from '../../shared.jsx';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
 
 const PRIMARY = '#16A06A';
@@ -13,20 +15,13 @@ const BORDER_STRONG = '#E4EEE9';
 const CARD_SHADOW = '0 1px 3px rgba(13,43,30,0.05), 0 10px 26px -16px rgba(13,43,30,0.18)';
 const GRAD = 'linear-gradient(135deg, #1AAE74 0%, #12875A 55%, #0B6A46 100%)';
 
-const appointments = [
-  { time: '09:00', name: 'Mme Laila Benhaddou', motif: 'Consultation générale', status: 'Confirmé' },
-  { time: '10:00', name: 'M. Karim Alaoui', motif: 'Suivi hypertension', status: 'Confirmé' },
-  { time: '11:30', name: 'Mme Sara Moussaoui', motif: 'Bilan sanguin', status: 'En attente' },
-  { time: '14:00', name: 'M. Hassan Tahiri', motif: 'Contrôle diabète', status: 'Terminé' },
-  { time: '15:30', name: 'Mme Fatima Zahra', motif: 'Renouvellement ordonnance', status: 'En attente' },
-];
-
-const messages = [
-  { initials: 'LB', color: '#7C3AED', name: 'Laila Benhaddou', msg: 'Bonjour Docteur, je voulais confirmer mon RDV de demain...', time: '09:14' },
-  { initials: 'KA', color: '#0EA5E9', name: 'Karim Alaoui', msg: 'Mon tension était à 14/9 ce matin, est-ce que...', time: '08:52' },
-  { initials: 'SM', color: '#F59E0B', name: 'Sara Moussaoui', msg: 'Résultats reçus, tout est normal merci beaucoup...', time: 'Hier' },
-  { initials: 'HT', color: '#EF4444', name: 'Hassan Tahiri', msg: 'Est-ce possible de décaler mon rendez-vous à 15h...', time: 'Hier' },
-];
+// Compact "time ago" for the inbox preview.
+const agoLabel = (iso) => {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 3600000) return `${Math.max(1, Math.round(ms / 60000))} min`;
+  if (ms < 86400000) return `${Math.round(ms / 3600000)} h`;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+};
 
 const statusStyle = (status) => {
   if (status === 'Confirmé') return { background: '#E3F8EE', color: '#0E7C52', border: '1px solid #B6E8D0' };
@@ -57,6 +52,21 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const { isMobile } = useViewport();
   // Real + manually-added appointments for the signed-in doctor (soonest first).
   const allAppts = [...(state?.manualAppts || []), ...(state?.myAppointments || [])];
+
+  // Real inbox preview. In demo mode (no account) show clearly-fictional samples.
+  const [inbox, setInbox] = useState([]);
+  const appUserId = state?.appUser?.id;
+  useEffect(() => {
+    if (!appUserId) {
+      setInbox(state?.demoDoctor ? [
+        { id: 'd1', patientName: 'Fatima Zahra Benali', last: { content: 'Bonjour Docteur, je confirme mon rendez-vous de demain.', sent_at: new Date(Date.now() - 40 * 60000).toISOString() } },
+        { id: 'd2', patientName: 'Mohamed Rachid Alami', last: { content: 'Ma tension était à 13/8 ce matin, tout va bien.', sent_at: new Date(Date.now() - 3 * 3600000).toISOString() } },
+        { id: 'd3', patientName: 'Amina Tazi', last: { content: 'Merci beaucoup pour la consultation !', sent_at: new Date(Date.now() - 26 * 3600000).toISOString() } },
+      ] : []);
+      return;
+    }
+    fetchConversationPreviews(4).then(setInbox).catch(() => {});
+  }, [appUserId, state?.demoDoctor]);
   // Greeting: real doctor name + today's actual date (Morocco time).
   const fullName = state?.appUser?.full_name || '';
   const docLabel = fullName ? (/^dr/i.test(fullName) ? fullName : `Dr. ${fullName}`) : 'Docteur';
@@ -180,28 +190,38 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Messages — real inbox preview (latest conversations) */}
         <div style={{ flex: 1, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, overflow: 'hidden', boxShadow: CARD_SHADOW, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER_STRONG}`, fontWeight: 800, fontSize: 15.5, color: DARK, letterSpacing: '-0.3px' }}>
             Derniers messages
           </div>
           <div style={{ flex: 1 }}>
-            {messages.map((msg, i) => (
-              <div key={i}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 22px', borderBottom: i < messages.length - 1 ? `1px solid #F0F5F2` : 'none', background: i % 2 === 0 ? '#fff' : ROW_ALT, cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#EEF7F2'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : ROW_ALT}
-              >
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: msg.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, boxShadow: `0 4px 10px -3px ${msg.color}88` }}>{msg.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: DARK }}>{msg.name}</span>
-                    <span style={{ fontSize: 11, color: MUTED, flexShrink: 0, marginLeft: 8 }}>{msg.time}</span>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.msg}</div>
-                </div>
+            {inbox.length === 0 && (
+              <div style={{ padding: '34px 22px', textAlign: 'center', color: MUTED, fontSize: 13, lineHeight: 1.6 }}>
+                Aucun message pour le moment.<br />Vos patients pourront vous écrire depuis leur espace.
               </div>
-            ))}
+            )}
+            {inbox.map((c, i) => {
+              const [bg, fg] = tint(i);
+              const preview = isImageMessage(c.last.content) ? '📷 Photo' : c.last.content;
+              return (
+                <div key={c.id}
+                  onClick={() => go('dchat')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 22px', borderBottom: i < inbox.length - 1 ? `1px solid #F0F5F2` : 'none', background: i % 2 === 0 ? '#fff' : ROW_ALT, cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#EEF7F2'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : ROW_ALT}
+                >
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: bg, color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{initialsOf(c.patientName)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: DARK }}>{c.patientName}</span>
+                      <span style={{ fontSize: 11, color: MUTED, flexShrink: 0, marginLeft: 8 }}>{agoLabel(c.last.sent_at)}</span>
+                    </div>
+                    <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <button onClick={() => go('dchat')} style={{ padding: '13px 20px', borderTop: `1px solid ${BORDER_STRONG}`, textAlign: 'center', background: '#fff', border: 'none', borderBottomLeftRadius: 18, borderBottomRightRadius: 18, color: PRIMARY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             Voir tous les messages →

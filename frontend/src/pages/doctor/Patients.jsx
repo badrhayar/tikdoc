@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { DEMO_PATIENTS } from '../../shared.jsx';
-import { updatePatient } from '../../lib/api';
+import { updatePatient, fetchPrescriptions } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import Icon from '../../components/Icon';
 
@@ -33,6 +33,63 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const patientList = state.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS);
   const [viewPatient, setViewPatient] = useState(null);   // detail modal
   const [menuId, setMenuId] = useState(null);             // open "…" menu row
+
+  // ── Fiche patient: history + ordonnances + editable notes ──────────────────
+  const doctorId = state.myDoctor?.id;
+  const [pRx, setPRx] = useState([]);          // this patient's prescriptions
+  const [pNotes, setPNotes] = useState('');
+  const [notesBusy, setNotesBusy] = useState(false);
+  useEffect(() => {
+    if (!viewPatient) return;
+    setPNotes(viewPatient.notes || '');
+    setPRx([]);
+    if (!doctorId) return;
+    fetchPrescriptions(doctorId)
+      .then((rows) => setPRx((rows || []).filter((r) =>
+        (viewPatient.userId && r.patient_id === viewPatient.userId) ||
+        ((r.patient_name || '').trim().toLowerCase() === (viewPatient.name || '').trim().toLowerCase())
+      )))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewPatient?.id]);
+
+  // Visit history from already-loaded consultations (no extra query).
+  const patientHistory = viewPatient
+    ? [...(state.manualConsults || []), ...(state.consultations || [])]
+        .filter((c) => (c.patient || '').trim().toLowerCase() === (viewPatient.name || '').trim().toLowerCase())
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    : [];
+
+  const saveNotes = async () => {
+    if (!viewPatient?.id) return;
+    setNotesBusy(true);
+    try {
+      if (isSupabaseConfigured && doctorId) await updatePatient(viewPatient.id, { notes: pNotes || null });
+      setState({
+        patients: (state.patients || []).map((x) => x.id === viewPatient.id ? { ...x, notes: pNotes } : x),
+        toast: 'Notes enregistrées ✓', toastShow: true,
+      });
+      setViewPatient((v) => v ? { ...v, notes: pNotes } : v);
+    } catch (e) {
+      setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setNotesBusy(false); }
+  };
+
+  // Quick actions from the fiche.
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const newApptFor = (p) => {
+    setViewPatient(null);
+    openNewAppt();
+    setState({
+      newAppt: {
+        name: p.name || '', phone: p.phone && p.phone !== '—' ? p.phone : '', cin: p.cin && p.cin !== '—' ? p.cin : '',
+        sex: p.sex === 'M' ? 'Homme' : 'Femme', dob: p.dob || '',
+        motif: (state.services?.[0]?.name) || 'Consultation générale', date: todayISO, time: '09:00', notes: '',
+      },
+      naMatch: p, naSuggestOpen: false,
+    });
+  };
+  const newRxFor = (p) => { setViewPatient(null); setState({ rxPrefill: { name: p.name, patientId: p.userId || null } }); go('dprescribe'); };
 
   const filters = ['Tous', 'Actifs', 'Nouveaux', 'Archivés'];
 
@@ -172,7 +229,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
                 >
                   {/* Patient */}
                   <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div onClick={() => setViewPatient(patient)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} title="Ouvrir la fiche patient">
                       <div style={{
                         width: 38, height: 38, borderRadius: '50%', background: patient.color,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -309,34 +366,116 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           onClick={e => { if (e.target === e.currentTarget) setViewPatient(null); }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.45)', zIndex: 200, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', padding: isMobile ? '20px 12px' : 24, overflowY: 'auto' }}
         >
-          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(21,49,74,0.3)' }}>
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 620, boxShadow: '0 24px 60px rgba(21,49,74,0.3)', margin: 'auto 0' }}>
+            {/* Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: viewPatient.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 17, flexShrink: 0 }}>
                 {viewPatient.initials}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{viewPatient.name}</div>
-                <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{viewPatient.age} ans · {viewPatient.sex === 'F' ? 'Femme' : 'Homme'}</div>
+                <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>
+                  {viewPatient.age !== '—' ? `${viewPatient.age} ans · ` : ''}{viewPatient.sex === 'F' ? 'Femme' : viewPatient.sex === 'M' ? 'Homme' : ''}
+                  {viewPatient.userId && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#0E7C52', background: '#E7F6EE', borderRadius: 99, padding: '2px 8px' }}>Compte Tabibo lié</span>}
+                </div>
               </div>
               <button onClick={() => setViewPatient(null)} style={{ background: BG, border: `1px solid ${BORDER}`, cursor: 'pointer', width: 32, height: 32, borderRadius: 9, color: MUTED, fontSize: 15, flexShrink: 0 }}>✕</button>
             </div>
-            <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                ['CIN', viewPatient.cin],
-                ['Téléphone', viewPatient.phone],
-                ['Dernière visite', viewPatient.lastVisit],
-                ['Prochain RDV', viewPatient.nextAppt],
-                ['Statut', viewPatient.statut],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, fontSize: 13.5 }}>
-                  <span style={{ color: MUTED }}>{k}</span>
-                  <span style={{ color: DARK, fontWeight: 600, direction: 'ltr' }}>{v}</span>
-                </div>
-              ))}
+
+            {/* Quick actions — the daily loop, one tap away */}
+            <div style={{ padding: '14px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => newApptFor(viewPatient)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>+ Rendez-vous</button>
+              <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Ordonnance</button>
+              {viewPatient.userId && (
+                <button onClick={() => { setViewPatient(null); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Message</button>
+              )}
+              {viewPatient.phone && viewPatient.phone !== '—' && (
+                <a href={`tel:${String(viewPatient.phone).replace(/\s/g, '')}`} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>Appeler</a>
+              )}
             </div>
-            <div style={{ padding: '0 24px 22px', display: 'flex', gap: 10 }}>
-              <button onClick={() => { setViewPatient(null); openNewAppt(); }} style={{ flex: 1, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 11, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Planifier un RDV</button>
-              <button onClick={() => setViewPatient(null)} style={{ flex: 1, background: BG, color: '#5A6B65', border: `1px solid ${BORDER}`, borderRadius: 11, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
+
+            <div style={{ padding: '18px 24px', maxHeight: '58vh', overflowY: 'auto' }}>
+              {/* Identity + coverage */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 24px', marginBottom: 18 }}>
+                {[
+                  ['CIN', viewPatient.cin], ['Téléphone', viewPatient.phone],
+                  ['Assurance', viewPatient.insurance || '—'], ['N° AMO', viewPatient.amoNumber || '—'],
+                  ['Dernière visite', viewPatient.lastVisit], ['Prochain RDV', viewPatient.nextAppt],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: 13.5, padding: '3px 0' }}>
+                    <span style={{ color: MUTED }}>{k}</span>
+                    <span style={{ color: DARK, fontWeight: 600, direction: 'ltr', textAlign: 'end' }}>{v || '—'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Medical flags — what a doctor must see at a glance */}
+              {(viewPatient.blood || viewPatient.allergies || viewPatient.chronic) && (
+                <div style={{ background: '#FEF9EE', border: '1px solid #F3E3BC', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#9A6510', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Informations médicales</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {viewPatient.blood && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#C2466A', background: '#FCE7EE', borderRadius: 99, padding: '4px 12px' }}>Groupe {viewPatient.blood}</span>}
+                    {viewPatient.allergies && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#9A6510', background: '#FEF3DC', borderRadius: 99, padding: '4px 12px' }}>Allergies : {viewPatient.allergies}</span>}
+                    {viewPatient.chronic && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#3B6FB0', background: '#E8F1FC', borderRadius: 99, padding: '4px 12px' }}>Chronique : {viewPatient.chronic}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Visit history */}
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                Historique des consultations {patientHistory.length > 0 && <span style={{ color: PRIMARY }}>({patientHistory.length})</span>}
+              </div>
+              {patientHistory.length === 0 ? (
+                <div style={{ fontSize: 13, color: MUTED, marginBottom: 18 }}>Aucune consultation enregistrée.</div>
+              ) : (
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 18 }}>
+                  {patientHistory.slice(0, 5).map((c, i) => (
+                    <div key={c.id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i > 0 ? `1px solid ${BORDER}` : 'none', background: i % 2 ? ROW_ALT : '#fff' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{c.service || 'Consultation'}</div>
+                        <div style={{ fontSize: 11.5, color: MUTED }}>{c.date} · {c.time}</div>
+                      </div>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{c.amount ? `${c.amount} MAD` : ''}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 9px', background: c.status === 'Payé' ? '#E7F6EE' : c.status === 'Annulé' ? '#FCE7EE' : '#FEF3DC', color: c.status === 'Payé' ? '#0E7C52' : c.status === 'Annulé' ? '#C2466A' : '#9A6510' }}>{c.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Prescriptions */}
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                Ordonnances {pRx.length > 0 && <span style={{ color: PRIMARY }}>({pRx.length})</span>}
+              </div>
+              {pRx.length === 0 ? (
+                <div style={{ fontSize: 13, color: MUTED, marginBottom: 18 }}>Aucune ordonnance pour ce patient.</div>
+              ) : (
+                <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', marginBottom: 18 }}>
+                  {pRx.slice(0, 3).map((r, i) => (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i > 0 ? `1px solid ${BORDER}` : 'none' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{Array.isArray(r.items) ? `${r.items.length} médicament${r.items.length > 1 ? 's' : ''}` : 'Ordonnance'}</div>
+                        <div style={{ fontSize: 11.5, color: MUTED }}>{new Date(r.created_at).toLocaleDateString('fr-FR')} {r.sent_at ? '· envoyée au patient ✓' : ''}</div>
+                      </div>
+                      {r.ref && <span style={{ fontSize: 11, color: MUTED, fontFamily: 'monospace' }}>{r.ref}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Private notes — quick jot, saved to the roster */}
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Notes du praticien</div>
+              <textarea
+                value={pNotes}
+                onChange={(e) => setPNotes(e.target.value)}
+                placeholder="Antécédents, remarques, suivi… (visibles par vous et votre équipe uniquement)"
+                rows={3}
+                style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', fontSize: 13.5, color: DARK, outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: '#FAFCFB' }}
+              />
+              {pNotes !== (viewPatient.notes || '') && (
+                <button onClick={saveNotes} disabled={notesBusy} style={{ marginTop: 8, background: DARK, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: notesBusy ? 'default' : 'pointer', opacity: notesBusy ? 0.7 : 1 }}>
+                  {notesBusy ? 'Enregistrement…' : 'Enregistrer les notes'}
+                </button>
+              )}
             </div>
           </div>
         </div>
