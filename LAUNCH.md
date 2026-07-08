@@ -6,13 +6,33 @@ d'elle-même quand chaque médecin invitera ses propres patients.
 
 ## 1 · Technique (jour 1)
 
-- [ ] `supabase db push` — toutes les migrations (dont `security_hardening`, critique).
-- [ ] `supabase functions deploy` — les 4 fonctions (notify-verification, send-reminder, phone-login, invite-patient).
-- [ ] Secrets des fonctions posés : `RESEND_API_KEY`, `APP_URL=https://tabibo.ma`.
+- [ ] `supabase db push` — toutes les migrations (dont `security_hardening` + `chat_media_private` + `reminders_cron`, critiques).
+- [ ] `supabase functions deploy` — les 5 fonctions (notify-verification, send-reminder, phone-login, invite-patient, **admin-delete-user**).
+- [ ] Secrets des fonctions posés : `RESEND_API_KEY`, `APP_URL=https://tabibo.ma` (+ WhatsApp `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` si canal WhatsApp).
 - [ ] Resend : domaine `tabibo.ma` vérifié (DNS SPF/DKIM) → les emails partent de `@tabibo.ma`, pas du mode test.
 - [ ] Supabase Auth : **activer l'enforcement CAPTCHA** (Turnstile) + configurer le Site URL `https://tabibo.ma`.
 - [ ] Vercel : `VITE_APP_URL=https://tabibo.ma`, `VITE_SUPABASE_URL/ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_MAPTILER_KEY` en production. Brancher la branche de prod.
-- [ ] Cron des rappels (`send-reminder` type=dispatch) planifié (Supabase cron / GitHub Action).
+- [ ] **Rappels — activer le cron** (voir §1a) : le job pg_cron existe déjà (migration `reminders_cron`), il ne reste qu'à poser les 2 secrets Vault.
+- [ ] Supabase → Settings → Database : **activer les sauvegardes quotidiennes** (backups).
+
+### 1a · Activer l'envoi des rappels (une seule fois, SQL editor Supabase)
+
+Le dispatcher horaire est déjà planifié mais reste inerte tant que ces 2 secrets
+n'existent pas (aucune fuite dans le repo). Coller dans le SQL editor, avec vos
+vraies valeurs :
+
+```sql
+select vault.create_secret('https://<votre-ref>.supabase.co', 'tabibo_functions_url');
+select vault.create_secret('<service_role_ou_sb_secret_key>',  'tabibo_cron_key');
+```
+
+Ensuite le job `tabibo-reminders-hourly` appelle `send-reminder` chaque heure et
+envoie les rappels J-1 (activé par défaut) / J-2 (opt-in par médecin). Test manuel :
+`supabase functions invoke send-reminder --no-verify-jwt --body '{"type":"test","to":"+2126..."}'`.
+
+Canal par défaut : **email** (marche dès que `RESEND_API_KEY` est posé, zéro config
+Meta). Pour WhatsApp, créer les templates approuvés côté Meta et poser les secrets
+`WHATSAPP_*` (voir l'en-tête de `supabase/functions/send-reminder/index.ts`).
 
 ## 2 · Configuration admin (jour 1, dans la console admin)
 

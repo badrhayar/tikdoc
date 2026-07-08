@@ -173,15 +173,19 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {waiting.map((a) => {
                   const min = waitMin(a);
+                  const dot = min >= 30 ? '#E2748A' : min >= 15 ? '#E8B34B' : '#16A06A';
+                  const waitColor = min >= 30 ? '#C2466A' : min >= 15 ? '#9A6510' : '#0E7C52';
                   return (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F7FBF9', border: `1px solid #E4EEE9`, borderRadius: 11, padding: '9px 13px' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: min >= 30 ? '#E2748A' : min >= 15 ? '#E8B34B' : '#16A06A', flexShrink: 0 }} />
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#F7FBF9', border: `1px solid #E4EEE9`, borderRadius: 11, padding: '10px 13px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{a.patientName || 'Patient'}</span>
-                        <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>{a.reason || ''}</span>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.patientName || 'Patient'}</div>
+                        <div style={{ fontSize: 12, marginTop: 1 }}>
+                          {a.reason && <span style={{ color: MUTED }}>{a.reason} · </span>}
+                          <span style={{ fontWeight: 700, color: waitColor }}>attend depuis {min} min</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: min >= 30 ? '#C2466A' : min >= 15 ? '#9A6510' : '#0E7C52', flexShrink: 0 }}>attend depuis {min} min</span>
-                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
+                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
                     </div>
                   );
                 })}

@@ -6,6 +6,7 @@ import Icon from '../components/Icon';
 import QRCode from 'qrcode';
 import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, getDocumentUrl, fetchMyPrescriptions } from '../lib/api';
 import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
+import ChatImage from '../components/ChatImage';
 import PhoneField from '../components/PhoneField';
 
 const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/\/$/, '');
@@ -713,9 +714,7 @@ export default function PatientAccount() {
               thread.map((m) => (
                 <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
                   {m.image ? (
-                    <a href={m.text} target="_blank" rel="noreferrer" style={{ display:'block', maxWidth:'70%' }}>
-                      <img src={m.text} alt="pièce jointe" style={{ maxWidth:'100%', maxHeight:220, borderRadius:14, display:'block', border:`1px solid ${BORDER_STRONG}` }} />
-                    </a>
+                    <ChatImage token={m.text} linkStyle={{ display:'block', maxWidth:'70%' }} style={{ maxWidth:'100%', maxHeight:220, borderRadius:14, display:'block', border:`1px solid ${BORDER_STRONG}` }} />
                   ) : (
                     <div style={{ maxWidth:'78%', padding:'8px 12px', borderRadius:14, fontSize:13, lineHeight:1.45, background: m.mine ? G : '#fff', color: m.mine ? '#fff' : DARK, border: m.mine ? 'none' : `1px solid ${BORDER_STRONG}`, borderBottomRightRadius: m.mine ? 4 : 14, borderBottomLeftRadius: m.mine ? 14 : 4 }}>
                       <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{m.text}</div>

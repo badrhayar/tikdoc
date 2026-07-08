@@ -575,8 +575,15 @@ export async function fetchAllAccounts() {
 }
 
 export async function adminDeleteUser(id) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  if (error) throw error;
+  // Delete BOTH the auth login and the profile via a secured admin function.
+  // Falls back to a profile-only delete if the function isn't deployed yet
+  // (better than failing outright, though it leaves the auth login — deploy
+  // admin-delete-user to fully remove accounts).
+  const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: id } });
+  if (!error && data?.ok) return true;
+  if (data && data.ok === false && data.error) throw new Error(data.error);
+  const { error: delErr } = await supabase.from('users').delete().eq('id', id);
+  if (delErr) throw delErr;
   return true;
 }
 
@@ -1002,7 +1009,11 @@ export async function fetchConversationPreviews(limit = 4) {
     .slice(0, limit);
 }
 
-/** Upload a chat image; returns a public URL to send as the message content. */
+/**
+ * Upload a chat image to the PRIVATE chat-media bucket. Returns a bucket-scoped
+ * token stored as the message body; it's rendered via a short-lived signed URL
+ * (getChatMediaUrl), so no world-readable public URL ever exists.
+ */
 export async function uploadChatImage(file) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error('Non authentifié');
@@ -1010,13 +1021,22 @@ export async function uploadChatImage(file) {
   const path = `${auth.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const up = await supabase.storage.from('chat-media').upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (up.error) throw up.error;
-  const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
-  return data.publicUrl;
+  return `chat-media/${path}`;
 }
 
-/** True if a message body is an image attachment (a chat-media URL). */
+/** True if a message body is an image attachment (token or legacy public URL). */
 export function isImageMessage(content) {
-  return typeof content === 'string' && /\/chat-media\/.+\.(png|jpe?g|gif|webp|heic)(\?|$)/i.test(content);
+  return typeof content === 'string' && /(^chat-media\/|\/chat-media\/).+\.(png|jpe?g|gif|webp|heic)(\?|$)/i.test(content);
+}
+
+/** Resolve a chat-media token (or legacy URL) to a signed URL for <img src>. */
+export async function getChatMediaUrl(content) {
+  if (typeof content !== 'string') return '';
+  if (/^https?:\/\//i.test(content)) return content;            // legacy public URL
+  const path = content.replace(/^chat-media\//, '');
+  const { data, error } = await supabase.storage.from('chat-media').createSignedUrl(path, 3600);
+  if (error) return '';
+  return data.signedUrl;
 }
 
 export async function fetchMessages(conversationId) {
