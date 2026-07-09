@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { deleteAppointment } from '../../lib/api';
+import { deleteAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -165,6 +165,31 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
     }
     closeEdit();
   };
+  // Booking status of the currently-open appointment (pending | confirmed | …).
+  const apptFor = (id) => [...(state?.manualAppts || []), ...(state?.myAppointments || [])].find(a => a.id === id);
+  const bookStatus = editData ? apptFor(editData.id)?.status : null;
+
+  // Confirm a patient-booked appointment → notifies the patient (email + WhatsApp).
+  const [confirming, setConfirming] = useState(false);
+  const confirmBooking = async () => {
+    const id = editData.id;
+    const isManual = String(id).startsWith('local_') || String(id).startsWith('demo_');
+    setConfirming(true);
+    try {
+      if (isManual) {
+        setState({ manualAppts: (state.manualAppts || []).map(a => a.id === id ? { ...a, status: 'confirmed' } : a), toast: 'Rendez-vous confirmé ✓', toastShow: true });
+      } else {
+        await updateAppointmentStatus(id, 'confirmed');
+        setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status: 'confirmed' } : a), toast: 'Rendez-vous confirmé — le patient est notifié ✓', toastShow: true });
+        sendApptWhatsApp(id, 'confirmed');
+        notifyApptEmail(id, 'confirmed');
+      }
+      closeEdit();
+    } catch (e) {
+      setState({ toast: 'Confirmation impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setConfirming(false); }
+  };
+
   const deleteAppt = async () => {
     const id = editData.id;
     const isManual = String(id).startsWith('local_');
@@ -417,6 +442,28 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             </div>
 
             <div style={{ display: 'grid', gap: 14 }}>
+              {/* Booking status + confirm (the secretary/doctor can confirm here) */}
+              {bookStatus && bookStatus !== 'completed' && bookStatus !== 'cancelled' && bookStatus !== 'no_show' && (
+                <div style={{ background: bookStatus === 'confirmed' ? '#E7F6EE' : '#FEF6E7', border: `1px solid ${bookStatus === 'confirmed' ? '#CDE7DA' : '#F6E0AE'}`, borderRadius: 10, padding: '12px 14px' }}>
+                  {bookStatus === 'confirmed' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#0E7C52' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      Rendez-vous confirmé
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#9A6510' }}>Réservé par le patient</div>
+                        <div style={{ fontSize: 11.5, color: '#9A6510' }}>En attente de confirmation.</div>
+                      </div>
+                      <button onClick={confirmBooking} disabled={confirming} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
+                        {confirming ? 'Confirmation…' : 'Confirmer le rendez-vous'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Patient */}
               <div>
                 <label style={lbl}>Patient</label>

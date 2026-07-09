@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { uploadDocument, listDocuments, getDocumentUrl } from '../../lib/api';
+import { uploadDocument, listDocuments, downloadDocument } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import { DEMO_PATIENTS } from '../../shared.jsx';
 
@@ -66,7 +66,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   };
 
   const download = async (path) => {
-    try { window.open(await getDocumentUrl(path), '_blank'); }
+    try { await downloadDocument(path, fileName(path)); }
     catch (e) { setState({ toast: 'Téléchargement impossible : ' + (e?.message || 'erreur'), toastShow: true }); }
   };
 

@@ -388,7 +388,6 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
                       </div>
                       <div>
                         <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{row.patient}</div>
-                        <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{row.age} ans · {row.sex}</div>
                       </div>
                     </div>
                   </td>

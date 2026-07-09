@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useViewport } from '../../hooks/useViewport';
-import { DEMO_PATIENTS } from '../../shared.jsx';
+import { DEMO_PATIENTS, CITY_OPTS } from '../../shared.jsx';
 import { updatePatient, fetchPrescriptions } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import Icon from '../../components/Icon';
+
+// Whole years between a birth date and today (for the age shown from the DOB).
+function ageFromDob(dob) {
+  if (!dob) return '—';
+  const b = new Date(dob); if (isNaN(b)) return '—';
+  const t = new Date(); let a = t.getFullYear() - b.getFullYear();
+  const m = t.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < b.getDate())) a--;
+  return a >= 0 && a < 130 ? a : '—';
+}
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -32,7 +43,46 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   // Real roster when connected; demo data only when Supabase isn't configured.
   const patientList = state.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS);
   const [viewPatient, setViewPatient] = useState(null);   // detail modal
-  const [menuId, setMenuId] = useState(null);             // open "…" menu row
+  const [menu, setMenu] = useState(null);                 // { patient, x, y } — portal menu
+  const [editForm, setEditForm] = useState(null);         // full patient edit form
+  const [editBusy, setEditBusy] = useState(false);
+
+  // Open the full editable form (all patient info). Age is derived from the DOB.
+  const openEdit = (p) => setEditForm({
+    id: p.id, name: p.name || '', cin: p.cin && p.cin !== '—' ? p.cin : '', phone: p.phone && p.phone !== '—' ? p.phone : '',
+    email: p.email || '', dob: p.dob || '', sex: p.sex === 'M' ? 'Homme' : p.sex === 'F' ? 'Femme' : '',
+    address: p.address || '', city: p.city || '', blood: p.blood || '', allergies: p.allergies || '',
+    chronic: p.chronic || '', insurance: p.insurance || '', amoNumber: p.amoNumber || '', notes: p.notes || '',
+  });
+  const setEF = (k, v) => setEditForm((f) => ({ ...f, [k]: v }));
+  const saveEditForm = async () => {
+    if (!editForm?.id) return;
+    setEditBusy(true);
+    const patch = {
+      name: editForm.name, cin: editForm.cin || null, phone: editForm.phone || null, email: editForm.email || null,
+      dob: editForm.dob || null, sex: editForm.sex === 'Homme' ? 'M' : editForm.sex === 'Femme' ? 'F' : null,
+      address: editForm.address || null, city: editForm.city || null, blood: editForm.blood || null,
+      allergies: editForm.allergies || null, chronic: editForm.chronic || null, insurance: editForm.insurance || null,
+      amo_number: editForm.amoNumber || null, notes: editForm.notes || null,
+    };
+    try {
+      if (isSupabaseConfigured) await updatePatient(editForm.id, patch);
+      const merged = {
+        name: editForm.name, cin: editForm.cin || '—', phone: editForm.phone || '—', email: editForm.email,
+        dob: editForm.dob, age: ageFromDob(editForm.dob), sex: patch.sex || '',
+        address: editForm.address, city: editForm.city, blood: editForm.blood, allergies: editForm.allergies,
+        chronic: editForm.chronic, insurance: editForm.insurance, amoNumber: editForm.amoNumber, notes: editForm.notes,
+      };
+      setState({
+        patients: (state.patients || []).map((x) => x.id === editForm.id ? { ...x, ...merged } : x),
+        toast: 'Fiche patient mise à jour ✓', toastShow: true,
+      });
+      setViewPatient((v) => v && v.id === editForm.id ? { ...v, ...merged } : v);
+      setEditForm(null);
+    } catch (e) {
+      setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setEditBusy(false); }
+  };
 
   // ── Fiche patient: history + ordonnances + editable notes ──────────────────
   const doctorId = state.myDoctor?.id;
@@ -105,7 +155,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
     const cur = patientList.find(p => p.id === id);
     const next = cur && cur.statut === 'Archivé' ? 'Actif' : 'Archivé';
     setState({ patients: patientList.map(p => p.id === id ? { ...p, statut: next } : p) });
-    setMenuId(null);
+    setMenu(null);
     if (isSupabaseConfigured) updatePatient(id, { statut: next }).catch(() => {});
   };
 
@@ -303,7 +353,10 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
                       </button>
                       <button
                         title="Plus d'options"
-                        onClick={() => setMenuId(menuId === patient.id ? null : patient.id)}
+                        onClick={(e) => {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          setMenu(menu?.patient?.id === patient.id ? null : { patient, x: r.right, y: r.bottom });
+                        }}
                         style={{
                           background: BG, border: 'none', borderRadius: 8,
                           width: 32, height: 32, cursor: 'pointer', color: MUTED,
@@ -312,18 +365,6 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                       </button>
-                      {menuId === patient.id && (
-                        <>
-                          <div onClick={() => setMenuId(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-                          <div style={{ position: 'absolute', top: 38, right: 0, width: 188, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: '0 14px 34px rgba(21,49,74,0.16)', overflow: 'hidden', zIndex: 40 }}>
-                            <button onClick={() => { setViewPatient(patient); setMenuId(null); }} style={menuItemStyle}>Voir le dossier</button>
-                            <button onClick={() => { openNewAppt(); setMenuId(null); }} style={menuItemStyle}>Planifier un RDV</button>
-                            <button onClick={() => toggleArchive(patient.id)} style={{ ...menuItemStyle, color: patient.statut === 'Archivé' ? PRIMARY : '#D9536B', borderTop: `1px solid ${BORDER}` }}>
-                              {patient.statut === 'Archivé' ? 'Réactiver' : 'Archiver'}
-                            </button>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </td>
                 </tr>
@@ -360,6 +401,92 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
         </div>
       </div>
 
+      {/* "…" options menu — rendered in a portal so the table's overflow can't
+          clip it (that's why it looked "stuck underneath the table"). */}
+      {menu && createPortal(
+        <>
+          <div onClick={() => setMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
+          <div style={{ position: 'fixed', top: menu.y + 4, left: Math.max(8, menu.x - 200), width: 200, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: '0 14px 34px rgba(21,49,74,0.18)', overflow: 'hidden', zIndex: 1001 }}>
+            <button onClick={() => { setViewPatient(menu.patient); setMenu(null); }} style={menuItemStyle}>Voir le dossier</button>
+            <button onClick={() => { openEdit(menu.patient); setMenu(null); }} style={{ ...menuItemStyle, borderTop: `1px solid ${BORDER}` }}>Modifier le patient</button>
+            <button onClick={() => { newApptFor(menu.patient); setMenu(null); }} style={{ ...menuItemStyle, borderTop: `1px solid ${BORDER}` }}>Planifier un RDV</button>
+            <button onClick={() => toggleArchive(menu.patient.id)} style={{ ...menuItemStyle, color: menu.patient.statut === 'Archivé' ? PRIMARY : '#D9536B', borderTop: `1px solid ${BORDER}` }}>
+              {menu.patient.statut === 'Archivé' ? 'Réactiver' : 'Archiver'}
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* Full patient edit form */}
+      {editForm && createPortal(
+        <div onClick={e => { if (e.target === e.currentTarget) setEditForm(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.45)', zIndex: 1100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '28px 14px', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 560, boxShadow: '0 24px 60px rgba(21,49,74,0.3)' }}>
+            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>Modifier la fiche patient</div>
+              <button onClick={() => setEditForm(null)} style={{ background: BG, border: `1px solid ${BORDER}`, width: 30, height: 30, borderRadius: 8, cursor: 'pointer', color: MUTED }}>✕</button>
+            </div>
+            <div style={{ padding: '18px 22px', maxHeight: '64vh', overflowY: 'auto' }}>
+              {(() => {
+                const inp = { width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, color: DARK, outline: 'none', background: '#fff' };
+                const lab = { display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 5 };
+                const Field = ({ label, k, type = 'text', full }) => (
+                  <div style={{ gridColumn: full ? '1 / -1' : 'auto' }}>
+                    <label style={lab}>{label}</label>
+                    <input type={type} value={editForm[k] || ''} onChange={e => setEF(k, e.target.value)} style={{ ...inp, direction: type === 'tel' || k === 'cin' || k === 'email' || k === 'amoNumber' ? 'ltr' : undefined }} />
+                  </div>
+                );
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                    <Field label="Nom complet" k="name" full />
+                    <Field label="CIN" k="cin" />
+                    <Field label="Téléphone" k="phone" type="tel" />
+                    <div>
+                      <label style={lab}>Date de naissance {editForm.dob && <span style={{ color: PRIMARY, fontWeight: 700 }}>· {ageFromDob(editForm.dob)} ans</span>}</label>
+                      <input type="date" value={editForm.dob || ''} onChange={e => setEF('dob', e.target.value)} style={inp} />
+                    </div>
+                    <div>
+                      <label style={lab}>Sexe</label>
+                      <select value={editForm.sex || ''} onChange={e => setEF('sex', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                        <option value="">—</option><option>Femme</option><option>Homme</option>
+                      </select>
+                    </div>
+                    <Field label="Email" k="email" type="email" />
+                    <Field label="Adresse" k="address" full />
+                    <div>
+                      <label style={lab}>Ville</label>
+                      <select value={editForm.city || ''} onChange={e => setEF('city', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                        <option value="">—</option>
+                        {CITY_OPTS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={lab}>Assurance</label>
+                      <select value={editForm.insurance || ''} onChange={e => setEF('insurance', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                        <option value="">—</option>{['CNSS','CNOPS','Mutuelle privée','Sans assurance'].map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <Field label="N° AMO" k="amoNumber" />
+                    <Field label="Groupe sanguin" k="blood" />
+                    <Field label="Allergies" k="allergies" full />
+                    <Field label="Maladies chroniques" k="chronic" full />
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={lab}>Notes</label>
+                      <textarea value={editForm.notes || ''} onChange={e => setEF('notes', e.target.value)} rows={3} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div style={{ padding: '14px 22px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditForm(null)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={saveEditForm} disabled={editBusy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: editBusy ? 'default' : 'pointer', opacity: editBusy ? 0.7 : 1 }}>{editBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Patient detail modal */}
       {viewPatient && (
         <div
@@ -385,6 +512,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
             {/* Quick actions — the daily loop, one tap away */}
             <div style={{ padding: '14px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={() => newApptFor(viewPatient)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>+ Rendez-vous</button>
+              <button onClick={() => openEdit(viewPatient)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Modifier</button>
               <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Ordonnance</button>
               {viewPatient.userId && (
                 <button onClick={() => { const uid = viewPatient.userId; setViewPatient(null); setState({ chatOpenPeer: uid }); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Message</button>

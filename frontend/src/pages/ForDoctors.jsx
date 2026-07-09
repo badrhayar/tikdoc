@@ -59,7 +59,10 @@ export default function ForDoctors() {
         mkAppt(4, '15:00', 'Hassan Berrada', '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed'),
       ],
       manualConsults: [
-        { id: 'dc1', patient: 'Fatima Zahra Benali', age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: '09:00', amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
+        // Today's calendar entries reuse the appointment ids so the calendar can
+        // show/confirm their booking status (demo of the confirm-from-calendar flow).
+        { id: 'demo_1', patient: 'Fatima Zahra Benali', age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: '09:00', amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
+        { id: 'demo_3', patient: 'Amina Tazi', age: 22, sex: 'F', service: 'Bilan complet', date: t0, time: '11:30', amount: 500, pay: '—', status: 'En attente', notes: '' },
         { id: 'dc2', patient: 'Mohamed Rachid Alami', age: 52, sex: 'M', service: 'Suivi', date: daysAgo(1), time: '10:00', amount: 200, pay: 'CMI', status: 'Payé', notes: '' },
         { id: 'dc3', patient: 'Khadija Oumghar', age: 28, sex: 'F', service: 'Bilan complet', date: daysAgo(2), time: '11:00', amount: 500, pay: 'Espèces', status: 'Payé', notes: '' },
         { id: 'dc4', patient: 'Youssef El Mansouri', age: 45, sex: 'M', service: 'Consultation générale', date: daysAgo(3), time: '14:30', amount: 300, pay: '—', status: 'En attente', notes: '' },

@@ -130,27 +130,20 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const svcRanking = Object.entries(bySvcCount).sort((a, b) => b[1] - a[1]);
   const maxSvcCount = svcRanking[0]?.[1] || 1;
 
-  // Fixed-window revenue cards (today / week / month) use ALL paid consultations
-  // — they are calendar windows, independent of the period selector. The 4th
-  // card uses the selected period. All share the same local source, so they
-  // never contradict each other.
+  // ALL revenue KPIs are driven by the selected period — no more fixed calendar
+  // cards that contradict the filter. Every figure below shares the same
+  // period-windowed `consultations`/`paid` source, so they stay coherent
+  // (encaissé = Σ paid, payées = count, panier = encaissé ÷ payées).
   const today = new Date();
-  const paidAll = allConsultations.filter(c => c.status === 'Payé');
-  const isSameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-  const revToday = paidAll.filter(c => c.date && isSameDay(parse(c.date))).reduce((s, c) => s + (c.amount || 0), 0);
   const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7)); startOfWeek.setHours(0, 0, 0, 0);
-  const revWeek = paidAll.filter(c => c.date && parse(c.date) >= startOfWeek).reduce((s, c) => s + (c.amount || 0), 0);
-  const revMonth = paidAll.filter(c => c.date && parse(c.date).getMonth() === today.getMonth() && parse(c.date).getFullYear() === today.getFullYear()).reduce((s, c) => s + (c.amount || 0), 0);
-
-  // Average ticket over the selected period (revenue ÷ paid consultations) — a
-  // distinct, useful KPI (replaces the old period-revenue card that duplicated
-  // "Revenus ce mois").
   const panierMoyen = paid.length ? Math.round(totalRevenue / paid.length) : 0;
+  const pending = consultations.filter(c => c.status !== 'Payé' && c.status !== 'Annulé');
+  const pendingAmount = pending.reduce((s, c) => s + (c.amount || 0), 0);
   const REVENUE_CARDS = [
-    { label: "Revenus aujourd'hui", value: revToday.toLocaleString('fr-FR') + ' MAD' },
-    { label: 'Revenus cette semaine', value: revWeek.toLocaleString('fr-FR') + ' MAD' },
-    { label: 'Revenus ce mois', value: revMonth.toLocaleString('fr-FR') + ' MAD' },
-    { label: `Panier moyen (${period})`, value: panierMoyen.toLocaleString('fr-FR') + ' MAD' },
+    { label: `Revenus encaissés (${period})`, value: totalRevenue.toLocaleString('fr-FR') + ' MAD' },
+    { label: 'Consultations payées', value: String(paid.length) },
+    { label: 'Panier moyen', value: panierMoyen.toLocaleString('fr-FR') + ' MAD' },
+    { label: "En attente d'encaissement", value: pendingAmount.toLocaleString('fr-FR') + ' MAD' },
   ];
 
   // Consultation KPIs over the selected period (same source as everything else).

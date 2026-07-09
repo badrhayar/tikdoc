@@ -4,7 +4,7 @@ import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 import QRCode from 'qrcode';
-import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, getDocumentUrl, fetchMyPrescriptions } from '../lib/api';
+import { createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, downloadDocument, fetchMyPrescriptions } from '../lib/api';
 import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
 import ChatImage from '../components/ChatImage';
 import PhoneField from '../components/PhoneField';
@@ -248,10 +248,10 @@ export default function PatientAccount() {
     } finally { setDocBusy(false); }
   };
 
-  const openDoc = async (path) => {
+  const openDoc = async (path, name) => {
     if (!path) return;
-    try { const url = await getDocumentUrl(path); if (url) window.open(url, '_blank'); }
-    catch (e) { setState({ toast: 'Ouverture du document impossible.', toastShow: true }); }
+    try { await downloadDocument(path, name || (path.split('/').pop() || 'document')); }
+    catch (e) { setState({ toast: 'Téléchargement du document impossible.', toastShow: true }); }
   };
 
   // ── Ordonnances the patient has received from their doctors ─────────────────
@@ -628,7 +628,7 @@ export default function PatientAccount() {
                       <span style={{ fontSize:11, fontWeight:700, color: isIn ? '#138257' : '#3B6FB0', background: isIn ? '#E7F6EE' : '#E8F1FC', padding:'3px 9px', borderRadius:99, flexShrink:0 }}>
                         {isIn ? 'Reçu' : 'Envoyé'}
                       </span>
-                      <button title="Télécharger" onClick={() => openDoc(d.path)} style={{ background:BG, border:'1px solid #DCE5E0', color:DARK, cursor:'pointer', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <button title="Télécharger" onClick={() => openDoc(d.path, d.name)} style={{ background:BG, border:'1px solid #DCE5E0', color:DARK, cursor:'pointer', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
                       </button>
                     </div>

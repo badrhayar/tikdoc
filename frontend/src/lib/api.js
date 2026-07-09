@@ -929,11 +929,28 @@ export async function listDocuments() {
   return data || [];
 }
 
-/** A short-lived signed URL to download/preview a private file. */
-export async function getDocumentUrl(path) {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+/**
+ * A short-lived signed URL to a private file. Pass a filename to force a
+ * download (Content-Disposition: attachment) instead of opening in-tab.
+ */
+export async function getDocumentUrl(path, downloadName = null) {
+  const opts = downloadName ? { download: downloadName } : undefined;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600, opts);
   if (error) throw error;
   return data.signedUrl;
+}
+
+/** Force-download a private document (fetches the blob so it saves, not opens). */
+export async function downloadDocument(path, filename) {
+  const url = await getDocumentUrl(path, filename || 'document');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Téléchargement impossible');
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objUrl; a.download = filename || (path.split('/').pop() || 'document');
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
 }
 
 // ── Chat: conversations + messages ────────────────────────────────────────────
