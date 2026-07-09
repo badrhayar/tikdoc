@@ -420,6 +420,19 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
             <button onClick={() => { setViewPatient(menu.patient); setMenu(null); }} style={menuItemStyle}>Voir le dossier</button>
             <button onClick={() => { openEdit(menu.patient); setMenu(null); }} style={{ ...menuItemStyle, borderTop: `1px solid ${BORDER}` }}>Modifier le patient</button>
             <button onClick={() => { newApptFor(menu.patient); setMenu(null); }} style={{ ...menuItemStyle, borderTop: `1px solid ${BORDER}` }}>Planifier un RDV</button>
+            <button
+              onClick={() => {
+                const p = menu.patient;
+                const next = p.statut === 'Bloqué' ? 'Actif' : 'Bloqué';
+                setState({ patients: (state.patients || []).map(x => x.id === p.id ? { ...x, statut: next } : x), toast: next === 'Bloqué' ? 'Réservation en ligne bloquée pour ce patient.' : 'Réservation en ligne autorisée.', toastShow: true });
+                if (isSupabaseConfigured) updatePatient(p.id, { statut: next }).catch(() => {});
+                setMenu(null);
+              }}
+              title="Empêche ce patient de réserver en ligne (au cabinet reste possible)"
+              style={{ ...menuItemStyle, color: menu.patient.statut === 'Bloqué' ? PRIMARY : '#C28A1B', borderTop: `1px solid ${BORDER}` }}
+            >
+              {menu.patient.statut === 'Bloqué' ? 'Autoriser la réservation en ligne' : 'Bloquer la réservation en ligne'}
+            </button>
             <button onClick={() => toggleArchive(menu.patient.id)} style={{ ...menuItemStyle, color: menu.patient.statut === 'Archivé' ? PRIMARY : '#D9536B', borderTop: `1px solid ${BORDER}` }}>
               {menu.patient.statut === 'Archivé' ? 'Réactiver' : 'Archiver'}
             </button>

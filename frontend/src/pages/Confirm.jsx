@@ -155,12 +155,14 @@ export default function Confirm() {
           gap: 8,
         }}>
           <Icon name="smartphone" size={15} />
-          Une confirmation vous a été envoyée par email
+          {state.guestBooking
+            ? `Rendez-vous enregistré pour le ${state.guestPhone || 'numéro vérifié'} — le cabinet vous confirmera.`
+            : 'Une confirmation vous a été envoyée par email'}
         </div>
 
-        {/* Primary: view my appointments (payment happens at the cabinet — no invoice) */}
+        {/* Primary: guests are invited to create an account; patients see their RDV */}
         <button
-          onClick={() => go('paccount')}
+          onClick={() => go(state.guestBooking ? 'pregister' : 'paccount')}
           style={{
             width: '100%',
             padding: '13px 0',
@@ -174,7 +176,7 @@ export default function Confirm() {
             marginBottom: 12,
           }}
         >
-          Voir mes rendez-vous
+          {state.guestBooking ? 'Créer mon compte pour suivre mes rendez-vous' : 'Voir mes rendez-vous'}
         </button>
 
         {/* Side-by-side buttons */}

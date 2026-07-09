@@ -875,6 +875,46 @@ export async function saveAvailability(doctorId, rows) {
   return true;
 }
 
+// ── Guest booking (phone-verified, no account) ───────────────────────────────
+/** Is the OTP channel configured server-side? Cached per session. */
+let _guestEnabled = null;
+export async function guestBookingEnabled() {
+  if (_guestEnabled !== null) return _guestEnabled;
+  try {
+    const { data } = await supabase.functions.invoke('guest-booking', { body: { action: 'status' } });
+    _guestEnabled = !!data?.enabled;
+  } catch { _guestEnabled = false; }
+  return _guestEnabled;
+}
+
+/** Step 1: request the one-time code (sent by WhatsApp/SMS to the phone). */
+export async function guestBookingStart({ doctorId, datetime, name, phone, reason }) {
+  const { data, error } = await supabase.functions.invoke('guest-booking', {
+    body: { action: 'start', doctorId, datetime, name, phone, reason },
+  });
+  if (error) {
+    let msg = 'Envoi du code impossible.';
+    try { const t = await error.context?.text?.(); if (t) msg = JSON.parse(t).error || msg; } catch (_) { /* ignore */ }
+    throw new Error(msg);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'Envoi du code impossible.');
+  return data;   // { sent: 'whatsapp'|'sms', phone }
+}
+
+/** Step 2: verify the code → the appointment is created. */
+export async function guestBookingVerify({ phone, code }) {
+  const { data, error } = await supabase.functions.invoke('guest-booking', {
+    body: { action: 'verify', phone, code },
+  });
+  if (error) {
+    let msg = 'Vérification impossible.';
+    try { const t = await error.context?.text?.(); if (t) msg = JSON.parse(t).error || msg; } catch (_) { /* ignore */ }
+    throw new Error(msg);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'Vérification impossible.');
+  return data;   // { appointmentId }
+}
+
 // ── Reviews ───────────────────────────────────────────────────────────────────
 /** Public reviews of a doctor (anonymised reviewer), newest first. */
 export async function fetchDoctorReviews(doctorId, limit = 10) {

@@ -34,6 +34,17 @@ Canal par défaut : **email** (marche dès que `RESEND_API_KEY` est posé, zéro
 Meta). Pour WhatsApp, créer les templates approuvés côté Meta et poser les secrets
 `WHATSAPP_*` (voir l'en-tête de `supabase/functions/send-reminder/index.ts`).
 
+### 1b · Réservation sans compte (vérifiée par code) — optionnelle
+
+La fonction `guest-booking` permet aux patients de réserver avec nom + téléphone,
+validés par un **code à usage unique** (anti-faux numéros ; limites anti-abus,
+liste noire par cabinet, blocage des récidivistes d'absence). Elle s'active toute
+seule dès qu'UN canal d'envoi du code est configuré :
+- **WhatsApp** : `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE_OTP`
+  (template Meta de catégorie **Authentication**, corps `{{1}}` = code), ou
+- **SMS** : `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`.
+Sans ces secrets, les patients passent par le compte classique (aucun risque).
+
 ## 2 · Configuration admin (jour 1, dans la console admin)
 
 - [ ] **RIB réel** dans Facturation — sans lui, les médecins bloqués voient « contactez le support ».

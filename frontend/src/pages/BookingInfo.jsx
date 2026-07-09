@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import PhoneField from '../components/PhoneField';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
-import { createAppointment } from '../lib/api';
+import { createAppointment, guestBookingEnabled, guestBookingStart, guestBookingVerify } from '../lib/api';
 import { moroccoToUTCISO } from '../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -63,10 +63,57 @@ export default function BookingInfo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appUser?.id]);
 
+  // ── Phone-verified guest booking (no account needed) ────────────────────────
+  const [guestOk, setGuestOk] = useState(false);           // OTP channel configured?
+  const [otp, setOtp] = useState(null);                    // { phone, sent } → code modal open
+  const [otpCode, setOtpCode] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  useEffect(() => {
+    if (isSupabaseConfigured && !appUser) guestBookingEnabled().then(setGuestOk).catch(() => {});
+  }, [appUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startGuest = async () => {
+    if (!(info.name || '').trim() || !(info.phone || '').trim()) {
+      setState({ toast: 'Indiquez votre nom et votre téléphone.', toastShow: true });
+      return;
+    }
+    setOtpBusy(true); setOtpError('');
+    try {
+      const iso = moroccoToUTCISO(bookDate, slot || '09:00');
+      const r = await guestBookingStart({ doctorId: doc.id, datetime: iso, name: info.name.trim(), phone: info.phone, reason: selectedMotif });
+      setOtp({ phone: r.phone, sent: r.sent });
+      setOtpCode('');
+    } catch (e) {
+      if (/slot_taken/.test(e?.message || '')) {
+        setState({ bookSlot: '', toast: 'Ce créneau vient d’être réservé. Choisissez-en un autre.', toastShow: true });
+        go('profile');
+      } else setState({ toast: e?.message || 'Envoi du code impossible.', toastShow: true });
+    } finally { setOtpBusy(false); }
+  };
+
+  const verifyGuest = async () => {
+    setOtpBusy(true); setOtpError('');
+    try {
+      await guestBookingVerify({ phone: otp.phone, code: otpCode });
+      setState({ guestBooking: true, guestPhone: otp.phone });
+      setOtp(null);
+      go('confirm');
+    } catch (e) {
+      if (/slot_taken/.test(e?.message || '')) {
+        setOtp(null);
+        setState({ bookSlot: '', toast: 'Ce créneau vient d’être réservé. Choisissez-en un autre.', toastShow: true });
+        go('profile');
+      } else setOtpError(e?.message || 'Code incorrect.');
+    } finally { setOtpBusy(false); }
+  };
+
   const handleConfirm = async () => {
     // When connected to Supabase, persist the appointment for the signed-in patient.
     if (isSupabaseConfigured) {
       if (!appUser) {
+        // Phone-verified guest path when the OTP channel is configured.
+        if (guestOk) { startGuest(); return; }
         // Remember the booking so we return here (not the account page) after login.
         setState({ postLoginScreen: 'pinfo', toast: 'Connectez-vous pour confirmer votre rendez-vous.', toastShow: true });
         go('plogin');
@@ -331,8 +378,48 @@ export default function BookingInfo() {
           >
             Confirmer le rendez-vous
           </button>
+          {isSupabaseConfigured && !appUser && guestOk && (
+            <p style={{ margin: '10px 0 0', fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.5 }}>
+              Sans compte : vous recevrez un <strong>code de confirmation</strong> par WhatsApp/SMS pour valider votre numéro.
+            </p>
+          )}
         </div>
       </div>
+
+      {/* OTP modal — phone-verified guest booking */}
+      {otp && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setOtp(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 24px 60px rgba(21,49,74,0.3)', textAlign: 'center' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E7F6EE', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+            </div>
+            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: DARK }}>Confirmez votre numéro</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>
+              Un code à 6 chiffres a été envoyé par {otp.sent === 'whatsapp' ? 'WhatsApp' : 'SMS'} au <strong style={{ color: DARK, direction: 'ltr', display: 'inline-block' }}>{otp.phone}</strong>.
+            </p>
+            <input
+              value={otpCode}
+              onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && otpCode.length === 6) verifyGuest(); }}
+              inputMode="numeric"
+              autoFocus
+              placeholder="––––––"
+              style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center', letterSpacing: 10, fontSize: 26, fontWeight: 800, color: DARK, padding: '12px 10px', border: `1.5px solid ${otpError ? '#E0596F' : BORDER}`, borderRadius: 12, outline: 'none', background: otpError ? '#FEF2F4' : '#F8FBF9', direction: 'ltr' }}
+            />
+            {otpError && <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: '#C2415C' }}>{otpError}</div>}
+            <button
+              onClick={verifyGuest}
+              disabled={otpBusy || otpCode.length !== 6}
+              style={{ width: '100%', marginTop: 16, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 11, padding: 13, fontSize: 15, fontWeight: 700, cursor: (otpBusy || otpCode.length !== 6) ? 'default' : 'pointer', opacity: (otpBusy || otpCode.length !== 6) ? 0.6 : 1 }}
+            >
+              {otpBusy ? 'Vérification…' : 'Confirmer mon rendez-vous'}
+            </button>
+            <button onClick={startGuest} disabled={otpBusy} style={{ marginTop: 12, background: 'none', border: 'none', color: PRIMARY, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+              Renvoyer le code
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
