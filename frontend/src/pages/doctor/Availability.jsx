@@ -4,7 +4,7 @@ import {
   fetchMyDoctor, fetchAvailability, saveAvailability,
   fetchBlockedSlots, saveBlockedSlotsForDate, fetchBookedSlots, saveDoctorPlanning,
 } from '../../lib/api';
-import { BOOK_SLOTS } from '../../shared.jsx';
+import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
 import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS } from '../../lib/prayer.js';
 
@@ -131,11 +131,22 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
     return () => { active = false; };
   }, [doctorId, selDate]);
 
+  // The day's slot grid mirrors the WEEKLY HOURS currently in the editor (live):
+  // open range(s) minus the déjeuner pause. Day toggled off → no slots at all.
+  const selUi = (new Date(`${selDate}T12:00:00`).getDay() + 6) % 7;   // 0=Lun … 6=Dim
+  const daySlots = dayToggles[selUi]
+    ? genSlots(
+        [{ from: dayStartTimes[selUi], to: dayEndTimes[selUi] }],
+        (pauseStartTimes[selUi] && pauseEndTimes[selUi] > pauseStartTimes[selUi])
+          ? [{ from: pauseStartTimes[selUi], to: pauseEndTimes[selUi] }] : [],
+      )
+    : [];
+
   const toggleSlot = (slot) => {
     if (bookedForDate.includes(slot)) return; // can't free a booked slot here
     setBlockedForDate((prev) => { const n = new Set(prev); n.has(slot) ? n.delete(slot) : n.add(slot); return n; });
   };
-  const setAllSlots = (block) => setBlockedForDate(block ? new Set(BOOK_SLOTS.filter((s) => !bookedForDate.includes(s))) : new Set());
+  const setAllSlots = (block) => setBlockedForDate(block ? new Set(daySlots.filter((s) => !bookedForDate.includes(s))) : new Set());
 
   const saveSlots = async () => {
     if (!doctorId) { setSlotsMsg('Profil introuvable.'); return; }
@@ -238,9 +249,14 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             <button onClick={() => setAllSlots(true)} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Tout désactiver</button>
           </div>
 
-          {/* Slot grid for selected date */}
+          {/* Slot grid for selected date — generated from the weekly hours below */}
+          {daySlots.length === 0 && (
+            <div style={{ padding: '18px 14px', textAlign: 'center', color: MUTED, fontSize: 13, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
+              Jour fermé selon vos horaires hebdomadaires — activez-le ci-dessous pour proposer des créneaux.
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: 8 }}>
-            {BOOK_SLOTS.map((slot) => {
+            {daySlots.map((slot) => {
               const booked = bookedForDate.includes(slot);
               const off = blockedForDate.has(slot);
               return (
@@ -307,6 +323,13 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                 </div>
               );
             })}
+          </div>
+          {/* Explicit save right under the hours — no more forgotten changes. */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
+            {savedMsg && <span style={{ fontSize: 13, fontWeight: 600, color: savedMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{savedMsg}</span>}
+            <button onClick={handleSave} disabled={saving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, minHeight: 44 }}>
+              {saving ? 'Enregistrement…' : 'Enregistrer les horaires'}
+            </button>
           </div>
         </div>
 

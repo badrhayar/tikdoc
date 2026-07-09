@@ -37,12 +37,13 @@ Meta). Pour WhatsApp, créer les templates approuvés côté Meta et poser les s
 ### 1b · Réservation sans compte (vérifiée par code) — optionnelle
 
 La fonction `guest-booking` permet aux patients de réserver avec nom + téléphone,
-validés par un **code à usage unique** (anti-faux numéros ; limites anti-abus,
-liste noire par cabinet, blocage des récidivistes d'absence). Elle s'active toute
-seule dès qu'UN canal d'envoi du code est configuré :
-- **WhatsApp** : `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE_OTP`
-  (template Meta de catégorie **Authentication**, corps `{{1}}` = code), ou
-- **SMS** : `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`.
+validés par un **code à usage unique envoyé par WhatsApp** (anti-faux numéros ;
+limites anti-abus, liste noire par cabinet, blocage des récidivistes d'absence).
+Après vérification, le patient reçoit le WhatsApp « rendez-vous réservé », puis le
+« confirmé » quand le cabinet confirme — exactement comme les comptes classiques.
+Activation automatique dès que ces secrets existent :
+- `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE_OTP`
+  (template Meta de catégorie **Authentication**, corps `{{1}}` = code).
 Sans ces secrets, les patients passent par le compte classique (aucun risque).
 
 ## 2 · Configuration admin (jour 1, dans la console admin)

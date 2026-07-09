@@ -79,6 +79,19 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const { isMobile } = useViewport();
 
+  // Dynamic hour axis: expand beyond the 08–19 default so appointments outside
+  // it (e.g. a cabinet open until 20:00) are always visible on the grid.
+  const apptHours = consultations
+    .map((c) => parseInt(String(c.time || '').split(':')[0], 10))
+    .filter((h) => Number.isFinite(h));
+  const startH = Math.min(START_HOUR, ...(apptHours.length ? apptHours : [START_HOUR]));
+  const endH = Math.max(END_HOUR, ...(apptHours.length ? apptHours.map((h) => h + 1) : [END_HOUR]));
+  const HOURS_DYN = Array.from({ length: endH - startH + 1 }, (_, i) => `${String(startH + i).padStart(2, '0')}:00`);
+  const timeToTopDyn = (time) => {
+    const [h, mm] = String(time || '9:0').split(':').map(Number);
+    return ((h - startH) + (mm || 0) / 60) * HOUR_HEIGHT;
+  };
+
   // Service colours + legend are driven by the doctor's actual services.
   const svcNames = (state?.services?.length ? state.services.map(s => s.name).filter(Boolean) : Object.keys(SVC_COLORS));
   const PALETTE = [
@@ -215,8 +228,8 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
     <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 310px)', paddingTop: 10 }}>
       {/* Time axis */}
       <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }}>
-        {HOURS.map((h, i) => (
-          <div key={h} style={{ height: i < HOURS.length - 1 ? HOUR_HEIGHT : 0, position: 'relative' }}>
+        {HOURS_DYN.map((h, i) => (
+          <div key={h} style={{ height: i < HOURS_DYN.length - 1 ? HOUR_HEIGHT : 0, position: 'relative' }}>
             <span style={{ position: 'absolute', top: -9, right: 8, fontSize: 11, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap', userSelect: 'none' }}>{h}</span>
           </div>
         ))}
@@ -230,7 +243,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
         return (
           <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${BORDER}` : 'none', position: 'relative', background: isToday ? '#F0FDF8' : 'transparent', minWidth: 0 }}>
             {/* Hour grid lines */}
-            {HOURS.slice(0, -1).map(h => (
+            {HOURS_DYN.slice(0, -1).map(h => (
               <div key={h} style={{ height: HOUR_HEIGHT, borderBottom: `1px solid ${BORDER}`, position: 'relative' }}>
                 <div style={{ position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0, borderBottom: `1px dashed ${BORDER}`, opacity: 0.45 }} />
               </div>
@@ -238,7 +251,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             {/* Appointment blocks */}
             {appts.map(c => {
               const col    = svcColor(c.service);
-              const top    = timeToTop(c.time);
+              const top    = timeToTopDyn(c.time);
               const height = Math.max(32, HOUR_HEIGHT * 0.5);
               return (
                 <div

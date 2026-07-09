@@ -16,10 +16,10 @@
 //   • ≥3 no-shows at that cabinet → refused
 //   • doctor's blocklist (roster status 'Bloqué') → refused
 //
-// Secrets (either channel enables the feature):
-//   WhatsApp: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_TEMPLATE_OTP
-//             (an APPROVED "authentication" template, body {{1}} = code)
-//   SMS:      TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM
+// Secrets (WhatsApp ONLY — no SMS by product decision):
+//   WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_TEMPLATE_OTP
+//   (an APPROVED Meta "authentication" template, body {{1}} = code)
+//   After verification, the booked/confirmed WhatsApps reuse send-reminder.
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -30,12 +30,7 @@ const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
 const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
 const WA_TPL_OTP = Deno.env.get("WHATSAPP_TEMPLATE_OTP") ?? "";
 const WA_LANG = Deno.env.get("WHATSAPP_LANG") ?? "fr";
-const TW_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
-const TW_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
-const TW_FROM = Deno.env.get("TWILIO_FROM") ?? "";
-
 const waEnabled = !!(WA_TOKEN && WA_PHONE_ID && WA_TPL_OTP);
-const smsEnabled = !!(TW_SID && TW_TOKEN && TW_FROM);
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -81,16 +76,6 @@ async function sendWhatsAppOtp(to: string, code: string) {
   return res.ok;
 }
 
-async function sendSmsOtp(to: string, code: string) {
-  const body = new URLSearchParams({ To: to, From: TW_FROM, Body: `Tabibo — votre code de confirmation : ${code}. Valable 10 minutes.` });
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TW_SID}/Messages.json`, {
-    method: "POST",
-    headers: { Authorization: "Basic " + btoa(`${TW_SID}:${TW_TOKEN}`), "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  return res.ok;
-}
-
 // Doctor-protection checks shared by start & verify.
 async function bookingRefusal(admin: ReturnType<typeof createClient>, doctorId: string, phone: string): Promise<string | null> {
   // Blocklist: any roster entry for this cabinet with this phone and status 'Bloqué'.
@@ -119,9 +104,9 @@ Deno.serve(async (req) => {
     const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
 
     // ── status ────────────────────────────────────────────────────────────────
-    if (p.action === "status") return json({ ok: true, enabled: waEnabled || smsEnabled });
+    if (p.action === "status") return json({ ok: true, enabled: waEnabled });
 
-    if (!(waEnabled || smsEnabled)) return json({ ok: false, error: "guest_unavailable" }, 400);
+    if (!waEnabled) return json({ ok: false, error: "guest_unavailable" }, 400);
 
     // ── start: validate → rate-limit → send the code ─────────────────────────
     if (p.action === "start") {
@@ -163,11 +148,10 @@ Deno.serve(async (req) => {
         expires_at: new Date(Date.now() + 10 * 60e3).toISOString(),
       });
 
-      let sent = "";
-      if (waEnabled && (await sendWhatsAppOtp(phone, code))) sent = "whatsapp";
-      else if (smsEnabled && (await sendSmsOtp(phone, code))) sent = "sms";
-      if (!sent) return json({ ok: false, error: "Envoi du code impossible — vérifiez le numéro." }, 502);
-      return json({ ok: true, sent, phone });
+      if (!(await sendWhatsAppOtp(phone, code))) {
+        return json({ ok: false, error: "Envoi du code WhatsApp impossible — vérifiez le numéro." }, 502);
+      }
+      return json({ ok: true, sent: "whatsapp", phone });
     }
 
     // ── verify: check the code → create the appointment ──────────────────────
@@ -205,6 +189,13 @@ Deno.serve(async (req) => {
         return json({ ok: false, error: error.message }, 500);
       }
       await admin.from("booking_otps").update({ used: true }).eq("id", otp.id);
+      // Fire-and-forget: the "réservé" WhatsApp goes out through the same
+      // pipeline as account bookings (send-reminder logs it in reminder_log).
+      fetch(`${SUPABASE_URL}/functions/v1/send-reminder`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "send", appointment_id: (appt as any).id, template: "confirmation" }),
+      }).catch(() => {});
       return json({ ok: true, appointmentId: (appt as any).id });
     }
 

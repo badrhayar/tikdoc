@@ -347,6 +347,25 @@ export const BOOK_SLOTS = [
   '14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30',
 ];
 
+// Generate the 30-min slot grid from working ranges minus break ranges, so the
+// bookable slots ALWAYS mirror the hours the doctor actually defined (a cabinet
+// open until 20:00 offers 19:30; the déjeuner pause disappears from the grid).
+// Ranges accept {from,to} or DB rows {start_time,end_time} ('HH:MM[:SS]').
+export function genSlots(work = [], breaks = [], step = 30) {
+  const toMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+  const lo = (r) => toMin(r.from ?? r.start_time);
+  const hi = (r) => toMin(r.to ?? r.end_time);
+  const out = new Set();
+  for (const r of work) {
+    const start = Math.ceil(lo(r) / step) * step;
+    for (let mm = start; mm + step <= hi(r); mm += step) {
+      if (breaks.some((b) => mm >= lo(b) && mm < hi(b))) continue;
+      out.add(`${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`);
+    }
+  }
+  return [...out].sort();
+}
+
 export const GOOGLE_SVG = (
   <svg width="17" height="17" viewBox="0 0 48 48">
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>

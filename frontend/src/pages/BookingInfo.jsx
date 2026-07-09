@@ -380,7 +380,7 @@ export default function BookingInfo() {
           </button>
           {isSupabaseConfigured && !appUser && guestOk && (
             <p style={{ margin: '10px 0 0', fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.5 }}>
-              Sans compte : vous recevrez un <strong>code de confirmation</strong> par WhatsApp/SMS pour valider votre numéro.
+              Sans compte : vous recevrez un <strong>code de confirmation</strong> par WhatsApp pour valider votre numéro.
             </p>
           )}
         </div>
@@ -395,7 +395,7 @@ export default function BookingInfo() {
             </div>
             <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: DARK }}>Confirmez votre numéro</h2>
             <p style={{ margin: '0 0 18px', fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>
-              Un code à 6 chiffres a été envoyé par {otp.sent === 'whatsapp' ? 'WhatsApp' : 'SMS'} au <strong style={{ color: DARK, direction: 'ltr', display: 'inline-block' }}>{otp.phone}</strong>.
+              Un code à 6 chiffres a été envoyé par WhatsApp au <strong style={{ color: DARK, direction: 'ltr', display: 'inline-block' }}>{otp.phone}</strong>.
             </p>
             <input
               value={otpCode}

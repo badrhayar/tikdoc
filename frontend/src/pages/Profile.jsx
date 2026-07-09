@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, kmOf, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
@@ -117,6 +117,17 @@ export default function Profile() {
     }).catch(() => active && setPrayerSlots([]));
     return () => { active = false; };
   }, [doc?.id, doc?.prayerBlock, doc?.prayerIds, doc?.city, selectedDate]);
+
+  // The slot grid for the selected date is GENERATED from the doctor's working
+  // hours (minus the pause), so a cabinet open until 20:00 really offers 19:30.
+  // Doctors with no configured schedule keep the legacy default grid.
+  const daySlots = (() => {
+    if (!selectedDate) return [];
+    if (!weekAvail || weekAvail.length === 0) return BOOK_SLOTS;
+    const dow = new Date(`${selectedDate}T12:00:00`).getDay();
+    const { work, breaks } = dayRules(dow);
+    return genSlots(work, breaks);
+  })();
 
   // Reason a slot is unavailable, or null if it's bookable for the selected date.
   const slotState = (slot) => {
@@ -414,9 +425,8 @@ export default function Profile() {
             {selectedDate ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
-                  {/* Slots outside the cabinet's working hours are hidden — the
-                      grid shows only what this doctor actually offers. */}
-                  {BOOK_SLOTS.filter((slot) => slotState(slot) !== 'closed').map((slot) => {
+                  {/* The grid is generated from the doctor's real working hours. */}
+                  {daySlots.filter((slot) => slotState(slot) !== 'closed').map((slot) => {
                     const isActive = selectedSlot === slot;
                     const blockState = slotState(slot);     // 'booked' | 'blocked' | 'past' | null
                     const disabled = blockState !== null;
@@ -449,7 +459,7 @@ export default function Profile() {
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: '#B45309', fontSize: 12.5, background: '#FEF6E7', borderRadius: 10, border: '1px dashed #F0CE8E', fontWeight: 600 }}>
                     Journée complète — ce médecin a atteint son maximum de consultations ce jour. Choisissez une autre date.
                   </div>
-                ) : BOOK_SLOTS.every((s) => slotState(s) !== null) && (
+                ) : (daySlots.length === 0 || daySlots.every((s) => slotState(s) !== null)) && (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: MUTED, fontSize: 12.5, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
                     Aucun créneau disponible ce jour — choisissez une autre date.
                   </div>
