@@ -876,6 +876,18 @@ export async function saveAvailability(doctorId, rows) {
 }
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
+/** Public reviews of a doctor (anonymised reviewer), newest first. */
+export async function fetchDoctorReviews(doctorId, limit = 10) {
+  const { data, error } = await supabase
+    .from('doctor_reviews')
+    .select('id, rating, comment, created_at, reviewer')
+    .eq('doctor_id', doctorId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function createReview(appointmentId, rating, comment) {
   const { data, error } = await supabase
     .from('reviews')

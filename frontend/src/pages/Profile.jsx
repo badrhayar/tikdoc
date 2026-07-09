@@ -5,7 +5,7 @@ import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, tint, initials, kmOf, nextLa
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
-import { fetchBookedSlots, fetchBlockedSlots } from '../lib/api';
+import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -45,6 +45,40 @@ export default function Profile() {
   const [bookedSlots, setBookedSlots]   = useState([]);   // ['09:00', ...] booked on the selected date
   const [blockedSlots, setBlockedSlots] = useState([]);   // ['09:00', ...] doctor-disabled on the selected date
   const [prayerSlots, setPrayerSlots]   = useState([]);   // ['13:00', ...] slots overlapping an enabled prayer
+
+  // The doctor's WEEKLY schedule (Disponibilités) — gates both the calendar days
+  // and the slot grid so patients can only book when the cabinet is open.
+  const [weekAvail, setWeekAvail] = useState(null);        // null = loading / demo
+  useEffect(() => {
+    if (!isSupabaseConfigured || typeof doc?.id !== 'string') { setWeekAvail(null); return; }
+    let active = true;
+    fetchAvailability(doc.id).then((rows) => active && setWeekAvail(rows || [])).catch(() => active && setWeekAvail([]));
+    return () => { active = false; };
+  }, [doc?.id]);
+  const toMin = (t) => { const [h, mm] = String(t || '0:0').split(':').map(Number); return h * 60 + (mm || 0); };
+  const dayRules = (dow) => {
+    const rows = (weekAvail || []).filter((r) => r.day_of_week === dow);
+    return { work: rows.filter((r) => !r.is_break), breaks: rows.filter((r) => r.is_break) };
+  };
+  // A day is open if it has at least one working range. Doctors who never
+  // configured their schedule fall back to the legacy default (closed Sunday).
+  const dayOpen = (dow) => (!weekAvail || weekAvail.length === 0) ? dow !== 0 : dayRules(dow).work.length > 0;
+  const slotInSchedule = (slot, dow) => {
+    if (!weekAvail || weekAvail.length === 0) return true;
+    const { work, breaks } = dayRules(dow);
+    const s = slotToMinutes(slot);
+    return work.some((r) => s >= toMin(r.start_time) && s < toMin(r.end_time))
+      && !breaks.some((r) => s >= toMin(r.start_time) && s < toMin(r.end_time));
+  };
+
+  // Public reviews shown on the profile (real social proof).
+  const [reviews, setReviews] = useState([]);
+  useEffect(() => {
+    if (!isSupabaseConfigured || typeof doc?.id !== 'string') { setReviews([]); return; }
+    let active = true;
+    fetchDoctorReviews(doc.id, 8).then((r) => active && setReviews(r)).catch(() => {});
+    return () => { active = false; };
+  }, [doc?.id]);
 
   const selectedSlot = bookSlot || '';
   const selectedDate = bookDate || '';
@@ -87,6 +121,8 @@ export default function Profile() {
   // Reason a slot is unavailable, or null if it's bookable for the selected date.
   const slotState = (slot) => {
     if (!selectedDate) return null;
+    const dow = new Date(`${selectedDate}T12:00:00`).getDay();
+    if (!slotInSchedule(slot, dow)) return 'closed';   // outside the doctor's working hours
     if (dayFull) return 'full';
     if (bookedSlots.includes(slot)) return 'booked';
     if (blockedSlots.includes(slot)) return 'blocked';
@@ -199,8 +235,14 @@ export default function Profile() {
               <div style={{ fontSize: isMobile ? 18 : 21, fontWeight: 800, color: DARK, marginBottom: 4 }}>{docDisplayName(doc.name, doc.spec)}</div>
               <div style={{ fontSize: 14, color: PRIMARY, fontWeight: 600, marginBottom: 6 }}>{si.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>
-                <span style={{ color: MUTED }}>({doc.reviews} avis)</span>
+                {doc.reviews > 0 ? (
+                  <>
+                    <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>
+                    <span style={{ color: MUTED }}>({doc.reviews} avis)</span>
+                  </>
+                ) : (
+                  <span style={{ color: PRIMARY, fontWeight: 700, fontSize: 12.5, background: '#E7F6EE', borderRadius: 99, padding: '2px 10px' }}>Nouveau sur Tabibo</span>
+                )}
               </div>
             </div>
           </div>
@@ -280,6 +322,32 @@ export default function Profile() {
               </div>
             </div>
           )}
+
+          {/* Real patient reviews (live from completed appointments) */}
+          {reviews.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Avis des patients</div>
+                <span style={{ fontSize: 12.5, color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>
+                <span style={{ fontSize: 12, color: MUTED }}>· {doc.reviews} avis vérifié{doc.reviews > 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {reviews.map((r) => (
+                  <div key={r.id} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: r.comment ? 6 : 0 }}>
+                      <span style={{ color: '#F2B33D', fontSize: 13, letterSpacing: 1 }}>
+                        {'★'.repeat(r.rating)}<span style={{ color: '#D8E0DC' }}>{'★'.repeat(5 - r.rating)}</span>
+                      </span>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{r.reviewer || 'Patient'}</span>
+                      <span style={{ fontSize: 11.5, color: '#9AA8A2' }}>{new Date(r.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
+                      <span style={{ marginInlineStart: 'auto', fontSize: 10.5, fontWeight: 700, color: '#0E7C52', background: '#E7F6EE', borderRadius: 99, padding: '2px 8px', flexShrink: 0 }}>Consultation vérifiée</span>
+                    </div>
+                    {r.comment && <p style={{ margin: 0, fontSize: 13, color: '#4A5E57', lineHeight: 1.6 }}>{r.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Booking card */}
@@ -308,8 +376,8 @@ export default function Profile() {
               const iso = isoOf(date);
               const isToday = iso === todayISO;
               const isPast = iso < todayISO;
-              const isSunday = date.getDay() === 0;
-              const available = !isPast && !isSunday;
+              // Closed = no working hours that weekday (real Disponibilités).
+              const available = !isPast && dayOpen(date.getDay());
               const selected = selectedDate === iso;
               return (
                 <button
@@ -346,7 +414,9 @@ export default function Profile() {
             {selectedDate ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
-                  {BOOK_SLOTS.map((slot) => {
+                  {/* Slots outside the cabinet's working hours are hidden — the
+                      grid shows only what this doctor actually offers. */}
+                  {BOOK_SLOTS.filter((slot) => slotState(slot) !== 'closed').map((slot) => {
                     const isActive = selectedSlot === slot;
                     const blockState = slotState(slot);     // 'booked' | 'blocked' | 'past' | null
                     const disabled = blockState !== null;
@@ -355,7 +425,7 @@ export default function Profile() {
                         key={slot}
                         onClick={() => !disabled && setState({ bookSlot: slot })}
                         disabled={disabled}
-                        title={blockState === 'booked' ? 'Déjà réservé' : blockState === 'blocked' ? 'Indisponible' : blockState === 'prayer' ? 'Horaire de prière' : blockState === 'full' ? 'Journée complète' : blockState === 'past' ? 'Heure passée' : ''}
+                        title={blockState === 'booked' ? 'Déjà réservé' : blockState === 'blocked' ? 'Indisponible' : blockState === 'prayer' ? 'Horaire de prière' : blockState === 'full' ? 'Journée complète' : blockState === 'past' ? 'Heure passée' : blockState === 'closed' ? 'Hors horaires du cabinet' : ''}
                         style={{
                           minHeight: 44, padding: '8px 4px', borderRadius: 10,
                           cursor: disabled ? 'not-allowed' : 'pointer',
