@@ -1,10 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { useViewport } from './hooks/useViewport';
 import { subscriptionState, docDisplayName } from './shared.jsx';
 import { subscribeToIncomingCalls } from './lib/api';
 import PWAInstall from './components/PWAInstall';
 import ErrorBoundary from './components/ErrorBoundary';
 import TeleconsultRoom from './components/TeleconsultRoom';
+import PatientTabBar from './components/PatientTabBar';
+
+// Signed-in patient screens where the mobile bottom tab bar appears.
+const PATIENT_TAB_SCREENS = new Set(['paccount', 'search', 'profile', 'pinfo', 'confirm', 'pmessages']);
 
 const Landing        = lazy(() => import('./pages/Landing'));
 const Search         = lazy(() => import('./pages/Search'));
@@ -64,9 +69,11 @@ const SCREEN_MAP = {
 };
 
 function AppShell() {
-  const { state, setState } = useApp();
+  const { state, setState, go } = useApp();
   const { screen, toast, toastShow } = state;
+  const { isMobile } = useViewport();
   const [incomingCall, setIncomingCall] = useState(null);
+  const showPatientTabs = isMobile && state.appUser?.role === 'patient' && PATIENT_TAB_SCREENS.has(screen);
 
   // Auto-dismiss the toast a few seconds after it appears.
   useEffect(() => {
@@ -115,6 +122,9 @@ function AppShell() {
           <Screen />
         </ErrorBoundary>
       </Suspense>
+
+      {/* Native-app bottom navigation for signed-in patients on mobile */}
+      {showPatientTabs && <PatientTabBar screen={screen} go={go} />}
 
       <PWAInstall />
 

@@ -35,8 +35,29 @@ const PROTECTED_SCREENS = new Set([
 ]);
 const restoreScreen = () => { try { return sessionStorage.getItem('tabibo_screen') || 'home'; } catch { return 'home'; } };
 
+// ── Browser-grade navigation ─────────────────────────────────────────────────
+// Every screen gets a real URL (/search, /doctor, /dappts…) so the browser
+// back/forward buttons, refresh and link-sharing all behave like a real site.
+// Must mirror App.jsx's SCREEN_MAP + DOCTOR_SCREENS.
+const URL_SCREENS = new Set([
+  'home', 'search', 'profile', 'confirm', 'invoice', 'sms', 'pinfo', 'plogin',
+  'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
+  'docregister', 'admin', 'forgotpw', 'resetpw', 'contact', 'pmessages',
+  'confidentialite', 'rxverify',
+  'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
+  'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff',
+]);
+const pathScreen = () => {
+  try {
+    const p = (window.location.pathname || '/').replace(/^\/+|\/+$/g, '');
+    return URL_SCREENS.has(p) ? p : null;
+  } catch { return null; }
+};
+// The URL wins over the sessionStorage restore (deep links / refresh on a page).
+const initialScreen = () => pathScreen() || restoreScreen();
+
 const initialState = {
-  screen: restoreScreen(),
+  screen: initialScreen(),
   patient: null,
   selDoc: 1,
   selPin: null,
@@ -261,6 +282,30 @@ export function AppProvider({ children }) {
     try { sessionStorage.setItem('tabibo_screen', state.screen); } catch (e) { /* ignore */ }
   }, [state.screen]);
 
+  // ── URL ↔ screen sync: real back/forward buttons ────────────────────────────
+  const navFromPop = useRef(false);
+  const firstUrlSync = useRef(true);
+  useEffect(() => {
+    const onPop = () => {
+      navFromPop.current = true;
+      dispatch({ screen: pathScreen() || 'home' });
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    if (navFromPop.current) { navFromPop.current = false; return; }   // came FROM the URL
+    const path = state.screen === 'home' ? '/' : `/${state.screen}`;
+    if (typeof window === 'undefined' || window.location.pathname === path) { firstUrlSync.current = false; return; }
+    try {
+      // First sync (load-time restore) replaces so we don't add a phantom entry.
+      if (firstUrlSync.current) window.history.replaceState({ screen: state.screen }, '', path);
+      else window.history.pushState({ screen: state.screen }, '', path);
+    } catch (e) { /* ignore (e.g. sandboxed iframe) */ }
+    firstUrlSync.current = false;
+  }, [state.screen]);
+
   // Deep links: a shared booking link opens that doctor's profile. Supports
   //   tabibo.ma/dr-aya-chakkour   (vanity slug path)
   //   tabibo.ma/?dr=dr-aya-chakkour
@@ -297,7 +342,7 @@ export function AppProvider({ children }) {
     (async () => {
       const session = await getSession().catch(() => null);
       // No session but the restored screen needs auth → send home.
-      if (!session && PROTECTED_SCREENS.has(restoreScreen())) dispatch({ screen: 'home' });
+      if (!session && PROTECTED_SCREENS.has(initialScreen())) dispatch({ screen: 'home' });
       await loadUser(session);
       unsub = onAuthChange((event, s) => {
         // A password-reset link signs the user in with a recovery session and

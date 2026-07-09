@@ -44,6 +44,16 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const patientList = state.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS);
   const [viewPatient, setViewPatient] = useState(null);   // detail modal
   const [menu, setMenu] = useState(null);                 // { patient, x, y } — portal menu
+
+  // Deep-link from the universal search: open this patient's dossier directly.
+  useEffect(() => {
+    const id = state.patientFocus;
+    if (!id) return;
+    setState({ patientFocus: null });
+    const p = (state.patients?.length ? state.patients : patientList).find((x) => x.id === id);
+    if (p) setViewPatient(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.patientFocus]);
   const [editForm, setEditForm] = useState(null);         // full patient edit form
   const [editBusy, setEditBusy] = useState(false);
 

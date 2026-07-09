@@ -5,6 +5,7 @@ import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
 import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox, fetchDoctorPayments, declareCurrentPayment, notifyVerification } from '../../lib/api';
 import PhoneField from '../../components/PhoneField';
+import CommandPalette from '../../components/CommandPalette';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 // Whole years between a birth date (YYYY-MM-DD) and today; null if unset/invalid.
@@ -385,12 +386,8 @@ export default function DoctorApp() {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
           )}
-          {!isMobile && (
-            <div style={{ flex:1, maxWidth:440, display:'flex', alignItems:'center', gap:9, background:'#F4F8F5', border:`1px solid #E4EEE9`, borderRadius:11, padding:'10px 14px' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-              <input placeholder="Rechercher un patient, un rendez-vous…" style={{ border:'none', outline:'none', background:'none', width:'100%', fontSize:13.5 }} />
-            </div>
-          )}
+          {/* Universal search (patients · rendez-vous · pages) — Ctrl/Cmd+K */}
+          <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} />
           <div style={{ flex:1 }} />
           <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ background:'linear-gradient(135deg,#1AAE74,#12875A)', color:'#fff', border:'none', cursor:'pointer', padding:isMobile?0:'10px 17px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':11, fontSize:13.5, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:7, flexShrink:0, boxShadow:'0 8px 18px -6px rgba(22,160,106,.55)' }}>
             <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
