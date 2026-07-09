@@ -338,6 +338,13 @@ export default function PatientAccount() {
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tabib<span style={{ color:G }}>o</span></span>
           </div>
           <div style={{ flex:1, minWidth:8 }} />
+          {/* Staff members hop back to the cabinet they work for. */}
+          {state.isStaff && (
+            <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
+              {!isMobile && 'Espace cabinet'}
+            </button>
+          )}
           <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight:44, display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? 'RDV' : 'Prendre un rendez-vous'}
           </button>
