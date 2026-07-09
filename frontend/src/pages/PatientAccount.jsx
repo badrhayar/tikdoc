@@ -194,13 +194,14 @@ export default function PatientAccount() {
     } finally { setPhotoBusy(false); }
   };
 
-  // Real doctors the patient has consulted (no hardcoded names).
-  const docDoctorOpts = (visitedDocs || []).map((d) => d.name);
   const docFileRef = useRef(null);
   const [docFile, setDocFile] = useState(null);
   const [docBusy, setDocBusy] = useState(false);
 
-  // Load the patient's real documents from storage.
+  // Load the patient's real documents. From the patient's viewpoint:
+  // 'to_patient' = Reçu (from the doctor), 'to_doctor' = Envoyé (by me).
+  const docNameByDoctorId = {};
+  visitedDocs.forEach((d) => { docNameByDoctorId[d.id] = docDisplayName(d.name, d.spec); });
   const loadDocs = async () => {
     if (!state.appUser?.id) return;
     try {
@@ -209,23 +210,25 @@ export default function PatientAccount() {
         id: r.id,
         name: (r.file_url || '').split('/').pop()?.replace(/^\d+_/, '') || 'Document',
         type: r.file_type || 'Document',
-        doctor: 'Mes documents',
+        doctor: docNameByDoctorId[r.doctor_id] || (r.direction === 'to_doctor' ? 'Envoyé au médecin' : 'Votre médecin'),
         date: r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' }) : '',
-        dir: 'out',
+        dir: r.direction === 'to_doctor' ? 'out' : 'in',
         path: r.file_url,
       })) });
     } catch (e) { /* ignore */ }
   };
-  useEffect(() => { if (state.appUser?.id) loadDocs(); /* eslint-disable-next-line */ }, [state.appUser?.id]);
+  useEffect(() => { if (state.appUser?.id) loadDocs(); /* eslint-disable-next-line */ }, [state.appUser?.id, visitedDocs.length]);
 
   const sendDoc = async () => {
     if (!docFile || !state.appUser?.id) { setState({ toast: 'Choisissez un fichier à envoyer.', toastShow: true }); return; }
+    const doctorId = pNewDoc?.doctorId || visitedDocs[0]?.id;
+    if (!doctorId) { setState({ toast: 'Prenez d’abord rendez-vous avec un médecin pour lui envoyer un document.', toastShow: true }); return; }
     setDocBusy(true);
     try {
-      await uploadDocument({ file: docFile, ownerId: state.appUser.id, fileType: pNewDoc?.type || 'Document' });
+      await uploadDocument({ file: docFile, patientId: state.appUser.id, doctorId, direction: 'to_doctor', fileType: pNewDoc?.type || 'Document' });
       setDocFile(null);
       await loadDocs();
-      setState({ toast: 'Document envoyé ✓', toastShow: true });
+      setState({ toast: 'Document envoyé à votre médecin ✓', toastShow: true });
     } catch (e) {
       setState({ toast: 'Envoi du document échoué : ' + (e?.message || 'erreur'), toastShow: true });
     } finally { setDocBusy(false); }
@@ -621,8 +624,9 @@ export default function PatientAccount() {
               <div style={{ borderTop:'1px solid #F0F3F2', paddingTop:14 }}>
                 <div style={{ fontSize:12.5, fontWeight:800, color:DARK, marginBottom:10 }}>Envoyer un document à mon médecin</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                  <select value={pNewDoc?.doctor || ''} onChange={e => setState({ pNewDoc: { ...pNewDoc, doctor: e.target.value } })} style={{ width:'100%', padding:'10px 12px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>
-                    {docDoctorOpts.map(o => <option key={o} value={o}>{o}</option>)}
+                  <select value={pNewDoc?.doctorId || visitedDocs[0]?.id || ''} onChange={e => setState({ pNewDoc: { ...pNewDoc, doctorId: e.target.value } })} style={{ width:'100%', padding:'10px 12px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>
+                    {visitedDocs.length === 0 && <option value="">Aucun médecin — prenez un rendez-vous</option>}
+                    {visitedDocs.map(d => <option key={d.id} value={d.id}>{docDisplayName(d.name, d.spec)}</option>)}
                   </select>
                   <div style={{ display:'flex', gap:9 }}>
                     <select value={pNewDoc?.type || 'Résultat'} onChange={e => setState({ pNewDoc: { ...pNewDoc, type: e.target.value } })} style={{ width:130, padding:'10px 12px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>

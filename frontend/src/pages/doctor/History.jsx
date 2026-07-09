@@ -51,19 +51,26 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
   const [filterService, setFilterService] = useState('');
   const [filterPay, setFilterPay] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterFrom, setFilterFrom] = useState('');   // YYYY-MM-DD
+  const [filterTo, setFilterTo] = useState('');
 
-  // Computed stats from live data
-  const totalCount = consultations.length;
-  const totalEncaisse = consultations.filter(c => c.status === 'Payé').reduce((s, c) => s + c.amount, 0);
-  const panierMoyen = totalCount > 0 ? Math.round(totalEncaisse / totalCount) : 0;
-
-  // Apply filters
+  // Apply filters (incl. a date range) — the KPIs below react to these.
   const filtered = consultations.filter(c => {
     if (filterService && c.service !== filterService) return false;
     if (filterPay && c.pay !== filterPay) return false;
     if (filterStatus && c.status !== filterStatus) return false;
+    if (filterFrom && (!c.date || c.date < filterFrom)) return false;
+    if (filterTo && (!c.date || c.date > filterTo)) return false;
     return true;
   });
+
+  // KPIs are computed from the FILTERED rows. Money only counts PAID
+  // consultations (en attente / annulé contribute 0), and the average basket
+  // divides revenue by the number of PAID visits — not the total count.
+  const totalCount = filtered.length;
+  const paidRows = filtered.filter(c => c.status === 'Payé');
+  const totalEncaisse = paidRows.reduce((s, c) => s + (c.amount || 0), 0);
+  const panierMoyen = paidRows.length > 0 ? Math.round(totalEncaisse / paidRows.length) : 0;
 
   function openEdit(consultation) {
     setEditData({ ...consultation });
@@ -318,8 +325,18 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
             <option value="Annulé">Annulé</option>
           </select>
         </div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Du</div>
+          <input type="date" value={filterFrom} max={filterTo || undefined} onChange={e => setFilterFrom(e.target.value)}
+            style={{ padding: '8px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: DARK, outline: 'none', cursor: 'pointer' }} />
+        </div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Au</div>
+          <input type="date" value={filterTo} min={filterFrom || undefined} onChange={e => setFilterTo(e.target.value)}
+            style={{ padding: '8px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: DARK, outline: 'none', cursor: 'pointer' }} />
+        </div>
         <button
-          onClick={() => { setFilterService(''); setFilterPay(''); setFilterStatus(''); }}
+          onClick={() => { setFilterService(''); setFilterPay(''); setFilterStatus(''); setFilterFrom(''); setFilterTo(''); }}
           style={{ padding: '9px 20px', border: `1px solid ${BORDER_STRONG}`, background: '#fff', color: MUTED, border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-end' }}
         >
           Réinitialiser

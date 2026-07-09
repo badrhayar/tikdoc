@@ -889,28 +889,38 @@ export async function createReview(appointmentId, rating, comment) {
 // ── Documents (Supabase Storage bucket "documents") ───────────────────────────
 const BUCKET = 'documents';
 
-/** Upload a File object and record it in the documents table. */
-export async function uploadDocument({ file, ownerId, appointmentId = null, fileType = null }) {
+/**
+ * Send a document between a doctor and a patient. The file is stored under the
+ * uploader's auth folder; the row records patient_id + doctor_id + direction so
+ * the recipient can see AND download it (via RLS + the shared-read storage policy).
+ * @param direction 'to_patient' (doctor → patient) | 'to_doctor' (patient → doctor)
+ */
+export async function uploadDocument({ file, ownerId = null, patientId = null, doctorId = null, direction = null, appointmentId = null, fileType = null, notes = null }) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error('Non authentifié');
-  // Objects must live under the owner's auth-uid folder (storage RLS).
   const path = `${auth.user.id}/${Date.now()}_${file.name}`;
   const up = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
   if (up.error) throw up.error;
+  const me = await getCurrentAppUser().catch(() => null);
   const { data, error } = await supabase
     .from('documents')
-    .insert({ owner_id: ownerId, appointment_id: appointmentId, file_url: path, file_type: fileType || file.type || null })
+    .insert({
+      owner_id: ownerId || me?.id || null,
+      patient_id: patientId, doctor_id: doctorId, direction,
+      appointment_id: appointmentId, notes: notes || null,
+      file_url: path, file_type: fileType || file.type || null,
+    })
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-/** List documents the current user can see (RLS scopes the rows). */
+/** List documents the current user can see (RLS scopes the rows), newest first. */
 export async function listDocuments() {
   const { data, error } = await supabase
     .from('documents')
-    .select('*')
+    .select('id, owner_id, patient_id, doctor_id, direction, appointment_id, notes, file_url, file_type, uploaded_at')
     .order('uploaded_at', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -946,19 +956,29 @@ export async function findConversation(patientId, doctorId) {
 }
 
 export async function getOrCreateConversation(patientId, doctorId) {
+  if (!patientId || !doctorId) throw new Error('Profil incomplet — impossible de démarrer la conversation.');
+  // Look for an existing thread (limit(1) is race/duplicate-safe).
   const existing = await supabase
     .from('conversations')
     .select('*')
     .eq('patient_id', patientId)
     .eq('doctor_id', doctorId)
-    .maybeSingle();
-  if (existing.data) return existing.data;
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (existing.data && existing.data[0]) return existing.data[0];
   const { data, error } = await supabase
     .from('conversations')
     .insert({ patient_id: patientId, doctor_id: doctorId })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    // Unique-index race: another tab/click created it first → fetch and return it.
+    if (error.code === '23505') {
+      const again = await supabase.from('conversations').select('*').eq('patient_id', patientId).eq('doctor_id', doctorId).limit(1);
+      if (again.data && again.data[0]) return again.data[0];
+    }
+    throw error;
+  }
   return data;
 }
 

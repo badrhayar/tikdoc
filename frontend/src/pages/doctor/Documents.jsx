@@ -18,17 +18,6 @@ const fileName = (path = '') => (path.split('/').pop() || path).replace(/^\d+_/,
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 
-const MOCK_DOCUMENTS = [
-  { id: 1, icon: 'file', name: 'ordonnance_benali_14juin.pdf', patient: 'Amina Benali', date: '14/06/2026', size: '128 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 2, icon: 'image', name: 'radio_thorax_elfassi.jpg', patient: 'Youssef El Fassi', date: '13/06/2026', size: '2.4 Mo', status: 'Lu', statusColor: '#3B82F6' },
-  { id: 3, icon: 'file', name: 'analyse_sang_alaoui.pdf', patient: 'Fatima Zahra Alaoui', date: '12/06/2026', size: '340 Ko', status: 'Reçu', statusColor: '#F59E0B' },
-  { id: 4, icon: 'file', name: 'compte_rendu_chraibi.pdf', patient: 'Omar Chraibi', date: '11/06/2026', size: '215 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 5, icon: 'image', name: 'echo_abdominale_tazi.png', patient: 'Leila Tazi', date: '10/06/2026', size: '1.8 Mo', status: 'Lu', statusColor: '#3B82F6' },
-  { id: 6, icon: 'file', name: 'ordonnance_benali_08juin.pdf', patient: 'Amina Benali', date: '08/06/2026', size: '98 Ko', status: 'Envoyé', statusColor: PRIMARY },
-  { id: 7, icon: 'file', name: 'resultats_nfs_elfassi.pdf', patient: 'Youssef El Fassi', date: '07/06/2026', size: '180 Ko', status: 'Reçu', statusColor: '#F59E0B' },
-  { id: 8, icon: 'image', name: 'fond_oeil_alaoui.jpg', patient: 'Fatima Zahra Alaoui', date: '05/06/2026', size: '3.1 Mo', status: 'Lu', statusColor: '#3B82F6' },
-];
-
 const DOC_TYPES = ['Ordonnance', "Résultats d'analyses", 'Compte-rendu', 'Autre'];
 
 export default function Documents({ state, setState, go, openNewAppt, openAddPatient }) {
@@ -46,8 +35,14 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const fileRef = useRef(null);
 
   const appUser = state?.appUser;
-  // Same patient roster as the Patients directory (includes any just added).
-  const patientOpts = (state?.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS)).map(p => ({ id: p.id, name: p.name }));
+  const myDoctorId = state?.myDoctor?.id;
+  // Same patient roster as the Patients directory. Keep userId — only patients
+  // with a Tabibo account can receive documents in their space.
+  const patientOpts = (state?.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS))
+    .map(p => ({ id: p.id, name: p.name, userId: p.userId || null }));
+  // Resolve a patient's display name from their account id (for the exchange list).
+  const nameByUserId = {};
+  (state?.patients || []).forEach(p => { if (p.userId) nameByUserId[p.userId] = p.name; });
 
   const refresh = async () => {
     try { setDocs(await listDocuments()); } catch (e) { console.warn('[Tabibo] listDocuments failed', e); }
@@ -57,10 +52,11 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const handleUpload = async () => {
     if (!appUser) { setState({ toast: 'Connectez-vous en tant que médecin.', toastShow: true }); return; }
     if (!docPatient) { setState({ toast: 'Sélectionnez d’abord un patient.', toastShow: true }); return; }
+    if (!docPatient.userId) { setState({ toast: `${docPatient.name} n’a pas de compte Tabibo — invitez-le d’abord pour lui envoyer des documents.`, toastShow: true }); return; }
     if (!file) { setState({ toast: 'Choisissez un fichier d’abord.', toastShow: true }); return; }
     setBusy(true);
     try {
-      await uploadDocument({ file, ownerId: appUser.id, fileType: docType });
+      await uploadDocument({ file, patientId: docPatient.userId, doctorId: myDoctorId, direction: 'to_patient', fileType: docType, notes: docNotes || null });
       setFile(null); setDocNotes(''); setDocPatient(null);
       await refresh();
       setState({ toast: `Document envoyé à ${docPatient.name} ✓`, toastShow: true });
@@ -74,7 +70,15 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
     catch (e) { setState({ toast: 'Téléchargement impossible : ' + (e?.message || 'erreur'), toastShow: true }); }
   };
 
-  const filteredDocs = docs;
+  // From the doctor's viewpoint: 'to_patient' = Envoyé, 'to_doctor' = Reçu.
+  const withMeta = docs.map(d => ({
+    ...d,
+    dir: d.direction === 'to_doctor' ? 'received' : 'sent',
+    peer: nameByUserId[d.patient_id] || 'Patient',
+  }));
+  const filteredDocs = withMeta.filter(d =>
+    docTab === 'Tous' ? true : docTab === 'Reçus' ? d.dir === 'received' : d.dir === 'sent'
+  );
 
   return (
     <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
@@ -352,9 +356,14 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                       {fileName(doc.file_url)}
                     </div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-                      {doc.file_type || 'Document'} · {fmtDate(doc.uploaded_at)}
+                      {doc.file_type || 'Document'} · {doc.peer} · {fmtDate(doc.uploaded_at)}
                     </div>
                   </div>
+
+                  {/* Direction badge */}
+                  <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 9px', flexShrink: 0, background: doc.dir === 'received' ? '#E7F6EE' : '#E8F1FC', color: doc.dir === 'received' ? '#138257' : '#3B6FB0' }}>
+                    {doc.dir === 'received' ? 'Reçu' : 'Envoyé'}
+                  </span>
 
                   {/* Download button */}
                   <button

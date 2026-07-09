@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchDoctorStats } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -85,28 +84,19 @@ function ConsultCard({ label, value, trend, trendDir, sub }) {
 export default function Statistics({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
   const [period, setPeriod] = useState('30 jours');
-  const [stats, setStats] = useState(null);
 
-  // Window (in days) for the selected period filter.
+  // Window (in days) for the selected period. EVERYTHING on this page derives
+  // from the same local consultation set, filtered by this window, so the KPIs
+  // are always internally consistent (and consistent with the Historique page).
   const PERIOD_DAYS = { '7 jours': 7, '30 jours': 30, '3 mois': 90, '1 an': 365 };
+  const parse = (iso) => new Date(`${iso}T00:00:00`);
+  const periodStart = new Date(Date.now() - (PERIOD_DAYS[period] || 30) * 86400000);
 
-  // Pull REAL aggregates for the doctor over the selected window.
-  useEffect(() => {
-    const doctorId = state?.myDoctor?.id;
-    if (!doctorId) { setStats(null); return; }
-    let active = true;
-    const days = PERIOD_DAYS[period] || 30;
-    const from = new Date(Date.now() - days * 86400000).toISOString();
-    const to = new Date().toISOString();
-    fetchDoctorStats(doctorId, { from, to })
-      .then((s) => { if (active) setStats(s); })
-      .catch(() => { if (active) setStats(null); });
-    return () => { active = false; };
-  }, [state?.myDoctor?.id, period]);
-
-  const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
+  const allConsultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
+  // Scope to the selected period for every metric below.
+  const consultations = allConsultations.filter(c => c.date && parse(c.date) >= periodStart);
   const paid = consultations.filter(c => c.status === 'Payé');
-  const totalRevenue = paid.reduce((s, c) => s + c.amount, 0);
+  const totalRevenue = paid.reduce((s, c) => s + (c.amount || 0), 0);
 
   // Revenue by service
   const byService = paid.reduce((acc, c) => {
@@ -140,39 +130,34 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const svcRanking = Object.entries(bySvcCount).sort((a, b) => b[1] - a[1]);
   const maxSvcCount = svcRanking[0]?.[1] || 1;
 
-  // Revenue KPI cards (all derived from real paid consultations).
+  // Fixed-window revenue cards (today / week / month) use ALL paid consultations
+  // — they are calendar windows, independent of the period selector. The 4th
+  // card uses the selected period. All share the same local source, so they
+  // never contradict each other.
   const today = new Date();
+  const paidAll = allConsultations.filter(c => c.status === 'Payé');
   const isSameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-  const parse = (iso) => new Date(`${iso}T00:00:00`);
-  const revToday = paid.filter(c => c.date && isSameDay(parse(c.date))).reduce((s, c) => s + c.amount, 0);
-  const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  const revWeek = paid.filter(c => c.date && parse(c.date) >= startOfWeek).reduce((s, c) => s + c.amount, 0);
-  const revMonth = paid.filter(c => c.date && parse(c.date).getMonth() === today.getMonth() && parse(c.date).getFullYear() === today.getFullYear()).reduce((s, c) => s + c.amount, 0);
+  const revToday = paidAll.filter(c => c.date && isSameDay(parse(c.date))).reduce((s, c) => s + (c.amount || 0), 0);
+  const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7)); startOfWeek.setHours(0, 0, 0, 0);
+  const revWeek = paidAll.filter(c => c.date && parse(c.date) >= startOfWeek).reduce((s, c) => s + (c.amount || 0), 0);
+  const revMonth = paidAll.filter(c => c.date && parse(c.date).getMonth() === today.getMonth() && parse(c.date).getFullYear() === today.getFullYear()).reduce((s, c) => s + (c.amount || 0), 0);
 
-  // The "période" card uses the real, window-aware DB aggregate when available.
-  const periodRevenue = stats ? stats.revenue : totalRevenue;
   const REVENUE_CARDS = [
     { label: "Revenus aujourd'hui", value: revToday.toLocaleString('fr-FR') + ' MAD' },
     { label: 'Revenus cette semaine', value: revWeek.toLocaleString('fr-FR') + ' MAD' },
     { label: 'Revenus ce mois', value: revMonth.toLocaleString('fr-FR') + ' MAD' },
-    { label: `Revenus encaissés (${period})`, value: periodRevenue.toLocaleString('fr-FR') + ' MAD' },
+    { label: `Revenus encaissés (${period})`, value: totalRevenue.toLocaleString('fr-FR') + ' MAD' },
   ];
 
-  // Consultation KPIs from real statuses.
+  // Consultation KPIs over the selected period (same source as everything else).
   const total = consultations.length;
   const cancelled = consultations.filter(c => c.status === 'Annulé').length;
-  const acceptRate = total ? Math.round((total - cancelled) / total * 100) : 0;
-  const cancelRate = total ? Math.round(cancelled / total * 100) : 0;
   const svcDur = (state?.services || []).map(s => Number(s.duration) || 0).filter(Boolean);
   const avgDur = svcDur.length ? Math.round(svcDur.reduce((a, b) => a + b, 0) / svcDur.length) : 20;
-
-  // Prefer the real, window-aware counts from the DB when available.
-  const cTotal = stats ? stats.counts.total : total;
-  const cCancelled = stats ? (stats.counts.cancelled + stats.counts.no_show) : cancelled;
-  const cAccept = cTotal ? Math.round((cTotal - cCancelled) / cTotal * 100) : 0;
-  const cCancel = cTotal ? Math.round(cCancelled / cTotal * 100) : 0;
+  const cAccept = total ? Math.round((total - cancelled) / total * 100) : 0;
+  const cCancel = total ? Math.round(cancelled / total * 100) : 0;
   const CONSULT_CARDS = [
-    { label: 'Total consultations', value: cTotal.toString(), sub: stats ? `sur ${period}` : 'enregistrées' },
+    { label: 'Total consultations', value: total.toString(), sub: `sur ${period}` },
     { label: "Taux d'acceptation", value: cAccept + '%', sub: 'non annulées' },
     { label: 'Durée moyenne', value: avgDur + ' min', sub: "d'après vos services" },
     { label: "Taux d'annulation", value: cCancel + '%', sub: 'des rendez-vous' },
@@ -193,15 +178,11 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const returning = Object.values(patientCounts).filter(n => n > 1).length;
   const retourRate = distinctPatients ? Math.round(returning / distinctPatients * 100) : 0;
   const teleCount = consultations.filter(c => /t[ée]l[ée]/i.test(c.service || '')).length;
-  const telePctLocal = total ? Math.round(teleCount / total * 100) : 0;
+  const telePct = total ? Math.round(teleCount / total * 100) : 0;
   const upcoming = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].filter(a => new Date(a.datetime) >= new Date()).length;
-  // Prefer real, window-aware DB aggregates when available; fall back to local.
-  const telePct = stats ? stats.teleconsultPct : telePctLocal;
-  const retourPct = stats
-    ? (stats.newPatients + stats.returningPatients ? Math.round(stats.returningPatients / (stats.newPatients + stats.returningPatients) * 100) : 0)
-    : retourRate;
+  const retourPct = retourRate;
   const miniStats = [
-    { icon: MINI_STATS[0].icon, label: 'Patients distincts', value: stats ? String(stats.newPatients + stats.returningPatients) : String(distinctPatients) },
+    { icon: MINI_STATS[0].icon, label: 'Patients distincts', value: String(distinctPatients) },
     { icon: MINI_STATS[1].icon, label: 'Note moyenne', value: state?.myDoctor?.rating ? `${state.myDoctor.rating}/5` : '—' },
     { icon: MINI_STATS[2].icon, label: 'Avis reçus', value: String(state?.myDoctor?.reviews_count ?? 0) },
     { icon: MINI_STATS[3].icon, label: 'Taux de retour', value: retourPct + '%' },
