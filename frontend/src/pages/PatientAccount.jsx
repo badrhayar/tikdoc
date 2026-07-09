@@ -22,6 +22,18 @@ const STATUS_PILL = {
 };
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+// Chat timestamp: time only for today, "Hier HH:MM", else a dated label so
+// messages from different days are clearly distinguished.
+const fmtMsgTime = (iso) => {
+  const d = new Date(iso); const now = new Date();
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return time;
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  if (d.toDateString() === yest.toDateString()) return `Hier ${time}`;
+  const sameYear = d.getFullYear() === now.getFullYear();
+  const dp = d.toLocaleDateString('fr-FR', sameYear ? { day: '2-digit', month: 'short' } : { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return `${dp} · ${time}`;
+};
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -89,7 +101,7 @@ export default function PatientAccount() {
     (async () => {
       try {
         const list = await fetchMessages(convId);
-        setThread(list.map((m) => ({ id: m.id, mine: m.sender_id === appUserId, image: isImageMessage(m.content), text: m.content, time: fmtTime(m.sent_at) })));
+        setThread(list.map((m) => ({ id: m.id, mine: m.sender_id === appUserId, image: isImageMessage(m.content), text: m.content, time: fmtMsgTime(m.sent_at) })));
       } catch (e) { console.warn('[Tabibo] fetchMessages failed', e); }
       unsub = subscribeToConversation(convId, (m) => {
         setThread((cur) => {
@@ -97,9 +109,9 @@ export default function PatientAccount() {
           const mine = m.sender_id === appUserId;
           if (mine) {
             const i = cur.findIndex((x) => String(x.id).startsWith('tmp_') && x.text === m.content);
-            if (i >= 0) { const copy = [...cur]; copy[i] = { ...copy[i], id: m.id, time: fmtTime(m.sent_at) }; return copy; }
+            if (i >= 0) { const copy = [...cur]; copy[i] = { ...copy[i], id: m.id, time: fmtMsgTime(m.sent_at) }; return copy; }
           }
-          return [...cur, { id: m.id, mine, image: isImageMessage(m.content), text: m.content, time: fmtTime(m.sent_at) }];
+          return [...cur, { id: m.id, mine, image: isImageMessage(m.content), text: m.content, time: fmtMsgTime(m.sent_at) }];
         });
       });
     })();
@@ -212,7 +224,9 @@ export default function PatientAccount() {
         type: r.file_type || 'Document',
         doctor: docNameByDoctorId[r.doctor_id] || (r.direction === 'to_doctor' ? 'Envoyé au médecin' : 'Votre médecin'),
         date: r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' }) : '',
-        dir: r.direction === 'to_doctor' ? 'out' : 'in',
+        dir: r.direction === 'to_doctor' ? 'out'
+           : r.direction === 'to_patient' ? 'in'
+           : (r.owner_id === state.appUser?.id ? 'out' : 'in'),
         path: r.file_url,
       })) });
     } catch (e) { /* ignore */ }
@@ -225,7 +239,7 @@ export default function PatientAccount() {
     if (!doctorId) { setState({ toast: 'Prenez d’abord rendez-vous avec un médecin pour lui envoyer un document.', toastShow: true }); return; }
     setDocBusy(true);
     try {
-      await uploadDocument({ file: docFile, patientId: state.appUser.id, doctorId, direction: 'to_doctor', fileType: pNewDoc?.type || 'Document' });
+      await uploadDocument({ file: docFile, ownerId: state.appUser.id, patientId: state.appUser.id, doctorId, direction: 'to_doctor', fileType: pNewDoc?.type || 'Document' });
       setDocFile(null);
       await loadDocs();
       setState({ toast: 'Document envoyé à votre médecin ✓', toastShow: true });

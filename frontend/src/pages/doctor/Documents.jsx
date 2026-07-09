@@ -56,7 +56,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
     if (!file) { setState({ toast: 'Choisissez un fichier d’abord.', toastShow: true }); return; }
     setBusy(true);
     try {
-      await uploadDocument({ file, patientId: docPatient.userId, doctorId: myDoctorId, direction: 'to_patient', fileType: docType, notes: docNotes || null });
+      await uploadDocument({ file, ownerId: appUser.id, patientId: docPatient.userId, doctorId: myDoctorId, direction: 'to_patient', fileType: docType, notes: docNotes || null });
       setFile(null); setDocNotes(''); setDocPatient(null);
       await refresh();
       setState({ toast: `Document envoyé à ${docPatient.name} ✓`, toastShow: true });
@@ -71,9 +71,12 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   };
 
   // From the doctor's viewpoint: 'to_patient' = Envoyé, 'to_doctor' = Reçu.
+  // Legacy rows (no direction) fall back to who uploaded them.
   const withMeta = docs.map(d => ({
     ...d,
-    dir: d.direction === 'to_doctor' ? 'received' : 'sent',
+    dir: d.direction === 'to_doctor' ? 'received'
+       : d.direction === 'to_patient' ? 'sent'
+       : (d.owner_id && appUser?.id && d.owner_id === appUser.id ? 'sent' : 'received'),
     peer: nameByUserId[d.patient_id] || 'Patient',
   }));
   const filteredDocs = withMeta.filter(d =>

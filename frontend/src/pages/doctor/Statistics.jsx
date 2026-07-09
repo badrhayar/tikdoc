@@ -142,11 +142,15 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const revWeek = paidAll.filter(c => c.date && parse(c.date) >= startOfWeek).reduce((s, c) => s + (c.amount || 0), 0);
   const revMonth = paidAll.filter(c => c.date && parse(c.date).getMonth() === today.getMonth() && parse(c.date).getFullYear() === today.getFullYear()).reduce((s, c) => s + (c.amount || 0), 0);
 
+  // Average ticket over the selected period (revenue ÷ paid consultations) — a
+  // distinct, useful KPI (replaces the old period-revenue card that duplicated
+  // "Revenus ce mois").
+  const panierMoyen = paid.length ? Math.round(totalRevenue / paid.length) : 0;
   const REVENUE_CARDS = [
     { label: "Revenus aujourd'hui", value: revToday.toLocaleString('fr-FR') + ' MAD' },
     { label: 'Revenus cette semaine', value: revWeek.toLocaleString('fr-FR') + ' MAD' },
     { label: 'Revenus ce mois', value: revMonth.toLocaleString('fr-FR') + ' MAD' },
-    { label: `Revenus encaissés (${period})`, value: totalRevenue.toLocaleString('fr-FR') + ' MAD' },
+    { label: `Panier moyen (${period})`, value: panierMoyen.toLocaleString('fr-FR') + ' MAD' },
   ];
 
   // Consultation KPIs over the selected period (same source as everything else).

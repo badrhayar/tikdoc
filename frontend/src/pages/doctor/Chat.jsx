@@ -93,9 +93,14 @@ export default function Chat({ state, setState }) {
       const doctorId  = isDoctor ? state?.myDoctor?.id : peer.id;
       if (!doctorId || !patientId) throw new Error('profil incomplet');
       const conv = await getOrCreateConversation(patientId, doctorId);
-      const mapped = await loadConvs(false);
+      // Inject the thread locally so it opens instantly (don't depend on the
+      // list refetch), then refresh the list in the background.
+      setConvs((cur) => cur.some((c) => c.id === conv.id)
+        ? cur
+        : [{ id: conv.id, ci: cur.length, peer: peer.name || 'Patient', peerId: peer.id }, ...cur]);
       setShowNew(false);
-      setActiveId(conv.id || mapped.find((c) => c.peerId === peer.id)?.id || null);
+      setActiveId(conv.id);
+      loadConvs(false);
     } catch (e) {
       setState({ toast: 'Impossible de démarrer la conversation : ' + (e?.message || 'erreur'), toastShow: true });
     } finally { setCreating(false); }

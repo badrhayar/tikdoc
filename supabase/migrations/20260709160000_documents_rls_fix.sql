@@ -1,23 +1,20 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Tabibo · 39 · Real document exchange (doctor ⇄ patient) + conversation guard
---
---   The old model only had documents.owner_id (the uploader). A doctor "sending"
---   a document owned it themselves → the patient never saw it; and there was no
---   sent/received direction. This adds a proper patient/doctor/direction model,
---   mirroring conversations, with RLS + storage read access for the recipient.
+-- Tabibo · 40 · Document exchange RLS — re-affirm (idempotent)
+--   A patient's "send to doctor" was rejected by RLS ("new row violates row-level
+--   security policy for table documents"). This re-creates the insert/select
+--   policies with the correct, permissive-but-safe definitions. Safe to run even
+--   if the previous documents-exchange migration already applied — it just
+--   replaces the policies with the final version.
 -- ════════════════════════════════════════════════════════════════════════════
 
+-- Columns are additive/idempotent (in case the prior migration didn't land).
 alter table public.documents
   add column if not exists patient_id uuid references public.users (id)   on delete cascade,
   add column if not exists doctor_id  uuid references public.doctors (id) on delete cascade,
-  add column if not exists direction  text,        -- 'to_patient' | 'to_doctor'
+  add column if not exists direction  text,
   add column if not exists notes      text;
-
 alter table public.documents alter column owner_id drop not null;
-create index if not exists idx_documents_patient on public.documents (patient_id);
-create index if not exists idx_documents_doctor  on public.documents (doctor_id);
 
--- Row visibility: the patient, the owning doctor (or their staff), or admin.
 drop policy if exists documents_select on public.documents;
 create policy documents_select on public.documents for select using (
   owner_id = public.app_uid()
@@ -29,10 +26,6 @@ create policy documents_select on public.documents for select using (
         where a.id = documents.appointment_id and public.owns_doctor(a.doctor_id)))
 );
 
--- Insert: allowed when the caller is the uploader (owner_id), the patient side,
--- the owning doctor/staff, or an admin. The frontend always sets owner_id to the
--- caller's app id, so `owner_id = app_uid()` alone already authorises every
--- legitimate send — the other clauses are defence-in-depth.
 drop policy if exists documents_insert on public.documents;
 create policy documents_insert on public.documents for insert with check (
   owner_id = public.app_uid()
@@ -41,7 +34,7 @@ create policy documents_insert on public.documents for insert with check (
   or public.is_admin()
 );
 
--- ── Storage: the recipient must be able to sign the uploader's object ─────────
+-- Storage read for the recipient (re-affirm the helper + policy).
 create or replace function public.can_read_document_object(obj_name text)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
@@ -63,9 +56,3 @@ create policy "documents_read_shared" on storage.objects for select using (
     or public.can_read_document_object(name)
   )
 );
-
--- ── Conversations: prevent duplicate threads (also makes get-or-create safe) ──
-delete from public.conversations a using public.conversations b
-  where a.ctid < b.ctid and a.patient_id = b.patient_id and a.doctor_id = b.doctor_id;
-create unique index if not exists uniq_conversation_pair
-  on public.conversations (patient_id, doctor_id);

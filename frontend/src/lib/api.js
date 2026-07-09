@@ -901,11 +901,14 @@ export async function uploadDocument({ file, ownerId = null, patientId = null, d
   const path = `${auth.user.id}/${Date.now()}_${file.name}`;
   const up = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
   if (up.error) throw up.error;
-  const me = await getCurrentAppUser().catch(() => null);
+  // owner_id MUST equal the caller's app-user id so RLS accepts the insert
+  // (owner_id = app_uid()). Callers pass their own appUser.id; resolve it as a
+  // fallback only if omitted.
+  const owner = ownerId || (await getCurrentAppUser().catch(() => null))?.id || null;
   const { data, error } = await supabase
     .from('documents')
     .insert({
-      owner_id: ownerId || me?.id || null,
+      owner_id: owner,
       patient_id: patientId, doctor_id: doctorId, direction,
       appointment_id: appointmentId, notes: notes || null,
       file_url: path, file_type: fileType || file.type || null,
@@ -984,9 +987,12 @@ export async function getOrCreateConversation(patientId, doctorId) {
 
 /** Conversations for the current user, with the peer's display name resolved. */
 export async function fetchConversations() {
+  // NOTE: `doctors` has TWO FKs to `users` (user_id + reviewed_by), so a bare
+  // `doctor:doctors(...user:users...)` embed is AMBIGUOUS and errors the whole
+  // query (→ the doctor's inbox looked empty). Disambiguate the user embed.
   const { data, error } = await supabase
     .from('conversations')
-    .select('*, patient:users(full_name), doctor:doctors(id, user:users(full_name))')
+    .select('*, patient:users(full_name), doctor:doctors(id, user:users!doctors_user_id_fkey(full_name))')
     .order('created_at', { ascending: false });
   if (error) throw error;
   const rows = data || [];
