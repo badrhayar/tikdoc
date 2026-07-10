@@ -25,10 +25,10 @@ export default function BrandMark({ size = 32, radius = 11.5, shadow = false, st
       </defs>
       <rect width="48" height="48" rx={radius} fill="url(#tbm-g)" />
       <rect width="48" height="48" rx={radius} fill="url(#tbm-hl)" />
-      {/* Stethoscope with ear tubes, optically centered in the tile */}
-      <g transform="translate(3.4 7.9) scale(1.5)" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 3 4.9 1.1" />
-        <path d="M14 3l1.1-1.9" />
+      {/* Stethoscope with inward ear tubes, optically centered in the tile */}
+      <g transform="translate(3.84 8.74) scale(1.44)" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3 6.9 1.2" />
+        <path d="M14 3l-.9-1.8" />
         <path d="M6 3v5a4 4 0 0 0 8 0V3" />
         <path d="M10 12v3a5 5 0 0 0 10 0v-2" />
         <circle cx="20" cy="10" r="2" />
