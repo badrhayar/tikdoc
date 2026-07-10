@@ -4,6 +4,7 @@ import {
   fetchMyDoctor, fetchAvailability, saveAvailability,
   fetchBlockedSlots, saveBlockedSlotsForDate, fetchBookedSlots, saveDoctorPlanning,
   fetchTimeOff, addTimeOff, deleteTimeOff,
+  updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail,
 } from '../../lib/api';
 import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
@@ -198,6 +199,40 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
     if (doctorId && !String(row.id).startsWith('local_')) {
       try { await deleteTimeOff(row.id); } catch (_) { /* refetch on next visit */ }
     }
+  };
+
+  // Appointments already booked inside a closed range — the doctor must deal
+  // with them, otherwise patients show up at a closed cabinet.
+  const conflictsFor = (r) => [...(state?.manualAppts || []), ...(state?.myAppointments || [])]
+    .filter((a) => {
+      if (a.status !== 'pending' && a.status !== 'confirmed') return false;
+      const iso = isoOf(new Date(a.datetime));
+      return iso >= r.start_date && iso <= r.end_date;
+    })
+    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+  const [cancellingOffId, setCancellingOffId] = useState(null);
+  const cancelConflicts = async (r) => {
+    const list = conflictsFor(r);
+    if (!list.length) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Annuler ${list.length} rendez-vous et prévenir les patients (WhatsApp + email) ?`)) return;
+    setCancellingOffId(r.id);
+    for (const a of list) {
+      const local = String(a.id).startsWith('local_') || String(a.id).startsWith('demo_');
+      if (!local) {
+        try {
+          await updateAppointmentStatus(a.id, 'cancelled');
+          sendApptWhatsApp(a.id, 'cancelled');
+          notifyApptEmail(a.id, 'cancelled');
+        } catch (_) { /* keep going — remaining patients still get notified */ }
+      }
+    }
+    const ids = new Set(list.map((a) => a.id));
+    setState({
+      myAppointments: (state.myAppointments || []).map((a) => ids.has(a.id) ? { ...a, status: 'cancelled' } : a),
+      manualAppts: (state.manualAppts || []).map((a) => ids.has(a.id) ? { ...a, status: 'cancelled' } : a),
+      toast: `${list.length} rendez-vous annulé(s) — patients prévenus ✓`, toastShow: true,
+    });
+    setCancellingOffId(null);
   };
 
   const handleSave = async () => {
@@ -423,6 +458,18 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                         {active && <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, background: '#FEF4DD', color: '#9A6510', borderRadius: 20, padding: '2px 8px', verticalAlign: 'middle' }}>EN COURS</span>}
                       </div>
                       {r.reason && <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>{r.reason}</div>}
+                      {(() => {
+                        const cf = conflictsFor(r);
+                        return cf.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#9A6510' }}>⚠ {cf.length} rendez-vous à venir pendant cette période</span>
+                            <button onClick={() => cancelConflicts(r)} disabled={cancellingOffId === r.id}
+                              style={{ background: '#FEF4DD', color: '#9A6510', border: '1px solid #F6E0AE', borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer', opacity: cancellingOffId === r.id ? 0.6 : 1 }}>
+                              {cancellingOffId === r.id ? 'Annulation…' : 'Annuler & prévenir les patients'}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <button onClick={() => handleDeleteOff(r)} title="Rouvrir cette période" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 600, color: '#C2466A', cursor: 'pointer', flexShrink: 0 }}>Rouvrir</button>
                   </div>

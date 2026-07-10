@@ -170,6 +170,39 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     }
   };
 
+  // ── Feuille de journée — printable day list for the front desk ──────────────
+  const printDaySheet = () => {
+    const t = new Date();
+    const iso = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    const day = rows.filter((r) => r.date === iso && r.rawStatus !== 'cancelled').sort((a, b) => a.time.localeCompare(b.time));
+    const docName = state?.appUser?.full_name ? (/^dr/i.test(state.appUser.full_name) ? state.appUser.full_name : `Dr. ${state.appUser.full_name}`) : 'Cabinet';
+    const dateLbl = t.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' });
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const trs = day.length
+      ? day.map((r) => `<tr><td>${esc(r.time)}</td><td><strong>${esc(r.patient)}</strong></td><td>${esc(r.phone)}</td><td>${esc(r.motif)}</td><td>${esc(r.statut)}</td><td></td></tr>`).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:#888;padding:24px">Aucun rendez-vous aujourd\'hui</td></tr>';
+    const w = window.open('', '_blank', 'width=840,height=980');
+    if (!w) return;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Feuille de journée — ${esc(dateLbl)}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;color:#15314A;padding:28px}
+        h1{font-size:19px;margin:0}p.sub{margin:4px 0 20px;color:#555;font-size:13px}
+        table{width:100%;border-collapse:collapse;font-size:12.5px}
+        th{background:#F0F5F2;text-align:left;padding:8px 10px;border:1px solid #D8E4DE;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+        td{padding:9px 10px;border:1px solid #D8E4DE;vertical-align:top}
+        td:last-child{min-width:130px}
+        footer{margin-top:18px;font-size:11px;color:#888}
+        @media print{body{padding:8px}}
+      </style></head><body>
+      <h1>${esc(docName)} — Feuille de journée</h1>
+      <p class="sub">${esc(dateLbl.charAt(0).toUpperCase() + dateLbl.slice(1))} · ${day.length} rendez-vous</p>
+      <table><thead><tr><th>Heure</th><th>Patient</th><th>Téléphone</th><th>Motif</th><th>Statut</th><th>Notes</th></tr></thead>
+      <tbody>${trs}</tbody></table>
+      <footer>Généré par Tabibo — tabibo.ma</footer>
+      <script>window.onload = () => setTimeout(() => window.print(), 150);</` + `script></body></html>`);
+    w.document.close();
+  };
+
   // ── Reschedule (doctor changes date/time → patient gets a WhatsApp) ──────────
   const [resched, setResched] = useState(null); // { id, date, time }
   const openResched = (appt) => {
@@ -206,17 +239,31 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: DARK }}>Rendez-vous</h1>
           <p style={{ margin: '4px 0 0', fontSize: 14, color: MUTED }}>Gérez vos consultations et plannings</p>
         </div>
-        <button
-          onClick={openNewAppt}
-          style={{
-            background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10,
-            padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-            boxShadow: '0 2px 8px rgba(22,160,106,0.25)',
-          }}
-        >
-          <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Nouveau RDV
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={printDaySheet}
+            title="Imprimer la feuille de journée (liste du jour)"
+            style={{
+              background: '#fff', color: DARK, border: `1px solid ${BORDER_STRONG}`, borderRadius: 10,
+              padding: '10px 16px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimer la journée
+          </button>
+          <button
+            onClick={openNewAppt}
+            style={{
+              background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10,
+              padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 2px 8px rgba(22,160,106,0.25)',
+            }}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Nouveau RDV
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}

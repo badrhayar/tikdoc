@@ -60,6 +60,36 @@ export default function Profile() {
     return () => { active = false; };
   }, [doc?.id]);
   const dateOff = (iso) => isDateOff(timeOff, iso);
+
+  // "Prochain créneau disponible" — scan the next 14 days for the first truly
+  // bookable slot (open day, not on leave, not full, not booked/blocked/past).
+  // Stops at the first hit, so it usually costs a single extra request.
+  const [nextFree, setNextFree] = useState(null);           // {iso, slot} | 'none' | null (loading)
+  useEffect(() => {
+    if (!isSupabaseConfigured || typeof doc?.id !== 'string' || weekAvail === null) { setNextFree(null); return; }
+    let active = true;
+    (async () => {
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(`${todayISO}T12:00:00`); d.setDate(d.getDate() + i);
+        const iso = isoOf(d), dow = d.getDay();
+        if (!dayOpen(dow) || dateOff(iso)) continue;
+        const { work, breaks } = dayRules(dow);
+        const slots = weekAvail.length === 0 ? BOOK_SLOTS : genSlots(work, breaks);
+        if (!slots.length) continue;
+        let booked = [], blocked = [];
+        try {
+          [booked, blocked] = await Promise.all([fetchBookedSlots(doc.id, iso), fetchBlockedSlots(doc.id, iso)]);
+        } catch (_) { /* treat as free — the grid re-checks on selection */ }
+        if (!active) return;
+        if ((doc?.maxPerDay || 0) > 0 && booked.length >= doc.maxPerDay) continue;
+        const free = slots.find((s) => !booked.includes(s) && !blocked.includes(s) && !(iso === todayISO && slotToMinutes(s) <= m.minutes));
+        if (free) { setNextFree({ iso, slot: free }); return; }
+      }
+      if (active) setNextFree('none');
+    })();
+    return () => { active = false; };
+  }, [doc?.id, weekAvail, timeOff]);
+
   const toMin = (t) => { const [h, mm] = String(t || '0:0').split(':').map(Number); return h * 60 + (mm || 0); };
   const dayRules = (dow) => {
     const rows = (weekAvail || []).filter((r) => r.day_of_week === dow);
@@ -369,6 +399,29 @@ export default function Profile() {
         {/* Right: Booking card */}
         <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 18 : 28, border: `1px solid ${BORDER}`, position: isMobile ? 'static' : 'sticky', top: 86, boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 16 }}>Choisissez une date et une heure</div>
+
+          {/* Next truly-free slot — one tap selects it. */}
+          {nextFree && nextFree !== 'none' && (() => {
+            const nd = new Date(`${nextFree.iso}T12:00:00`);
+            const label = nextFree.iso === todayISO ? "aujourd'hui" : `${FR_DOW[(nd.getDay() + 6) % 7]}. ${nd.getDate()} ${FR_MONTHS[nd.getMonth()].toLowerCase()}`;
+            return (
+              <button
+                onClick={() => { setViewY(nd.getFullYear()); setViewM(nd.getMonth()); setState({ bookDate: nextFree.iso, bookSlot: nextFree.slot }); }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#E7F6EE', border: '1px solid #CDE7DA', borderRadius: 12, padding: '11px 14px', marginBottom: 14, cursor: 'pointer', textAlign: 'start' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E7C52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span style={{ flex: 1, fontSize: 13, color: '#0E5C40' }}>
+                  Prochain créneau : <strong>{label} à {nextFree.slot}</strong>
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#0E7C52', whiteSpace: 'nowrap' }}>Choisir →</span>
+              </button>
+            );
+          })()}
+          {nextFree === 'none' && (
+            <div style={{ fontSize: 12.5, color: MUTED, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 14px', marginBottom: 14 }}>
+              Aucun créneau libre sous 14 jours — contactez le cabinet directement.
+            </div>
+          )}
 
           {/* Month nav */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

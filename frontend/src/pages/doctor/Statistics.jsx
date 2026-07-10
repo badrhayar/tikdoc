@@ -149,14 +149,18 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   // Consultation KPIs over the selected period (same source as everything else).
   const total = consultations.length;
   const cancelled = consultations.filter(c => c.status === 'Annulé').length;
-  const svcDur = (state?.services || []).map(s => Number(s.duration) || 0).filter(Boolean);
-  const avgDur = svcDur.length ? Math.round(svcDur.reduce((a, b) => a + b, 0) / svcDur.length) : 20;
   const cAccept = total ? Math.round((total - cancelled) / total * 100) : 0;
   const cCancel = total ? Math.round(cancelled / total * 100) : 0;
+  // True no-shows come from the appointment status (apptToConsultation folds
+  // them into 'Annulé', so they can't be derived from the consultation set).
+  const periodAppts = [...(state?.manualAppts || []), ...(state?.myAppointments || [])]
+    .filter(a => a.datetime && new Date(a.datetime) >= periodStart && new Date(a.datetime) <= new Date());
+  const noShows = periodAppts.filter(a => a.status === 'no_show').length;
+  const cNoShow = periodAppts.length ? Math.round(noShows / periodAppts.length * 100) : 0;
   const CONSULT_CARDS = [
     { label: 'Total consultations', value: total.toString(), sub: `sur ${period}` },
     { label: "Taux d'acceptation", value: cAccept + '%', sub: 'non annulées' },
-    { label: 'Durée moyenne', value: avgDur + ' min', sub: "d'après vos services" },
+    { label: 'Absences (no-show)', value: cNoShow + '%', sub: `${noShows} rendez-vous non honorés` },
     { label: "Taux d'annulation", value: cCancel + '%', sub: 'des rendez-vous' },
   ];
 

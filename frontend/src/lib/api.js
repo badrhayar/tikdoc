@@ -142,6 +142,36 @@ export function isDateOff(timeOffRows, iso) {
   return (timeOffRows || []).some((r) => iso >= r.start_date && iso <= r.end_date);
 }
 
+/** Download a mapped appointment as an .ics file ("Ajouter à l'agenda").
+ *  Works with Google Agenda, Apple Calendar and Outlook — no backend needed. */
+export function downloadICS(a, durationMin = 30) {
+  const start = new Date(a.datetime);
+  const end = new Date(start.getTime() + durationMin * 60000);
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Tabibo//Rendez-vous//FR', 'BEGIN:VEVENT',
+    `UID:tabibo-${a.id}@tabibo.ma`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${esc(`Rendez-vous ${a.doctorName || 'médecin'} — Tabibo`)}`,
+    (a.clinic || a.city) ? `LOCATION:${esc([a.clinic, a.city].filter(Boolean).join(', '))}` : null,
+    a.reason ? `DESCRIPTION:${esc(a.reason)}` : null,
+    'BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Rendez-vous médical dans 2 heures')}`, 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].filter(Boolean);
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const el = document.createElement('a');
+  el.href = url;
+  el.download = 'rendez-vous-tabibo.ics';
+  document.body.appendChild(el);
+  el.click();
+  el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 // ── Appointments ─────────────────────────────────────────────────────────────
 
 /**
