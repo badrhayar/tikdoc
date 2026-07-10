@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, kmOf, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff } from '../lib/api';
-import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
+import { fetchPrayerTimes, PRAYER_FALLBACK, prayerSlotLabel } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 const PRIMARY = '#16A06A';
@@ -140,15 +140,9 @@ export default function Profile() {
     fetchPrayerTimes(doc.city, selectedDate).then((times) => {
       if (!active) return;
       const t = times || PRAYER_FALLBACK;
-      const out = [];
-      for (const id of doc.prayerIds) {
-        const hhmm = t[id];
-        if (!hhmm) continue;
-        const mins = slotToMinutes(hhmm);
-        const slot = BOOK_SLOTS.find((s) => mins >= slotToMinutes(s) && mins < slotToMinutes(s) + 30);
-        if (slot) out.push(slot);
-      }
-      setPrayerSlots(out);
+      // Nearest half-hour rule: XX:00–XX:15 blocks XX:00, XX:16–XX:45 blocks
+      // XX:30, XX:46–XX:59 blocks the next hour (same rule as the doctor's planner).
+      setPrayerSlots(doc.prayerIds.map((id) => prayerSlotLabel(t[id])).filter(Boolean));
     }).catch(() => active && setPrayerSlots([]));
     return () => { active = false; };
   }, [doc?.id, doc?.prayerBlock, doc?.prayerIds, doc?.city, selectedDate]);
@@ -319,11 +313,6 @@ export default function Profile() {
               <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="pin" size={16} /></span>
               <span style={{ color: MUTED }}>Cabinet :</span>
               <span style={{ fontWeight: 600 }}>{doc.clinic}, {doc.city}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
-              <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="target" size={16} /></span>
-              <span style={{ color: MUTED }}>Distance :</span>
-              <span style={{ fontWeight: 600 }}>{kmOf(doc)} km</span>
             </div>
           </div>
 

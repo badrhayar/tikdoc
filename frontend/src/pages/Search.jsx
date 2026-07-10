@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, kmOf, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -45,7 +45,6 @@ export default function Search() {
   if (scSort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
   else if (scSort === 'price_asc') list = [...list].sort((a, b) => a.price - b.price);
   else if (scSort === 'price_desc') list = [...list].sort((a, b) => b.price - a.price);
-  else if (scSort === 'distance') list = [...list].sort((a, b) => parseFloat(kmOf(a)) - parseFloat(kmOf(b)));
 
   const pinDoc = selPin ? doctors.find((d) => d.id === selPin) : null;
 
@@ -62,7 +61,7 @@ export default function Search() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: DARK }}>{docDisplayName(pinDoc.name, pinDoc.spec)}</div>
         <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>{SPEC_INFO[pinDoc.spec]?.label || pinDoc.spec}</div>
-        <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD · {kmOf(pinDoc)} km</div>
+        <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD</div>
       </div>
       <button onClick={() => { setState({ selDoc: pinDoc.id }); setMapFull(false); go('profile'); }} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}>
         Voir le profil
@@ -155,7 +154,6 @@ export default function Search() {
               <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, marginLeft: 'auto' }}>
                 <option value="pertinence">Pertinence</option>
                 <option value="rating">Meilleures notes</option>
-                <option value="distance">Distance</option>
                 <option value="price_asc">Prix croissant</option>
                 <option value="price_desc">Prix décroissant</option>
               </select>
@@ -201,7 +199,6 @@ export default function Search() {
             <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
               <option value="pertinence">Pertinence</option>
               <option value="rating">Meilleures notes</option>
-              <option value="distance">Distance</option>
               <option value="price_asc">Prix croissant</option>
               <option value="price_desc">Prix décroissant</option>
             </select>
@@ -291,7 +288,7 @@ export default function Search() {
                     <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600, marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.label}</div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {d.rating}</span>
-                      <span>· {d.reviews} avis · {kmOf(d)} km</span>
+                      <span>· {d.reviews} avis</span>
                     </div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.clinic}, {d.city}</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

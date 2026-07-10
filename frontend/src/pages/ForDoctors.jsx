@@ -280,37 +280,40 @@ export default function ForDoctors() {
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
               </svg>
-              {/* City pins (positioned as % so they scale with the box) */}
+              {/* City pins — placed by real lat/lon so the dots trace the
+                  country's silhouette from Tanger down to Dakhla. */}
               {[
-                { x: 104, y: 134, label: 'Casa', big: true },
-                { x: 126, y: 108, label: 'Rabat', big: false },
-                { x: 92, y: 174, label: 'Marrakech', big: false },
-                { x: 160, y: 42, label: 'Tanger', big: false },
-                { x: 68, y: 186, label: 'Agadir', big: false },
-              ].map((pin) => (
-                <div key={pin.label} style={{
-                  position: 'absolute',
-                  left: `${(pin.x / 280 * 100).toFixed(2)}%`,
-                  top: `${(pin.y / 220 * 100).toFixed(2)}%`,
-                  transform: 'translate(-50%, -50%)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                }}>
-                  <div style={{
-                    width: pin.big ? 14 : 10,
-                    height: pin.big ? 14 : 10,
-                    borderRadius: '50%',
-                    background: pin.big ? '#fff' : 'rgba(255,255,255,0.75)',
-                    border: pin.big ? '2px solid rgba(22,160,106,0.6)' : 'none',
-                    boxShadow: pin.big ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none',
-                  }} />
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {pin.label}
-                  </span>
-                </div>
-              ))}
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
-                {lang === 'ar' ? `المغرب · ${CITY_COUNT} مدينة` : lang === 'en' ? `Morocco · ${CITY_COUNT} cities` : `Maroc · ${CITY_COUNT} villes`}
-              </div>
+                { x: 187, y: 24,  label: 'Tanger',     pos: 'top' },
+                { x: 229, y: 33,  label: 'Nador',      pos: 'top' },
+                { x: 244, y: 44,  label: 'Oujda',      pos: 'bottom' },
+                { x: 199, y: 52,  label: 'Fès',        pos: 'right' },
+                { x: 172, y: 50,  label: 'Rabat',      pos: 'left' },
+                { x: 159, y: 60,  label: 'Casablanca', big: true, pos: 'bottom' },
+                { x: 155, y: 88,  label: 'Marrakech',  pos: 'right' },
+                { x: 131, y: 105, label: 'Agadir',     pos: 'left' },
+                { x: 78,  y: 150, label: 'Laâyoune',   pos: 'right' },
+                { x: 38,  y: 198, label: 'Dakhla',     pos: 'right' },
+              ].map((pin) => {
+                const lbl = {
+                  position: 'absolute', fontSize: 9, color: 'rgba(255,255,255,0.85)', fontWeight: 600, whiteSpace: 'nowrap',
+                  ...(pin.pos === 'top'    ? { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 3 }
+                    : pin.pos === 'bottom' ? { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 3 }
+                    : pin.pos === 'left'   ? { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 5 }
+                    :                        { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: 5 }),
+                };
+                return (
+                  <div key={pin.label} style={{
+                    position: 'absolute',
+                    left: `${(pin.x / 280 * 100).toFixed(2)}%`,
+                    top: `${(pin.y / 220 * 100).toFixed(2)}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: pin.big ? 14 : 9, height: pin.big ? 14 : 9,
+                  }}>
+                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', boxSizing: 'border-box', background: pin.big ? '#fff' : 'rgba(255,255,255,0.75)', border: pin.big ? '2px solid rgba(22,160,106,0.6)' : 'none', boxShadow: pin.big ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none' }} />
+                    <span style={lbl}>{pin.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -441,7 +444,7 @@ export default function ForDoctors() {
           ))}
           {waSales && (
             <div style={{ textAlign: 'center', marginTop: 28 }}>
-              <a href={waSales} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 18px -6px rgba(37,211,102,0.55)' }}>
+              <a href={waSales} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY, color: '#fff', borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 18px -6px rgba(22,160,106,0.55)' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.68-1.62-.93-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.1 4.49.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.3a8.3 8.3 0 0 1-4.2-1.2l-.3-.18-2.9.9.9-2.8-.2-.3A8.3 8.3 0 1 1 12 20.3z"/></svg>
                 {lang === 'ar' ? 'تحدث مع فريقنا على واتساب' : lang === 'en' ? 'Talk to our team on WhatsApp' : 'Parler à notre équipe sur WhatsApp'}
               </a>

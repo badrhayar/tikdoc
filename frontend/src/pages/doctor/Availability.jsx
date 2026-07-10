@@ -8,7 +8,7 @@ import {
 } from '../../lib/api';
 import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
-import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS } from '../../lib/prayer.js';
+import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerSlotLabel } from '../../lib/prayer.js';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -146,6 +146,21 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
     return () => { active = false; };
   }, [doctorId, selDate]);
 
+  // Prayer times for the SELECTED planner date (the toggle card shows today's).
+  const [prayerForSel, setPrayerForSel] = useState(PRAYER_FALLBACK);
+  useEffect(() => {
+    let active = true;
+    fetchPrayerTimes(doctorCity, selDate)
+      .then((t) => active && setPrayerForSel({ ...PRAYER_FALLBACK, ...(t || {}) }))
+      .catch(() => {});
+    return () => { active = false; };
+  }, [doctorCity, selDate]);
+  // Slots blocked by enabled prayers on the selected date — nearest half-hour:
+  // XX:00–XX:15 blocks XX:00, XX:16–XX:45 blocks XX:30, XX:46–XX:59 the next hour.
+  const prayerSlotsForSel = prayerBlock ? [...prayerSet].map((id) => prayerSlotLabel(prayerForSel[id])).filter(Boolean) : [];
+  // Congé covering the selected date, if any → the whole day is closed.
+  const selOff = timeOff.find((r) => selDate >= r.start_date && selDate <= r.end_date) || null;
+
   // The day's slot grid mirrors the WEEKLY HOURS currently in the editor (live):
   // open range(s) minus the déjeuner pause. Day toggled off → no slots at all.
   const selUi = (new Date(`${selDate}T12:00:00`).getDay() + 6) % 7;   // 0=Lun … 6=Dim
@@ -267,12 +282,6 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
           <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 26, fontWeight: 800, color: DARK }}>Disponibilités</h1>
           <p style={{ margin: '4px 0 0', color: MUTED, fontSize: 13.5 }}>Horaires, créneaux, prière et limites de rendez-vous.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {savedMsg && <span style={{ fontSize: 13, fontWeight: 600, color: savedMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{savedMsg}</span>}
-          <button onClick={handleSave} disabled={saving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, minHeight: 44 }}>
-            {saving ? 'Enregistrement…' : 'Sauvegarder'}
-          </button>
-        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -320,30 +329,39 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             })}
           </div>
 
+          {/* Congé covering this date → the whole day is closed for booking */}
+          {selOff && (
+            <div style={{ padding: '16px 14px', textAlign: 'center', color: '#9A6510', fontSize: 13.5, fontWeight: 600, background: '#FEF9EC', borderRadius: 10, border: '1px solid #F6E0AE', marginBottom: 4 }}>
+              Cabinet fermé ce jour — congés{selOff.reason ? ` (${selOff.reason})` : ''}. Les patients ne peuvent pas réserver.
+              Rouvrez la période dans « Congés & absences » ci-dessous pour réactiver les créneaux.
+            </div>
+          )}
+
           {/* Quick actions */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {!selOff && <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <button onClick={() => setAllSlots(false)} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Tout activer</button>
             <button onClick={() => setAllSlots(true)} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Tout désactiver</button>
-          </div>
+          </div>}
 
           {/* Slot grid for selected date — generated from the weekly hours below */}
-          {daySlots.length === 0 && (
+          {!selOff && daySlots.length === 0 && (
             <div style={{ padding: '18px 14px', textAlign: 'center', color: MUTED, fontSize: 13, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
               Jour fermé selon vos horaires hebdomadaires — activez-le ci-dessous pour proposer des créneaux.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: 8 }}>
+          {!selOff && <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: 8 }}>
             {daySlots.map((slot) => {
               const booked = bookedForDate.includes(slot);
+              const prayer = !booked && prayerSlotsForSel.includes(slot);
               const off = blockedForDate.has(slot);
               return (
-                <button key={slot} onClick={() => toggleSlot(slot)} disabled={booked}
-                  title={booked ? 'Réservé' : off ? 'Désactivé' : 'Réservable'}
+                <button key={slot} onClick={() => !prayer && toggleSlot(slot)} disabled={booked || prayer}
+                  title={booked ? 'Réservé' : prayer ? 'Bloqué — horaire de prière' : off ? 'Désactivé' : 'Réservable'}
                   style={{
-                    minHeight: 46, padding: '6px 4px', borderRadius: 10, cursor: booked ? 'not-allowed' : 'pointer',
-                    border: `1.5px solid ${booked ? '#F3D9A8' : off ? '#EDF1EF' : PRIMARY}`,
-                    background: booked ? '#FEF6E7' : off ? '#F4F6F5' : '#E7F6EE',
-                    color: booked ? '#9A6510' : off ? '#B7C2BD' : '#0E7C52',
+                    minHeight: 46, padding: '6px 4px', borderRadius: 10, cursor: (booked || prayer) ? 'not-allowed' : 'pointer',
+                    border: `1.5px solid ${booked ? '#F3D9A8' : prayer ? '#D9CFF0' : off ? '#EDF1EF' : PRIMARY}`,
+                    background: booked ? '#FEF6E7' : prayer ? '#F3EFFB' : off ? '#F4F6F5' : '#E7F6EE',
+                    color: booked ? '#9A6510' : prayer ? '#6B57A6' : off ? '#B7C2BD' : '#0E7C52',
                     fontSize: 13.5, fontWeight: 700, textAlign: 'center', lineHeight: 1.1,
                     textDecoration: off ? 'line-through' : 'none', transition: 'all .12s',
                   }}>
@@ -352,9 +370,9 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                 </button>
               );
             })}
-          </div>
+          </div>}
           <div style={{ marginTop: 10, fontSize: 11.5, color: MUTED, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            {[['#16A06A', 'Réservable'], ['#C7D2CE', 'Désactivé'], ['#F59E0B', 'Réservé']].map(([c, lbl]) => (
+            {[['#16A06A', 'Réservable'], ['#C7D2CE', 'Désactivé'], ['#F59E0B', 'Réservé'], ['#6B57A6', 'Prière']].map(([c, lbl]) => (
               <span key={lbl} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: c, flexShrink: 0 }} /> {lbl}
               </span>
@@ -419,28 +437,32 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             rendez-vous manuellement pendant une absence.
           </p>
 
-          {/* Add form */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Du</label>
-              <input type="date" value={offStart} min={todayISO} onChange={(e) => setOffStart(e.target.value)}
-                style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+          {/* Add form — explicit save button underneath, like every other section */}
+          <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Du</label>
+                <input type="date" value={offStart} min={todayISO} onChange={(e) => setOffStart(e.target.value)}
+                  style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Au (inclus)</label>
+                <input type="date" value={offEnd} min={offStart || todayISO} onChange={(e) => setOffEnd(e.target.value)}
+                  style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Motif (optionnel)</label>
+                <input type="text" value={offReason} placeholder="Ex. Congés annuels" maxLength={80} onChange={(e) => setOffReason(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 12px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Au (inclus)</label>
-              <input type="date" value={offEnd} min={offStart || todayISO} onChange={(e) => setOffEnd(e.target.value)}
-                style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 14 }}>
+              {offMsg && <span style={{ fontSize: 13, fontWeight: 600, color: offMsg.startsWith('Échec') || offMsg.startsWith('Choisissez') || offMsg.startsWith('La date') || offMsg.startsWith('Cette') ? '#C2466A' : PRIMARY }}>{offMsg}</span>}
+              <button onClick={handleAddOff} disabled={offSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '0 22px', height: 44, fontSize: 13.5, fontWeight: 700, cursor: offSaving ? 'default' : 'pointer', opacity: offSaving ? 0.7 : 1 }}>
+                {offSaving ? 'Enregistrement…' : "Enregistrer l'absence"}
+              </button>
             </div>
-            <div style={{ flex: 1, minWidth: 160 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Motif (optionnel)</label>
-              <input type="text" value={offReason} placeholder="Ex. Congés annuels" maxLength={80} onChange={(e) => setOffReason(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 12px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
-            </div>
-            <button onClick={handleAddOff} disabled={offSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '0 20px', height: 44, fontSize: 13.5, fontWeight: 700, cursor: offSaving ? 'default' : 'pointer', opacity: offSaving ? 0.7 : 1 }}>
-              {offSaving ? 'Ajout…' : '+ Fermer cette période'}
-            </button>
           </div>
-          {offMsg && <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: offMsg.startsWith('Échec') || offMsg.startsWith('Choisissez') || offMsg.startsWith('La date') || offMsg.startsWith('Cette') ? '#C2466A' : PRIMARY }}>{offMsg}</div>}
 
           {/* Current & upcoming closures */}
           {timeOff.length > 0 ? (

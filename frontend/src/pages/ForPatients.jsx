@@ -221,37 +221,40 @@ export default function ForPatients() {
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
               </svg>
-              {/* City pins (positioned as % so they scale with the box) */}
+              {/* City pins — placed by real lat/lon so the dots trace the
+                  country's silhouette from Tanger down to Dakhla. */}
               {[
-                { x: 104, y: 134, label: 'Casa', big: true },
-                { x: 126, y: 108, label: 'Rabat', big: false },
-                { x: 92, y: 174, label: 'Marrakech', big: false },
-                { x: 160, y: 42, label: 'Tanger', big: false },
-                { x: 68, y: 186, label: 'Agadir', big: false },
-              ].map((pin) => (
-                <div key={pin.label} style={{
-                  position: 'absolute',
-                  left: `${(pin.x / 280 * 100).toFixed(2)}%`,
-                  top: `${(pin.y / 220 * 100).toFixed(2)}%`,
-                  transform: 'translate(-50%, -50%)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                }}>
-                  <div style={{
-                    width: pin.big ? 14 : 10,
-                    height: pin.big ? 14 : 10,
-                    borderRadius: '50%',
-                    background: pin.big ? '#fff' : 'rgba(255,255,255,0.75)',
-                    border: pin.big ? '2px solid rgba(22,160,106,0.6)' : 'none',
-                    boxShadow: pin.big ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none',
-                  }} />
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {pin.label}
-                  </span>
-                </div>
-              ))}
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
-                {lang === 'ar' ? `المغرب · ${CITY_COUNT} مدينة` : lang === 'en' ? `Morocco · ${CITY_COUNT} cities` : `Maroc · ${CITY_COUNT} villes`}
-              </div>
+                { x: 187, y: 24,  label: 'Tanger',     pos: 'top' },
+                { x: 229, y: 33,  label: 'Nador',      pos: 'top' },
+                { x: 244, y: 44,  label: 'Oujda',      pos: 'bottom' },
+                { x: 199, y: 52,  label: 'Fès',        pos: 'right' },
+                { x: 172, y: 50,  label: 'Rabat',      pos: 'left' },
+                { x: 159, y: 60,  label: 'Casablanca', big: true, pos: 'bottom' },
+                { x: 155, y: 88,  label: 'Marrakech',  pos: 'right' },
+                { x: 131, y: 105, label: 'Agadir',     pos: 'left' },
+                { x: 78,  y: 150, label: 'Laâyoune',   pos: 'right' },
+                { x: 38,  y: 198, label: 'Dakhla',     pos: 'right' },
+              ].map((pin) => {
+                const lbl = {
+                  position: 'absolute', fontSize: 9, color: 'rgba(255,255,255,0.85)', fontWeight: 600, whiteSpace: 'nowrap',
+                  ...(pin.pos === 'top'    ? { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 3 }
+                    : pin.pos === 'bottom' ? { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 3 }
+                    : pin.pos === 'left'   ? { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 5 }
+                    :                        { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: 5 }),
+                };
+                return (
+                  <div key={pin.label} style={{
+                    position: 'absolute',
+                    left: `${(pin.x / 280 * 100).toFixed(2)}%`,
+                    top: `${(pin.y / 220 * 100).toFixed(2)}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: pin.big ? 14 : 9, height: pin.big ? 14 : 9,
+                  }}>
+                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', boxSizing: 'border-box', background: pin.big ? '#fff' : 'rgba(255,255,255,0.75)', border: pin.big ? '2px solid rgba(22,160,106,0.6)' : 'none', boxShadow: pin.big ? '0 0 0 4px rgba(255,255,255,0.2)' : 'none' }} />
+                    <span style={lbl}>{pin.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

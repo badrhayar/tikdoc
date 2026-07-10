@@ -44,3 +44,15 @@ export const PRAYER_LABELS = [
   { id: 'maghrib', fr: 'Maghrib', ar: 'المغرب' },
   { id: 'isha',    fr: 'Isha',    ar: 'العشاء' },
 ];
+
+// The 30-min slot a prayer blocks, by NEAREST half-hour: a prayer at
+// XX:00–XX:15 blocks the XX:00 slot, XX:16–XX:30 blocks XX:30, XX:31–XX:45
+// blocks XX:30, XX:46–XX:59 blocks the next hour — i.e. round to nearest slot.
+export function prayerSlotLabel(hhmm) {
+  const [h, m] = String(hhmm || '').split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  const rounded = Math.round((h * 60 + m) / 30) * 30;
+  if (rounded >= 1440) return null;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(Math.floor(rounded / 60))}:${p(rounded % 60)}`;
+}
