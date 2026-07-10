@@ -279,9 +279,6 @@ export default function ForDoctors() {
                 {[56, 112, 168, 224].map((x) => (
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
-                {/* Subtle network line linking the cities north → south */}
-                <polyline points="177.2,13.1 210.7,20.8 222.5,27.3 186.8,35.8 165.5,35.9 156.9,41.8 152,67.1 133.6,82.9 92.1,125.7 60.5,171 47.6,208.7"
-                  fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1" strokeDasharray="3 4" strokeLinecap="round" />
               </svg>
               {/* City pins — placed by real lat/lon so the dots trace the
                   country's silhouette from Tanger down to Dakhla. */}
@@ -290,8 +287,8 @@ export default function ForDoctors() {
                 { x: 210.7, y: 20.8, label: 'Nador',      pos: 'top' },
                 { x: 222.5, y: 27.3, label: 'Oujda',      pos: 'right' },
                 { x: 186.8, y: 35.8, label: 'Fès',        pos: 'right' },
-                { x: 165.5, y: 35.9, label: 'Rabat',      pos: 'top' },
-                { x: 156.9, y: 41.8, label: 'Casablanca', big: true, pos: 'left' },
+                { x: 169,   y: 31.5, label: 'Rabat',      pos: 'left' },
+                { x: 153,   y: 47,   label: 'Casablanca', big: true, pos: 'left' },
                 { x: 152,   y: 67.1, label: 'Marrakech',  pos: 'right' },
                 { x: 133.6, y: 82.9, label: 'Agadir',     pos: 'left' },
                 { x: 92.1,  y: 125.7, label: 'Laâyoune',  pos: 'right' },
