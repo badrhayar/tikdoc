@@ -224,6 +224,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     }
   };
 
+  // Newest first — today's activity on top, history below.
+  rows.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+
   const filtered = rows.filter(appt => {
     const matchTab = activeTab === 'Tous' || appt.statut === activeTab;
     const matchSearch = appt.patient.toLowerCase().includes(searchQ.toLowerCase()) ||

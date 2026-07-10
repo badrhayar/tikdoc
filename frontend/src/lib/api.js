@@ -137,6 +137,18 @@ export async function deleteTimeOff(id) {
   if (error) throw error;
 }
 
+/** Join the freed-slot waitlist for a doctor + date. Returns 'ok' | 'dup'. */
+export async function joinWaitlist(doctorId, dateISO, patientId) {
+  const { error } = await supabase
+    .from('slot_waitlist')
+    .insert({ doctor_id: doctorId, date: dateISO, patient_id: patientId });
+  if (error) {
+    if (error.code === '23505') return 'dup';   // already on this day's list
+    throw error;
+  }
+  return 'ok';
+}
+
 /** true if the ISO date ('YYYY-MM-DD') falls inside any time-off range. */
 export function isDateOff(timeOffRows, iso) {
   return (timeOffRows || []).some((r) => iso >= r.start_date && iso <= r.end_date);
@@ -999,12 +1011,22 @@ export async function guestBookingVerify({ phone, code }) {
 export async function fetchDoctorReviews(doctorId, limit = 10) {
   const { data, error } = await supabase
     .from('doctor_reviews')
-    .select('id, rating, comment, created_at, reviewer')
+    .select('id, rating, comment, created_at, reviewer, reply, replied_at')
     .eq('doctor_id', doctorId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return data || [];
+}
+
+/** The cabinet answers a patient review (reply columns only — trigger-guarded). */
+export async function replyToReview(reviewId, reply) {
+  const text = (reply || '').trim();
+  const { error } = await supabase
+    .from('reviews')
+    .update({ reply: text || null, replied_at: text ? new Date().toISOString() : null })
+    .eq('id', reviewId);
+  if (error) throw error;
 }
 
 export async function createReview(appointmentId, rating, comment) {

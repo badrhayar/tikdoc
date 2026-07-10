@@ -279,23 +279,29 @@ export default function ForDoctors() {
                 {[56, 112, 168, 224].map((x) => (
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
+                {/* Simplified Morocco outline (same lat/lon projection as the pins) */}
+                <path d="M185.3 24 L204.2 32 L228.7 33.5 L246.3 37.3 L247.1 43.6 L252.2 66.2 L253.7 77.9 L238.3 84.5 L218.5 96.2 L185.5 118.1 L166.4 124 L144.8 142.8 L144.8 167.2 L81.3 235.2 L21.9 243.5 L38.1 201 L59.6 165.6 L75.5 151 L87.9 138.6 L122.7 118.1 L127.1 99.4 L128.7 86.5 L135.9 75 L147.3 61.1 L160.2 56 L171.8 49.7 L181.8 32.8 Z"
+                  fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.3" strokeLinejoin="round" />
+                {/* Subtle network line linking the cities north → south */}
+                <polyline points="185.3,26 229,35 244,44 199,52 172,50 159,60 155,88 131,105 78,150 38,198"
+                  fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1" strokeDasharray="3 4" strokeLinecap="round" />
               </svg>
               {/* City pins — placed by real lat/lon so the dots trace the
                   country's silhouette from Tanger down to Dakhla. */}
               {[
-                { x: 187, y: 24,  label: 'Tanger',     pos: 'top' },
+                { x: 187, y: 24,  label: 'Tanger',     pos: 'left' },
                 { x: 229, y: 33,  label: 'Nador',      pos: 'top' },
                 { x: 244, y: 44,  label: 'Oujda',      pos: 'bottom' },
                 { x: 199, y: 52,  label: 'Fès',        pos: 'right' },
-                { x: 172, y: 50,  label: 'Rabat',      pos: 'left' },
-                { x: 159, y: 60,  label: 'Casablanca', big: true, pos: 'bottom' },
+                { x: 172, y: 50,  label: 'Rabat',      pos: 'top' },
+                { x: 159, y: 60,  label: 'Casablanca', big: true, pos: 'left' },
                 { x: 155, y: 88,  label: 'Marrakech',  pos: 'right' },
                 { x: 131, y: 105, label: 'Agadir',     pos: 'left' },
                 { x: 78,  y: 150, label: 'Laâyoune',   pos: 'right' },
                 { x: 38,  y: 198, label: 'Dakhla',     pos: 'right' },
               ].map((pin) => {
                 const lbl = {
-                  position: 'absolute', fontSize: 9, color: 'rgba(255,255,255,0.85)', fontWeight: 600, whiteSpace: 'nowrap',
+                  position: 'absolute', fontSize: 9, color: 'rgba(255,255,255,0.92)', fontWeight: 600, whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(11,74,50,0.9)',
                   ...(pin.pos === 'top'    ? { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 3 }
                     : pin.pos === 'bottom' ? { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 3 }
                     : pin.pos === 'left'   ? { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 5 }

@@ -168,6 +168,13 @@ export default function PatientAccount() {
 
   // Patient cancels their own appointment → notifies the doctor (email) + self (WhatsApp).
   const cancelMyAppt = async (id) => {
+    // Online cancellation closes 24h before the visit (the promise shown on the
+    // card) — protects doctors from last-minute empty slots they can't refill.
+    const appt = appts.find((a) => a.id === id);
+    if (appt && new Date(appt.datetime).getTime() - Date.now() < 24 * 3600e3) {
+      setState({ toast: "À moins de 24h du rendez-vous, l'annulation en ligne n'est plus possible — contactez directement le cabinet.", toastShow: true });
+      return;
+    }
     if (typeof window !== 'undefined' && !window.confirm('Annuler ce rendez-vous ?')) return;
     try {
       await updateAppointmentStatus(id, 'cancelled');

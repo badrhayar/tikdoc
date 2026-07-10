@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
+import { fetchDoctorReviews, replyToReview } from '../../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -84,6 +85,29 @@ function ConsultCard({ label, value, trend, trendDir, sub }) {
 export default function Statistics({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
   const [period, setPeriod] = useState('30 jours');
+
+  // ── Avis des patients (public reviews of this cabinet + doctor replies) ──
+  const myDocId = state?.myDoctor?.id;
+  const [myReviews, setMyReviews] = useState([]);
+  const [replyDraft, setReplyDraft] = useState({});   // review id → text being edited
+  const [replySaving, setReplySaving] = useState(null);
+  useEffect(() => {
+    if (!myDocId || typeof myDocId !== 'string' || String(myDocId).startsWith('demo')) { setMyReviews([]); return; }
+    let active = true;
+    fetchDoctorReviews(myDocId, 25).then((r) => active && setMyReviews(r)).catch(() => {});
+    return () => { active = false; };
+  }, [myDocId]);
+  const saveReply = async (id) => {
+    const text = (replyDraft[id] ?? '').trim();
+    setReplySaving(id);
+    try {
+      await replyToReview(id, text);
+      setMyReviews((l) => l.map((r) => r.id === id ? { ...r, reply: text || null, replied_at: text ? new Date().toISOString() : null } : r));
+      setReplyDraft((d) => { const n = { ...d }; delete n[id]; return n; });
+    } catch (e) {
+      setState({ toast: 'Réponse impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setReplySaving(null); }
+  };
 
   // Window (in days) for the selected period. EVERYTHING on this page derives
   // from the same local consultation set, filtered by this window, so the KPIs
@@ -547,6 +571,63 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── Avis des patients — read & reply (feeds the public profile) ── */}
+      <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: isMobile ? 16 : 24, marginTop: 24 }}>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: DARK }}>Avis des patients</h2>
+        <p style={{ margin: '6px 0 16px', fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+          Les avis proviennent uniquement de consultations terminées. Votre réponse est publique —
+          remercier un patient ou répondre calmement à une critique inspire confiance aux suivants.
+        </p>
+        {myReviews.length === 0 ? (
+          <div style={{ fontSize: 13, color: MUTED, background: BG, border: `1px dashed ${BORDER}`, borderRadius: 10, padding: '16px 14px', textAlign: 'center' }}>
+            Aucun avis pour le moment — ils apparaîtront après vos premières consultations terminées.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {myReviews.map((r) => {
+              const editing = replyDraft[r.id] !== undefined;
+              return (
+                <div key={r.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ color: '#E8B34B', fontSize: 13, letterSpacing: 1 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{r.reviewer || 'Patient'}</span>
+                    <span style={{ fontSize: 11.5, color: MUTED }}>{new Date(r.created_at).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                  {r.comment && <p style={{ margin: '8px 0 0', fontSize: 13.5, color: '#3A4A45', lineHeight: 1.6 }}>{r.comment}</p>}
+                  {!editing && r.reply && (
+                    <div style={{ marginTop: 10, background: '#F0F9F4', border: '1px solid #CDE7DA', borderRadius: 10, padding: '10px 13px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#0E7C52', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Votre réponse</div>
+                      <div style={{ fontSize: 13, color: '#0E5C40', lineHeight: 1.55 }}>{r.reply}</div>
+                    </div>
+                  )}
+                  {editing ? (
+                    <div style={{ marginTop: 10 }}>
+                      <textarea value={replyDraft[r.id]} maxLength={600} rows={3} autoFocus
+                        onChange={(e) => setReplyDraft((d) => ({ ...d, [r.id]: e.target.value }))}
+                        placeholder="Votre réponse publique…"
+                        style={{ width: '100%', boxSizing: 'border-box', border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', fontSize: 13.5, color: DARK, fontFamily: 'inherit', resize: 'vertical' }} />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setReplyDraft((d) => { const n = { ...d }; delete n[r.id]; return n; })}
+                          style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, color: MUTED, cursor: 'pointer' }}>Annuler</button>
+                        <button onClick={() => saveReply(r.id)} disabled={replySaving === r.id}
+                          style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: replySaving === r.id ? 0.7 : 1 }}>
+                          {replySaving === r.id ? 'Publication…' : 'Publier la réponse'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setReplyDraft((d) => ({ ...d, [r.id]: r.reply || '' }))}
+                      style={{ marginTop: 10, background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 9, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                      {r.reply ? 'Modifier ma réponse' : 'Répondre'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

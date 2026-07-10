@@ -30,6 +30,10 @@ Ensuite le job `tabibo-reminders-hourly` appelle `send-reminder` chaque heure et
 envoie les rappels J-1 (activé par défaut) / J-2 (opt-in par médecin). Test manuel :
 `supabase functions invoke send-reminder --no-verify-jwt --body '{"type":"test","to":"+2126..."}'`.
 
+Ces 2 mêmes secrets activent aussi la **liste d'attente** (migration `waitlist`) :
+quand un rendez-vous à venir est annulé, les patients inscrits sur la liste de ce
+jour reçoivent automatiquement l'email « un créneau s'est libéré ».
+
 Canal par défaut : **email** (marche dès que `RESEND_API_KEY` est posé, zéro config
 Meta). Pour WhatsApp, créer les templates approuvés côté Meta et poser les secrets
 `WHATSAPP_*` (voir l'en-tête de `supabase/functions/send-reminder/index.ts`).

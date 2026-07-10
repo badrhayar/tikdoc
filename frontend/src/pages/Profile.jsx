@@ -6,7 +6,7 @@ import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, ne
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
-import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff } from '../lib/api';
+import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff, joinWaitlist } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK, prayerSlotLabel } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -117,6 +117,28 @@ export default function Profile() {
 
   const selectedSlot = bookSlot || '';
   const selectedDate = bookDate || '';
+
+  // Waitlist: signed-in patients can ask to be emailed if this day frees up.
+  const [waitState, setWaitState] = useState(null);     // null|'saving'|'ok'|'dup'|'err'
+  useEffect(() => { setWaitState(null); }, [selectedDate, doc?.id]);
+  const askWaitlist = async () => {
+    if (!state.appUser?.id) { setState({ postLoginScreen: 'profile' }); go('plogin'); return; }
+    setWaitState('saving');
+    try { setWaitState(await joinWaitlist(doc.id, selectedDate, state.appUser.id)); }
+    catch (_) { setWaitState('err'); }
+  };
+  const WaitlistCTA = () => (
+    waitState === 'ok' || waitState === 'dup' ? (
+      <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 700, color: '#0E7C52' }}>
+        ✓ {waitState === 'dup' ? 'Vous êtes déjà sur la liste pour ce jour.' : 'C\'est noté — vous recevrez un email si un créneau se libère ce jour.'}
+      </div>
+    ) : (
+      <button onClick={askWaitlist} disabled={waitState === 'saving'}
+        style={{ display: 'block', margin: '10px auto 0', background: '#fff', color: '#0E7C52', border: '1.5px solid #16A06A', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: waitState === 'saving' ? 0.6 : 1 }}>
+        {waitState === 'err' ? 'Réessayer' : '🔔 M\'avertir si un créneau se libère'}
+      </button>
+    )
+  );
 
   const maxPerDay = doc?.maxPerDay || 0;
   // "Complet" once the doctor's daily cap is reached.
@@ -378,6 +400,12 @@ export default function Profile() {
                       <span style={{ marginInlineStart: 'auto', fontSize: 10.5, fontWeight: 700, color: '#0E7C52', background: '#E7F6EE', borderRadius: 99, padding: '2px 8px', flexShrink: 0 }}>Consultation vérifiée</span>
                     </div>
                     {r.comment && <p style={{ margin: 0, fontSize: 13, color: '#4A5E57', lineHeight: 1.6 }}>{r.comment}</p>}
+                    {r.reply && (
+                      <div style={{ marginTop: 8, background: '#F0F9F4', border: '1px solid #CDE7DA', borderRadius: 10, padding: '9px 12px' }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 800, color: '#0E7C52', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 3 }}>Réponse du praticien</div>
+                        <div style={{ fontSize: 12.5, color: '#0E5C40', lineHeight: 1.55 }}>{r.reply}</div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -504,11 +532,19 @@ export default function Profile() {
                 </div>
                 {dayFull ? (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: '#B45309', fontSize: 12.5, background: '#FEF6E7', borderRadius: 10, border: '1px dashed #F0CE8E', fontWeight: 600 }}>
-                    Journée complète — ce médecin a atteint son maximum de consultations ce jour. Choisissez une autre date.
+                    Journée complète — ce médecin a atteint son maximum de consultations ce jour.
+                    {nextFree && nextFree !== 'none' && (
+                      <button onClick={() => { const nd = new Date(`${nextFree.iso}T12:00:00`); setViewY(nd.getFullYear()); setViewM(nd.getMonth()); setState({ bookDate: nextFree.iso, bookSlot: nextFree.slot }); }}
+                        style={{ display: 'block', margin: '10px auto 0', background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                        Aller au prochain créneau libre →
+                      </button>
+                    )}
+                    {typeof doc?.id === 'string' && isSupabaseConfigured && <WaitlistCTA />}
                   </div>
                 ) : (daySlots.length === 0 || daySlots.every((s) => slotState(s) !== null)) && (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: MUTED, fontSize: 12.5, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
                     Aucun créneau disponible ce jour — choisissez une autre date.
+                    {typeof doc?.id === 'string' && isSupabaseConfigured && daySlots.length > 0 && <WaitlistCTA />}
                   </div>
                 )}
               </>

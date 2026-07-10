@@ -299,6 +299,47 @@ Deno.serve(async (req) => {
       return json(r);
     }
 
+    // ── waitlist (freed-slot trigger) ─────────────────────────────────────────
+    // A cancellation freed a slot for doctor_id on date → email everyone still
+    // pending on that day's waitlist and mark them notified.
+    if (p.type === "waitlist" && p.doctor_id && p.date) {
+      if (!authz.isService) return json({ ok: false, error: "forbidden" }, 403);
+      if (!RESEND_API_KEY) return json({ ok: true, skipped: "no RESEND_API_KEY" });
+      const { data: rows } = await admin.from("slot_waitlist")
+        .select("id, patient:users!slot_waitlist_patient_id_fkey(full_name, email)")
+        .eq("doctor_id", p.doctor_id).eq("date", p.date).is("notified_at", null);
+      if (!rows?.length) return json({ ok: true, notified: 0 });
+      const { data: doc } = await admin.from("doctors")
+        .select("specialty, user:users!doctors_user_id_fkey(full_name)")
+        .eq("id", p.doctor_id).maybeSingle();
+      const docName = docTitle((doc as any)?.user?.full_name ?? "", (doc as any)?.specialty);
+      const dateStr = new Date(`${p.date}T12:00:00`).toLocaleDateString("fr-FR",
+        { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Casablanca" });
+      let notified = 0;
+      for (const r of rows as any[]) {
+        const email = r.patient?.email;
+        if (!email) continue;
+        const html = apptEmail({
+          name: r.patient?.full_name ?? "Patient", url: APP_URL,
+          accent: "#16A06A", accentSoft: "#E7F6EE", emoji: "🔔",
+          title: "Un créneau s'est libéré",
+          sentence: `bonne nouvelle — une place s'est libérée chez <strong>${esc(docName)}</strong> le <strong>${esc(dateStr)}</strong>. Les créneaux libérés partent vite : réservez dès maintenant.`,
+          ctaLabel: "Réserver ce créneau",
+          subLine: "Réservez votre rendez-vous sur",
+        });
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: FROM, to: email, subject: `Un créneau s'est libéré chez ${docName} — Tabibo`, html }),
+        });
+        if (res.ok) {
+          notified++;
+          await admin.from("slot_waitlist").update({ notified_at: new Date().toISOString() }).eq("id", r.id);
+        }
+      }
+      return json({ ok: true, notified });
+    }
+
     // ── dispatch (hourly cron) ─────────────────────────────────────────────────
     if (p.type === "dispatch") {
       if (!authz.isService) return json({ ok: false, error: "forbidden" }, 403);
