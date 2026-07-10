@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import PhoneField from '../components/PhoneField';
 import { useViewport } from '../hooks/useViewport';
@@ -188,7 +189,7 @@ export default function BookingInfo() {
           onClick={() => go('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 7 }} />
+          <BrandMark size={30} />
           <span style={{ fontSize: 19, fontWeight: 700, color: DARK }}>
             Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>

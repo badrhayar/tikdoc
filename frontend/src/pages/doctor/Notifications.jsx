@@ -7,20 +7,38 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
-// Toggle definitions — `key` maps to a column in public.reminder_settings.
+// Toggle definitions — `key` maps to a column in public.reminder_settings and
+// is enforced server-side by the send-reminder function. Only list rules that
+// really exist: j1/j2 gate the hourly dispatcher, confirmation gates the
+// booking messages. (No fake toggles for features that don't send anything.)
 const automatedRules = [
-  { key: 'j1', title: 'Rappel J-1', description: 'Envoie un message WhatsApp 24h avant le rendez-vous' },
-  { key: 'j2', title: 'Rappel J-2', description: 'Envoie un message WhatsApp 48h avant le rendez-vous' },
-  { key: 'confirmation', title: 'Confirmation de RDV', description: 'Envoie une confirmation après la prise de rendez-vous' },
-  { key: 'followup', title: 'Suivi post-consultation', description: 'Envoie un suivi 3 jours après la consultation' },
+  { key: 'j1', title: 'Rappel J-1', description: 'Rappel WhatsApp + email envoyé 24h avant le rendez-vous' },
+  { key: 'j2', title: 'Rappel J-2', description: 'Rappel WhatsApp + email envoyé 48h avant le rendez-vous' },
+  { key: 'confirmation', title: 'Messages de réservation', description: 'Messages « réservé » et « confirmé » envoyés au patient lors de la prise de rendez-vous' },
 ];
 
-const smsTemplates = [
-  { id: 1, name: 'Rappel J-1', preview: 'Bonjour {patient}, rappel de votre rendez-vous le {date} à {heure} avec {médecin}. Répondez ANNULER pour annuler. — Tabibo', chars: 110 },
-  { id: 2, name: 'Rappel J-2', preview: 'Bonjour {patient}, votre rendez-vous est prévu le {date} à {heure} avec {médecin}. — Tabibo', chars: 92 },
-  { id: 3, name: 'Confirmation RDV', preview: 'Votre rendez-vous du {date} à {heure} est confirmé. Merci de votre confiance. — Tabibo', chars: 86 },
-  { id: 4, name: 'Suivi post-consultation', preview: 'Suivi: Comment vous sentez-vous après votre consultation ? Contactez-nous si besoin. — Tabibo', chars: 93 },
+// The REAL automatic messages Tabibo sends on the doctor's behalf. WhatsApp
+// templates are pre-approved by Meta (that's what guarantees delivery), so
+// their wording is fixed — this tab shows exactly what patients receive
+// instead of pretending the texts are editable.
+const AUTO_MESSAGES = [
+  { id: 'booked', name: 'Rendez-vous réservé', when: 'Dès que le patient réserve', channels: ['WhatsApp', 'Email'],
+    preview: 'Bonjour {patient}, votre rendez-vous chez {médecin} le {date} à {heure} est bien enregistré. Le cabinet vous le confirmera. — Tabibo' },
+  { id: 'confirmed', name: 'Rendez-vous confirmé', when: 'Quand vous confirmez le rendez-vous', channels: ['WhatsApp', 'Email'],
+    preview: 'Bonjour {patient}, votre rendez-vous du {date} à {heure} chez {médecin} est confirmé. — Tabibo' },
+  { id: 'j1', name: 'Rappel J-1', when: 'La veille du rendez-vous, automatiquement', channels: ['WhatsApp', 'Email'],
+    preview: 'Bonjour {patient}, rappel : votre rendez-vous chez {médecin} a lieu demain, le {date} à {heure}. — Tabibo' },
+  { id: 'j2', name: 'Rappel J-2', when: '2 jours avant — à activer dans « Rappels automatiques »', channels: ['WhatsApp', 'Email'],
+    preview: 'Bonjour {patient}, votre rendez-vous chez {médecin} est prévu le {date} à {heure}. — Tabibo' },
+  { id: 'rescheduled', name: 'Rendez-vous reporté', when: 'Quand vous reportez le rendez-vous', channels: ['Email'],
+    preview: 'Bonjour {patient}, votre rendez-vous chez {médecin} a été reporté au {date} à {heure}. — Tabibo' },
+  { id: 'cancelled', name: 'Rendez-vous annulé', when: 'Quand le rendez-vous est annulé', channels: ['WhatsApp', 'Email'],
+    preview: 'Bonjour {patient}, votre rendez-vous du {date} à {heure} chez {médecin} a été annulé. — Tabibo' },
 ];
+const CHANNEL_STYLE = {
+  WhatsApp: { background: '#E7F6EE', color: '#0E7C52' },
+  Email: { background: '#E8F1FC', color: '#2C5BA6' },
+};
 
 // Map the reminder_log status enum to a French badge label.
 const STATUS_LABEL = { delivered: 'Livré', sent: 'Envoyé', queued: 'En attente', failed: 'Échoué' };
@@ -103,14 +121,14 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
     { label: 'Confirmations', value: String(confirmations) },
   ];
 
-  const tabs = ['Messages envoyés', 'Rappels automatiques', 'Modèles'];
+  const tabs = ['Messages envoyés', 'Rappels automatiques', 'Contenu des messages'];
 
   return (
     <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Rappels & Notifications</h1>
-        <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Rappels de rendez-vous automatiques par WhatsApp</p>
+        <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Messages automatiques envoyés à vos patients par WhatsApp et par email</p>
       </div>
 
       {/* Tab Bar */}
@@ -219,57 +237,35 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
         </div>
       )}
 
-      {/* Tab 3: Modèles SMS */}
+      {/* Tab 3: the automatic messages patients actually receive (read-only —
+          WhatsApp templates are validated by Meta, their wording is fixed). */}
       {activeTab === 2 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
-            <button style={{
-              backgroundColor: PRIMARY, color: '#fff', border: 'none',
-              borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 600,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Nouveau modèle
-            </button>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#F0F9F4', border: '1px solid #CDE7DA', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E7C52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg>
+            <p style={{ margin: 0, fontSize: 13, color: '#0E5C40', lineHeight: 1.65 }}>
+              Ces messages sont envoyés <strong>automatiquement</strong> par Tabibo, en votre nom, par WhatsApp
+              et par email — vous n'avez rien à faire. Les modèles WhatsApp sont validés par Meta pour garantir
+              la livraison : leur texte est fixe, mais le nom du patient, la date, l'heure et votre nom sont
+              remplis automatiquement à chaque envoi.
+            </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {smsTemplates.map((tpl) => (
+            {AUTO_MESSAGES.map((tpl) => (
               <div key={tpl.id} style={{
                 backgroundColor: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`,
                 padding: '20px 24px',
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: DARK }}>{tpl.name}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                        backgroundColor: '#EFF6FF', color: '#3B82F6',
-                      }}>
-                        {tpl.chars} car.
-                      </span>
-                    </div>
-                    <p style={{
-                      margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.6,
-                      fontStyle: 'italic',
-                    }}>
-                      {tpl.preview}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    <button style={{
-                      background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8,
-                      padding: '6px 14px', fontSize: 13, color: DARK, cursor: 'pointer', fontWeight: 500,
-                    }}>
-                      Modifier
-                    </button>
-                    <button style={{
-                      background: 'none', border: '1px solid #FEE2E2', borderRadius: 8,
-                      padding: '6px 14px', fontSize: 13, color: '#EF4444', cursor: 'pointer', fontWeight: 500,
-                    }}>
-                      Supprimer
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>{tpl.name}</span>
+                  {tpl.channels.map((ch) => (
+                    <span key={ch} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, ...CHANNEL_STYLE[ch] }}>{ch}</span>
+                  ))}
                 </div>
+                <div style={{ fontSize: 12, color: MUTED, fontWeight: 600, marginBottom: 8 }}>Envoyé : {tpl.when}</div>
+                <p style={{ margin: 0, fontSize: 13, color: MUTED, lineHeight: 1.6, fontStyle: 'italic' }}>
+                  {tpl.preview}
+                </p>
               </div>
             ))}
           </div>

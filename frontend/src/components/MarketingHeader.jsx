@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BrandMark from './BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials } from '../shared.jsx';
@@ -84,7 +85,7 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
           onClick={() => go('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
         >
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 8 }} />
+          <BrandMark size={32} />
           <span style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>
             Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>

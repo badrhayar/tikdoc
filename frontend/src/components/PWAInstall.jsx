@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BrandMark from './BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import Icon from './Icon';
@@ -99,7 +100,7 @@ export default function PWAInstall() {
             fontFamily: ar ? "'Noto Sans Arabic', sans-serif" : 'Inter, sans-serif',
           }}
         >
-          <img src="/icons/icon-192.png" alt="Tabibo" width={32} height={32} style={{ borderRadius: 8, flexShrink: 0 }} />
+          <BrandMark size={32} />
           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#15314A', lineHeight: 1.35 }}>
             {ar ? 'ثبّت Tabibo على شاشتك الرئيسية' : "Installez Tabibo sur votre écran d'accueil"}
           </span>
@@ -126,7 +127,7 @@ export default function PWAInstall() {
           >
             <div style={{ width: 40, height: 4, borderRadius: 99, background: '#E0E6E3', margin: '0 auto 16px' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center', marginBottom: 14 }}>
-              <img src="/icons/icon-192.png" width={40} height={40} style={{ borderRadius: 10 }} alt="Tabibo" />
+              <BrandMark size={40} />
               <span style={{ fontSize: 19, fontWeight: 800, color: TEAL }}>Tabibo</span>
             </div>
             <p style={{ fontSize: 15.5, color: '#15314A', lineHeight: 1.7, textAlign: 'center', margin: '0 0 8px' }}>

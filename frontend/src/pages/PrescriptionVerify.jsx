@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { verifyPrescription } from '../lib/api';
 import { docDisplayName, SPEC_INFO } from '../shared.jsx';
@@ -32,7 +33,7 @@ export default function PrescriptionVerify() {
     <div style={{ minHeight: '100vh', background: BG, fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px' }}>
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 18, padding: 30, maxWidth: 460, width: '100%', boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
         <div onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 24, cursor: 'pointer' }}>
-          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
+          <BrandMark size={30} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
         </div>
 

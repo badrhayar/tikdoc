@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { GOOGLE_SVG } from '../shared.jsx';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
@@ -75,7 +76,7 @@ export default function PatientLogin() {
           onClick={() => go('home')}
           style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
         >
-          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 34, height: 34, borderRadius: 9 }} />
+          <BrandMark size={34} />
           <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
         </div>
 

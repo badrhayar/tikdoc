@@ -1,0 +1,38 @@
+// Tabibo brand mark — the single source of truth for the logo icon.
+// Same form as the historical mark (rounded green square + white stethoscope)
+// but vector-crisp at any size, optically centered, with the app's brand
+// gradient. Used in every header/footer; the PWA PNG icons are generated
+// from this exact drawing (scripts/render-icons.mjs) so all surfaces match.
+export default function BrandMark({ size = 32, radius = 11.5, shadow = false, style }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      style={{ display: 'block', flexShrink: 0, borderRadius: (radius / 48) * size, boxShadow: shadow ? '0 4px 12px -3px rgba(22,160,106,0.5)' : undefined, ...style }}
+    >
+      <defs>
+        <linearGradient id="tbm-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#1AAE74" />
+          <stop offset="0.55" stopColor="#12875A" />
+          <stop offset="1" stopColor="#0B6A46" />
+        </linearGradient>
+        <linearGradient id="tbm-hl" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.18" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width="48" height="48" rx={radius} fill="url(#tbm-g)" />
+      <rect width="48" height="48" rx={radius} fill="url(#tbm-hl)" />
+      {/* Stethoscope, optically centered in the tile */}
+      <g transform="translate(3.4 6.6) scale(1.5)" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3v5a4 4 0 0 0 8 0V3" />
+        <path d="M10 15a5 5 0 0 0 10 0v-2" />
+        <circle cx="20" cy="10" r="2" />
+        {/* tube linking the chest piece to the lower hose */}
+        <path d="M10 12v3" />
+      </g>
+    </svg>
+  );
+}

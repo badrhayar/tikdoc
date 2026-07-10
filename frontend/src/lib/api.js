@@ -247,6 +247,8 @@ export function mapAppointment(row, nameById = {}) {
     // Daily cabinet flow (see 20260707120000_daily_flow.sql).
     arrivedAt: row.arrived_at || null,
     consultNote: row.consult_note || null,
+    // Consultation flow (see 20260712120000_consultation_flow.sql).
+    inConsultAt: row.in_consultation_at || null,
   };
 }
 
@@ -255,6 +257,19 @@ export async function markArrived(id, arrived = true) {
   const { data, error } = await supabase
     .from('appointments')
     .update({ arrived_at: arrived ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Consultation flow: move the patient from waiting into the consultation
+ *  ("dans la consultation"), or send them back to the queue with on=false. */
+export async function markInConsultation(id, on = true) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({ in_consultation_at: on ? new Date().toISOString() : null })
     .eq('id', id)
     .select()
     .single();

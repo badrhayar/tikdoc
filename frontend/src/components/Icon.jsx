@@ -28,6 +28,7 @@ const P = {
   target: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></>,
   leaf: <path d="M11 20A7 7 0 0 1 4 13c0-6 7-9 16-9 0 8-4 13-9 13a5 5 0 0 1-5-5c0-3 3-6 8-7M4 21c1.5-3 4-5.5 7-7" />,
   chart: <path d="M3 3v18h18M8 17v-5M13 17V8M18 17v-8" />,
+  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>,
   printer: <><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" rx="1" /></>,
   flask: <path d="M9 3h6M10 3v6l-5.5 9.5A2 2 0 0 0 6.2 21h11.6a2 2 0 0 0 1.7-3L14 9V3M7.5 14h9" />,
   hospital: <><path d="M3 21V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v13M3 21h18" /><path d="M12 9v6M9 12h6" /></>,

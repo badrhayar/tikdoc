@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, kmOf, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
@@ -177,7 +178,7 @@ export default function Profile() {
           onClick={() => go('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 31, height: 31, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
+          <BrandMark size={31} shadow />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
             Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>

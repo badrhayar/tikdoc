@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { STATUS_FR, fetchConversationPreviews, isImageMessage } from '../../lib/api';
+import { STATUS_FR, fetchConversationPreviews, isImageMessage, markInConsultation, markArrived } from '../../lib/api';
 import { useViewport } from '../../hooks/useViewport';
 import { initials as initialsOf, tint } from '../../shared.jsx';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
@@ -98,9 +98,28 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   // ── "Ma journée" : waiting room + live end-of-day summary ───────────────────
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNowTick(Date.now()), 60000); return () => clearInterval(t); }, []);
+
+  // Move a patient between the waiting room and the consultation (optimistic).
+  const moveConsult = async (a, on) => {
+    const ts = on ? new Date().toISOString() : null;
+    const hadArrived = !!(a.arrivedAt || a.arrived_at);
+    const upd = (list) => (list || []).map((x) => x.id === a.id ? { ...x, inConsultAt: ts, arrivedAt: x.arrivedAt || x.arrived_at || (on ? ts : null) } : x);
+    setState({ manualAppts: upd(state.manualAppts), myAppointments: upd(state.myAppointments) });
+    if (String(a.id).startsWith('local_') || String(a.id).startsWith('demo_')) return; // demo/manual rows live in state only
+    try {
+      if (on && !hadArrived) await markArrived(a.id, true);
+      await markInConsultation(a.id, on);
+    } catch (_) { /* optimistic; a refresh will reconcile */ }
+  };
   const todayAppts = allAppts.filter((a) => sameDay(new Date(a.datetime)) && a.status !== 'cancelled');
+  const inConsultAtOf = (a) => a.inConsultAt || a.in_consultation_at || null;
+  // A patient currently with the doctor: moved in, not yet finished.
+  const inConsultation = todayAppts
+    .filter((a) => inConsultAtOf(a) && a.status !== 'completed' && a.status !== 'no_show')
+    .sort((a, b) => new Date(inConsultAtOf(a)) - new Date(inConsultAtOf(b)));
+  // Waiting = arrived but not yet taken into consultation.
   const waiting = todayAppts
-    .filter((a) => (a.arrivedAt || a.arrived_at) && a.status !== 'completed' && a.status !== 'no_show')
+    .filter((a) => (a.arrivedAt || a.arrived_at) && !inConsultAtOf(a) && a.status !== 'completed' && a.status !== 'no_show')
     .sort((a, b) => new Date(a.arrivedAt || a.arrived_at) - new Date(b.arrivedAt || b.arrived_at));
   const seenToday = todayAppts.filter((a) => a.status === 'completed').length;
   const collectedToday = todayAppts.filter((a) => a.paid).reduce((s, a) => s + (a.amountPaid || a.fee || 0), 0)
@@ -155,7 +174,8 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
             <div style={{ display: 'flex', gap: isMobile ? 10 : 22, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
                 ['Vus', `${seenToday}/${todayAppts.length}`, DARK],
-                ['En salle', String(waiting.length), waiting.length ? '#0E7C52' : MUTED],
+                ['En salle', String(waiting.length), waiting.length ? '#9A6510' : MUTED],
+                ['En consultation', String(inConsultation.length), inConsultation.length ? '#0E7C52' : MUTED],
                 ['À venir', String(remainingToday), DARK],
                 ['Encaissé', `${collectedToday.toLocaleString('fr-FR')} MAD`, '#0E7C52'],
                 ['Attendu', `${expectedToday.toLocaleString('fr-FR')} MAD`, MUTED],
@@ -167,6 +187,37 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               ))}
             </div>
           </div>
+          {/* En consultation — who is with the doctor right now */}
+          {inConsultation.length > 0 && (
+            <div style={{ borderTop: `1px solid #F0F5F2`, padding: '10px 22px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#0E7C52', textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 10px', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16A06A', boxShadow: '0 0 0 3px rgba(22,160,106,0.22)' }} />
+                En consultation
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {inConsultation.map((a) => {
+                  const start = inConsultAtOf(a);
+                  const min = Math.max(1, Math.round((nowTick - new Date(start).getTime()) / 60000));
+                  return (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'linear-gradient(90deg,#EAF9F1,#F3FBF7)', border: `1px solid #C9EAD8`, borderRadius: 11, padding: '10px 13px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A06A', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.patientName || 'Patient'}</div>
+                        <div style={{ fontSize: 12, marginTop: 1 }}>
+                          {a.reason && <span style={{ color: MUTED }}>{a.reason} · </span>}
+                          <span style={{ fontWeight: 700, color: '#0E7C52' }}>en cours depuis {min} min</span>
+                        </div>
+                      </div>
+                      <button onClick={() => moveConsult(a, false)} title="Renvoyer en salle d'attente" style={{ background: '#fff', color: '#6B7B76', border: '1px solid #DCE7E2', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>↩ Salle</button>
+                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Salle d'attente — arrived, waiting to be taken in */}
           {waiting.length > 0 && (
             <div style={{ borderTop: `1px solid #F0F5F2`, padding: '10px 22px 14px' }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 10px' }}>Salle d'attente</div>
@@ -185,7 +236,10 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                           <span style={{ fontWeight: 700, color: waitColor }}>attend depuis {min} min</span>
                         </div>
                       </div>
-                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
+                      <button onClick={() => moveConsult(a, true)} title="Faire entrer en consultation" style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        Consultation
+                      </button>
                     </div>
                   );
                 })}

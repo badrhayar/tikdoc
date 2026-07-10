@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import BrandMark from '../../components/BrandMark';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
 import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, billingDue, docDisplayName } from '../../shared.jsx';
@@ -110,13 +111,13 @@ const NAV_GROUPS = [
   [
     { screen:'dpatients',  icon:IC.dpatients,  label:'Patients' },
     { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
-    { screen:'dshare',     icon:IC.dshare,     label:'Inviter mes patients' },
-    { screen:'dhist',      icon:IC.dhist,      label:'Historique consultations' },
     { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
+    { screen:'dhist',      icon:IC.dhist,      label:'Historique consultations' },
+    { screen:'dshare',     icon:IC.dshare,     label:'Inviter mes patients' },
   ],
   [
     { screen:'dchat',  icon:IC.dchat,  label:'Messages' },
-    { screen:'dnotif', icon:IC.dnotif, label:'SMS & Notifications' },
+    { screen:'dnotif', icon:IC.dnotif, label:'Rappels & Notifications' },
   ],
   [
     { screen:'dstats', icon:IC.dstats, label:'Statistiques' },
@@ -336,7 +337,7 @@ export default function DoctorApp() {
           ? { position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(13,43,30,0.3)' : 'none' }
           : { position:'sticky', top:0, height:'100vh' }) }}>
         <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap: 5, padding:'22px 22px 18px', cursor:'pointer' }}>
-          <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:31, height:31, borderRadius:9, objectFit:'contain', boxShadow:'0 4px 12px -3px rgba(22,160,106,0.5)' }} />
+          <BrandMark size={31} shadow />
           <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tabib<span style={{ color:G }}>o</span></span>
         </div>
         <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
-import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
+import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, markInConsultation, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
@@ -63,6 +63,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       payMethod: a.payMethod || null,
       paid: !!a.paid,
       arrivedAt: a.arrivedAt || a.arrived_at || null,
+      inConsultAt: a.inConsultAt || a.in_consultation_at || null,
       consultNote: a.consultNote || '',
     };
   });
@@ -102,6 +103,27 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     try {
       await markArrived(appt.id, arrived);
       setState({ myAppointments: (state.myAppointments || []).map(a => a.id === appt.id ? { ...a, arrivedAt: ts } : a) });
+    } catch (e) {
+      setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
+    }
+  };
+
+  // Consultation: move the patient from the waiting room into the consultation
+  // (or send them back to the queue if mis-clicked).
+  const toggleConsult = async (appt) => {
+    const on = !appt.inConsultAt;
+    const ts = on ? new Date().toISOString() : null;
+    // Entering the consultation implies arrival — backfill the check-in so a
+    // patient taken straight in still counts in the day's flow.
+    const patchRow = (a) => a.id === appt.id ? { ...a, inConsultAt: ts, arrivedAt: a.arrivedAt || (on ? ts : null) } : a;
+    if (isLocal(appt.id)) {
+      setState({ manualAppts: (state.manualAppts || []).map(patchRow) });
+      return;
+    }
+    try {
+      if (on && !appt.arrivedAt) await markArrived(appt.id, true);
+      await markInConsultation(appt.id, on);
+      setState({ myAppointments: (state.myAppointments || []).map(patchRow) });
     } catch (e) {
       setState({ toast: 'Action impossible : ' + (e?.message || 'erreur'), toastShow: true });
     }
@@ -296,10 +318,17 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                       }}>{appt.statut}</span>
                       {appt.arrivedAt && appt.rawStatus !== 'completed' && appt.rawStatus !== 'cancelled' && (
                         <div style={{ marginTop: 4 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#E7F6EE', color: '#0E7C52' }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A06A' }} />
-                            En salle · {Math.max(1, Math.round((Date.now() - new Date(appt.arrivedAt).getTime()) / 60000))} min
-                          </span>
+                          {appt.inConsultAt ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#16A06A', color: '#fff' }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
+                              En consultation · {Math.max(1, Math.round((Date.now() - new Date(appt.inConsultAt).getTime()) / 60000))} min
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#E7F6EE', color: '#0E7C52' }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A06A' }} />
+                              En salle · {Math.max(1, Math.round((Date.now() - new Date(appt.arrivedAt).getTime()) / 60000))} min
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
@@ -315,6 +344,19 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                     {/* Actions */}
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          title={appt.inConsultAt ? 'Renvoyer en salle d\'attente' : 'Faire entrer en consultation'}
+                          onClick={() => toggleConsult(appt)}
+                          disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'}
+                          style={{
+                            background: appt.inConsultAt ? '#0E7C52' : '#EAF9F1', border: 'none', borderRadius: 8,
+                            width: 32, height: 32, cursor: 'pointer', color: appt.inConsultAt ? '#fff' : '#0E7C52',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
+                          }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
+                        </button>
                         <button
                           title={appt.arrivedAt ? 'Annuler l\'arrivée' : 'Patient arrivé (salle d\'attente)'}
                           onClick={() => toggleArrived(appt)}
