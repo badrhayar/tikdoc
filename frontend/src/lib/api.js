@@ -108,6 +108,40 @@ export async function fetchAvailability(doctorId) {
   return data || [];
 }
 
+// ── Congés & absences (doctor_time_off) ─────────────────────────────────────
+// Public read: the patient booking calendar needs closed dates. Writes are
+// cabinet-only (RLS). Dates are 'YYYY-MM-DD' strings, inclusive.
+
+export async function fetchTimeOff(doctorId, { upcomingOnly = false } = {}) {
+  let q = supabase.from('doctor_time_off').select('*')
+    .eq('doctor_id', doctorId).order('start_date', { ascending: true });
+  if (upcomingOnly) {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Casablanca' });
+    q = q.gte('end_date', today);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addTimeOff(doctorId, startDate, endDate, reason = null) {
+  const { data, error } = await supabase.from('doctor_time_off')
+    .insert({ doctor_id: doctorId, start_date: startDate, end_date: endDate, reason })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteTimeOff(id) {
+  const { error } = await supabase.from('doctor_time_off').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** true if the ISO date ('YYYY-MM-DD') falls inside any time-off range. */
+export function isDateOff(timeOffRows, iso) {
+  return (timeOffRows || []).some((r) => iso >= r.start_date && iso <= r.end_date);
+}
+
 // ── Appointments ─────────────────────────────────────────────────────────────
 
 /**

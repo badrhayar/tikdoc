@@ -77,7 +77,15 @@ async function sendWhatsAppOtp(to: string, code: string) {
 }
 
 // Doctor-protection checks shared by start & verify.
-async function bookingRefusal(admin: ReturnType<typeof createClient>, doctorId: string, phone: string): Promise<string | null> {
+async function bookingRefusal(admin: ReturnType<typeof createClient>, doctorId: string, phone: string, datetime?: string): Promise<string | null> {
+  // Cabinet closed (congés / absences) on that date.
+  if (datetime) {
+    const dayStr = new Date(datetime).toLocaleDateString("en-CA", { timeZone: "Africa/Casablanca" });
+    const { data: off } = await admin.from("doctor_time_off")
+      .select("id").eq("doctor_id", doctorId)
+      .lte("start_date", dayStr).gte("end_date", dayStr).limit(1);
+    if (off && off.length) return "Le cabinet est fermé à cette date — choisissez une autre date.";
+  }
   // Blocklist: any roster entry for this cabinet with this phone and status 'Bloqué'.
   const { data: blocked } = await admin.from("doctor_patients")
     .select("id").eq("doctor_id", doctorId).eq("status", "Bloqué").eq("phone", phone).limit(1);
@@ -131,7 +139,7 @@ Deno.serve(async (req) => {
         .select("id", { count: "exact", head: true }).eq("ip", ip).gt("created_at", hourAgo);
       if ((perIp ?? 0) >= 10) return json({ ok: false, error: "Trop de tentatives — réessayez plus tard." }, 429);
 
-      const refusal = await bookingRefusal(admin, doctorId, phone);
+      const refusal = await bookingRefusal(admin, doctorId, phone, datetime);
       if (refusal) return json({ ok: false, error: refusal }, 403);
 
       // Slot still free? (final race handled by the unique index at insert)
@@ -174,7 +182,7 @@ Deno.serve(async (req) => {
       }
 
       const pl = otp.payload as { doctorId: string; datetime: string; name: string; reason: string | null };
-      const refusal = await bookingRefusal(admin, pl.doctorId, phone);
+      const refusal = await bookingRefusal(admin, pl.doctorId, phone, pl.datetime);
       if (refusal) return json({ ok: false, error: refusal }, 403);
 
       const { data: dr } = await admin.from("doctors").select("fee_mad").eq("id", pl.doctorId).maybeSingle();

@@ -220,7 +220,15 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
           {/* Salle d'attente — arrived, waiting to be taken in */}
           {waiting.length > 0 && (
             <div style={{ borderTop: `1px solid #F0F5F2`, padding: '10px 22px 14px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 10px' }}>Salle d'attente</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '4px 0 10px' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>Salle d'attente</span>
+                {/* One click: take the longest-waiting patient into the consultation. */}
+                {inConsultation.length === 0 && (
+                  <button onClick={() => moveConsult(waiting[0], true)} style={{ background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+                    Faire entrer le suivant →
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {waiting.map((a) => {
                   const min = waitMin(a);

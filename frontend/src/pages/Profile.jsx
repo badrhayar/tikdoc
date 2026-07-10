@@ -6,7 +6,7 @@ import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, km
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
-import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews } from '../lib/api';
+import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -50,12 +50,16 @@ export default function Profile() {
   // The doctor's WEEKLY schedule (Disponibilités) — gates both the calendar days
   // and the slot grid so patients can only book when the cabinet is open.
   const [weekAvail, setWeekAvail] = useState(null);        // null = loading / demo
+  // Congés & absences — dates where the cabinet is closed (not bookable).
+  const [timeOff, setTimeOff] = useState([]);
   useEffect(() => {
-    if (!isSupabaseConfigured || typeof doc?.id !== 'string') { setWeekAvail(null); return; }
+    if (!isSupabaseConfigured || typeof doc?.id !== 'string') { setWeekAvail(null); setTimeOff([]); return; }
     let active = true;
     fetchAvailability(doc.id).then((rows) => active && setWeekAvail(rows || [])).catch(() => active && setWeekAvail([]));
+    fetchTimeOff(doc.id, { upcomingOnly: true }).then((rows) => active && setTimeOff(rows || [])).catch(() => {});
     return () => { active = false; };
   }, [doc?.id]);
+  const dateOff = (iso) => isDateOff(timeOff, iso);
   const toMin = (t) => { const [h, mm] = String(t || '0:0').split(':').map(Number); return h * 60 + (mm || 0); };
   const dayRules = (dow) => {
     const rows = (weekAvail || []).filter((r) => r.day_of_week === dow);
@@ -389,7 +393,7 @@ export default function Profile() {
               const isToday = iso === todayISO;
               const isPast = iso < todayISO;
               // Closed = no working hours that weekday (real Disponibilités).
-              const available = !isPast && dayOpen(date.getDay());
+              const available = !isPast && dayOpen(date.getDay()) && !dateOff(iso);
               const selected = selectedDate === iso;
               return (
                 <button

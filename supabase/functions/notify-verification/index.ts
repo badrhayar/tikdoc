@@ -258,6 +258,9 @@ Deno.serve(async (req) => {
         else if (ev === "confirmed")   cfg = { ...GREEN, emoji: "✅", title: "Rendez-vous confirmé", sentence: `votre rendez-vous ${rdv} est confirmé.`, ctaLabel: "Gérer mes rendez-vous", subLine: "Gérez vos rendez-vous sur" };
         else if (ev === "rescheduled") cfg = { ...AMBER, emoji: "🔁", title: "Rendez-vous reporté", sentence: `votre rendez-vous a été reporté ${rdv}.`, ctaLabel: "Gérer mes rendez-vous", subLine: "Gérez vos rendez-vous sur" };
         else if (ev === "cancelled" || ev === "cancelled_by_patient") cfg = { ...RED, emoji: "🗓️", title: "Rendez-vous annulé", sentence: `votre rendez-vous ${rdv} a bien été annulé.`, ctaLabel: "Prendre un rendez-vous", subLine: "Prenez un nouveau rendez-vous sur" };
+        // Post-visit thank-you + review ask — this is what feeds the doctors'
+        // public ratings, so every completed visit sends one.
+        else if (ev === "completed")   cfg = { ...GREEN, emoji: "🙏", title: "Merci de votre visite", sentence: `merci de votre visite chez <strong>${esc(doctor)}</strong>. Votre avis compte : il aide d'autres patients à choisir leur médecin et ne prend qu'une minute.`, ctaLabel: "Laisser un avis", subLine: "Donnez votre avis sur", url: `${APP_URL}/paccount` };
         if (cfg) await sendEmail(patientEmail, `${cfg.title} — Tabibo`, apptEmail({ name: patientName, url: APP_URL, ...cfg }));
       }
 

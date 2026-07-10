@@ -156,6 +156,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     }
     try {
       await markAppointmentPaid(p.id, { amount, method: p.method, consultNote: note });
+      // Post-visit email: thank-you + "laissez un avis" — feeds the doctor's
+      // public rating (fire-and-forget; guests without email are skipped server-side).
+      notifyApptEmail(p.id, 'completed');
       setState({
         myAppointments: (state.myAppointments || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method, consultNote: note } : a),
         consultations: (state.consultations || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr, consultNote: note } : c),

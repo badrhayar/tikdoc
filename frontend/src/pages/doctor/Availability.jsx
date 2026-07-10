@@ -3,6 +3,7 @@ import { useViewport } from '../../hooks/useViewport';
 import {
   fetchMyDoctor, fetchAvailability, saveAvailability,
   fetchBlockedSlots, saveBlockedSlotsForDate, fetchBookedSlots, saveDoctorPlanning,
+  fetchTimeOff, addTimeOff, deleteTimeOff,
 } from '../../lib/api';
 import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
@@ -62,6 +63,14 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
+  // Congés & absences — closed date ranges (booking is blocked on them).
+  const [timeOff, setTimeOff] = useState([]);
+  const [offStart, setOffStart] = useState('');
+  const [offEnd, setOffEnd] = useState('');
+  const [offReason, setOffReason] = useState('');
+  const [offMsg, setOffMsg] = useState('');
+  const [offSaving, setOffSaving] = useState(false);
+
   // ── Date-based slot planner ──
   const todayDate = new Date(mNow.year, mNow.month, mNow.day);
   const todayISO = mNow.dateISO;
@@ -108,6 +117,11 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
           setDayToggles(on); setDayStartTimes(starts); setDayEndTimes(ends);
           setPauseStartTimes(pStarts); setPauseEndTimes(pEnds);
         }
+        // congés & absences (upcoming + current)
+        try {
+          const off = await fetchTimeOff(doc.id, { upcomingOnly: true });
+          if (active) setTimeOff(off);
+        } catch (_) { /* table may not exist yet in older DBs */ }
         // today's real prayer times
         const pt = await fetchPrayerTimes(doc.city || 'Casablanca', todayISO);
         if (active && pt) setPrayerTimes({ ...PRAYER_FALLBACK, ...pt });
@@ -156,6 +170,34 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
       setSlotsMsg('Enregistré ✓'); setTimeout(() => setSlotsMsg(''), 2500);
     } catch (e) { setSlotsMsg('Échec : ' + (e?.message || 'erreur')); }
     finally { setSlotsSaving(false); }
+  };
+
+  // Congés : add / remove a closed range (persisted immediately).
+  const handleAddOff = async () => {
+    setOffMsg('');
+    if (!offStart) { setOffMsg('Choisissez une date de début.'); return; }
+    const end = offEnd || offStart;                       // one-day absence by default
+    if (end < offStart) { setOffMsg('La date de fin est avant le début.'); return; }
+    if (end < todayISO) { setOffMsg('Cette période est déjà passée.'); return; }
+    if (!doctorId) {                                      // demo mode → local only
+      setTimeOff((l) => [...l, { id: `local_${offStart}`, start_date: offStart, end_date: end, reason: offReason || null }].sort((a, b) => a.start_date.localeCompare(b.start_date)));
+      setOffStart(''); setOffEnd(''); setOffReason('');
+      return;
+    }
+    setOffSaving(true);
+    try {
+      const row = await addTimeOff(doctorId, offStart, end, offReason.trim() || null);
+      setTimeOff((l) => [...l, row].sort((a, b) => a.start_date.localeCompare(b.start_date)));
+      setOffStart(''); setOffEnd(''); setOffReason('');
+      setOffMsg('Période enregistrée ✓'); setTimeout(() => setOffMsg(''), 2500);
+    } catch (e) { setOffMsg('Échec : ' + (e?.message || 'erreur')); }
+    finally { setOffSaving(false); }
+  };
+  const handleDeleteOff = async (row) => {
+    setTimeOff((l) => l.filter((r) => r.id !== row.id));
+    if (doctorId && !String(row.id).startsWith('local_')) {
+      try { await deleteTimeOff(row.id); } catch (_) { /* refetch on next visit */ }
+    }
   };
 
   const handleSave = async () => {
@@ -331,6 +373,65 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
               {saving ? 'Enregistrement…' : 'Enregistrer les horaires'}
             </button>
           </div>
+        </div>
+
+        {/* ── C. Congés & absences (closed date ranges) ── */}
+        <div style={card}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: DARK }}>Congés & absences</h2>
+          <p style={{ margin: '6px 0 16px', fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+            Fermez le cabinet sur une période (vacances, Aïd, congrès…) : ces dates deviennent
+            <strong> non réservables</strong> pour les patients. Vous pouvez toujours ajouter un
+            rendez-vous manuellement pendant une absence.
+          </p>
+
+          {/* Add form */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Du</label>
+              <input type="date" value={offStart} min={todayISO} onChange={(e) => setOffStart(e.target.value)}
+                style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Au (inclus)</label>
+              <input type="date" value={offEnd} min={offStart || todayISO} onChange={(e) => setOffEnd(e.target.value)}
+                style={{ height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 10px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Motif (optionnel)</label>
+              <input type="text" value={offReason} placeholder="Ex. Congés annuels" maxLength={80} onChange={(e) => setOffReason(e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box', height: 44, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '0 12px', fontSize: 13.5, color: DARK, background: '#fff', fontFamily: 'inherit' }} />
+            </div>
+            <button onClick={handleAddOff} disabled={offSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '0 20px', height: 44, fontSize: 13.5, fontWeight: 700, cursor: offSaving ? 'default' : 'pointer', opacity: offSaving ? 0.7 : 1 }}>
+              {offSaving ? 'Ajout…' : '+ Fermer cette période'}
+            </button>
+          </div>
+          {offMsg && <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: offMsg.startsWith('Échec') || offMsg.startsWith('Choisissez') || offMsg.startsWith('La date') || offMsg.startsWith('Cette') ? '#C2466A' : PRIMARY }}>{offMsg}</div>}
+
+          {/* Current & upcoming closures */}
+          {timeOff.length > 0 ? (
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {timeOff.map((r) => {
+                const oneDay = r.start_date === r.end_date;
+                const fmt = (iso) => { const d = new Date(`${iso}T12:00:00`); return `${FR_DOW_SHORT[(d.getDay() + 6) % 7]} ${d.getDate()} ${FR_MONTHS[d.getMonth()].toLowerCase()} ${d.getFullYear()}`; };
+                const active = r.start_date <= todayISO && todayISO <= r.end_date;
+                return (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${active ? '#F6E0AE' : BORDER}`, background: active ? '#FEF9EC' : '#fff', borderRadius: 11, padding: '11px 14px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active ? '#9A6510' : MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9.5 15.5l5 0"/></svg>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>
+                        {oneDay ? fmt(r.start_date) : `${fmt(r.start_date)} → ${fmt(r.end_date)}`}
+                        {active && <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, background: '#FEF4DD', color: '#9A6510', borderRadius: 20, padding: '2px 8px', verticalAlign: 'middle' }}>EN COURS</span>}
+                      </div>
+                      {r.reason && <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>{r.reason}</div>}
+                    </div>
+                    <button onClick={() => handleDeleteOff(r)} title="Rouvrir cette période" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 600, color: '#C2466A', cursor: 'pointer', flexShrink: 0 }}>Rouvrir</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{ margin: '14px 0 0', fontSize: 12.5, color: MUTED }}>Aucune absence programmée.</p>
+          )}
         </div>
 
         {/* ── C. Prayer-time blocking (real Morocco times) ── */}

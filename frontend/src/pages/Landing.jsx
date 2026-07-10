@@ -417,7 +417,7 @@ export default function Landing() {
         {/* Stats strip — 2 cols on mobile */}
         <div style={{ position: 'relative', maxWidth: 1180, margin: `${isMobile ? 36 : 60}px auto 0`, display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isPhone ? 12 : 18 }}>
           {[
-            { v: `${CITY_OPTS.length}`, l: tr('Villes couvertes', 'Cities covered', 'مدينة') },
+            { v: `${CITY_OPTS.length}`, l: tr('Villes du Maroc', 'Cities in Morocco', 'مدينة مغربية') },
             { v: '50+', l: tr('Spécialités', 'Specialties', 'تخصص') },
             { v: '24/7', l: tr('Prise de rendez-vous', 'Booking availability', 'حجز المواعيد') },
             { v: tr('Gratuit', 'Free', 'مجاني'), l: tr('Pour les patients', 'For patients', 'للمرضى') },
