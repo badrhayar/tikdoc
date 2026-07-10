@@ -279,11 +279,8 @@ export default function ForDoctors() {
                 {[56, 112, 168, 224].map((x) => (
                   <line key={x} x1={x} y1="0" x2={x} y2="220" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
                 ))}
-                {/* Simplified Morocco outline (same lat/lon projection as the pins) */}
-                <path d="M176.2 12.7 L182.7 13.3 L194.3 20.3 L203.5 21.1 L210.6 19.9 L216.6 21.8 L223.9 24.8 L224.6 28.3 L225.1 37.5 L226.1 45.7 L230.7 51 L232.4 55.6 L230.2 61.1 L211.9 65.6 L202.3 70.8 L188.5 79.9 L177 89.1 L167.7 94.3 L156.8 97.6 L144.4 105.7 L144.4 140.7 L105.9 140.7 L105.9 174.1 L93.8 174.1 L93.8 201.8 L48.7 201.8 L47.5 209.1 L49.3 200.2 L60.3 171 L70.7 159.7 L77 142 L86.9 130.9 L92.1 125.7 L99.6 114.7 L116.3 106.7 L125.6 100.2 L133.1 82.9 L130.8 76.7 L131.3 66.2 L138.8 55.1 L145.8 45.9 L156.8 41.1 L166 35.5 L171.8 26.3 L174.7 17.2 Z"
-                  fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.3" strokeLinejoin="round" />
                 {/* Subtle network line linking the cities north → south */}
-                <polyline points="177.2,13.1 210.7,20.8 222.5,27.3 186.8,35.8 165.5,35.9 156.9,41.8 152,67.1 133.6,82.9 92.1,125.7 60.5,171"
+                <polyline points="177.2,13.1 210.7,20.8 222.5,27.3 186.8,35.8 165.5,35.9 156.9,41.8 152,67.1 133.6,82.9 92.1,125.7 60.5,171 47.6,208.7"
                   fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1" strokeDasharray="3 4" strokeLinecap="round" />
               </svg>
               {/* City pins — placed by real lat/lon so the dots trace the
@@ -299,6 +296,7 @@ export default function ForDoctors() {
                 { x: 133.6, y: 82.9, label: 'Agadir',     pos: 'left' },
                 { x: 92.1,  y: 125.7, label: 'Laâyoune',  pos: 'right' },
                 { x: 60.5,  y: 171,  label: 'Dakhla',     pos: 'right' },
+                { x: 47.6,  y: 208.7, label: 'Lagouira',  pos: 'right' },
               ].map((pin) => {
                 const lbl = {
                   position: 'absolute', fontSize: 9, color: 'rgba(255,255,255,0.92)', fontWeight: 600, whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(11,74,50,0.9)',
