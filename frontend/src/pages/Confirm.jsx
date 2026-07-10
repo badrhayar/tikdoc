@@ -3,6 +3,7 @@ import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, BOOK_DAYS, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import LangPill from '../components/LangPill';
 
 const saPopKeyframes = `
 @keyframes saPop {
@@ -15,13 +16,14 @@ const saPopKeyframes = `
 export default function Confirm() {
   const { state, go } = useApp();
   const { isMobile } = useViewport();
+  const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
   const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find(d => d.id === state.selDoc) || doctors[0];
   // Restored session with an empty directory → nothing to confirm here.
   if (!doc) { go('home'); return null; }
   const dateLabel = state.bookDate
-    ? new Date(`${state.bookDate}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
-    : 'Date confirmée';
+    ? new Date(`${state.bookDate}T00:00:00`).toLocaleDateString(state.lang === 'ar' ? 'ar-MA' : state.lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+    : tr('Date confirmée', 'Date confirmed', 'تم تأكيد التاريخ');
   const drName = docDisplayName(doc.name, doc.spec);
 
   // Download an .ics so the patient can add the appointment to their calendar.
@@ -56,6 +58,7 @@ export default function Confirm() {
       background: '#F4F8F5',
     }}>
       <style>{saPopKeyframes}</style>
+      <div style={{ position: 'fixed', top: 14, insetInlineEnd: 14, zIndex: 5 }}><LangPill /></div>
 
       <div style={{
         background: '#fff',
@@ -84,10 +87,10 @@ export default function Confirm() {
         </div>
 
         <h1 style={{ margin: '0 0 8px', fontSize: 22, color: '#15314A', fontWeight: 700 }}>
-          Rendez-vous confirmé !
+          {tr('Rendez-vous confirmé !', 'Appointment confirmed!', 'تم تأكيد الموعد !')}
         </h1>
         <p style={{ margin: '0 0 24px', color: '#6B7B76', fontSize: 14 }}>
-          Votre réservation a bien été enregistrée.
+          {tr('Votre réservation a bien été enregistrée.', 'Your booking has been recorded.', 'تم تسجيل حجزكم بنجاح.')}
         </p>
 
         {/* Summary box */}
@@ -95,7 +98,7 @@ export default function Confirm() {
           background: '#F4F8F5',
           borderRadius: 12,
           padding: '18px 20px',
-          textAlign: 'left',
+          textAlign: 'start',
           marginBottom: 20,
           border: '1px solid #EAEFEC',
         }}>
@@ -133,9 +136,9 @@ export default function Confirm() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Row icon="calendar" label="Date" value={dateLabel} />
-            <Row icon="clock" label="Heure" value={state.bookSlot || '14:00'} />
-            {(doc.clinic || doc.city) && <Row icon="pin" label="Lieu" value={[doc.clinic, doc.city].filter(Boolean).join(', ')} />}
+            <Row icon="calendar" label={tr('Date', 'Date', 'التاريخ')} value={dateLabel} />
+            <Row icon="clock" label={tr('Heure', 'Time', 'الساعة')} value={state.bookSlot || '14:00'} />
+            {(doc.clinic || doc.city) && <Row icon="pin" label={tr('Lieu', 'Location', 'المكان')} value={[doc.clinic, doc.city].filter(Boolean).join(', ')} />}
           </div>
         </div>
 
@@ -156,8 +159,10 @@ export default function Confirm() {
         }}>
           <Icon name="smartphone" size={15} />
           {state.guestBooking
-            ? `Rendez-vous enregistré pour le ${state.guestPhone || 'numéro vérifié'} — le cabinet vous confirmera.`
-            : 'Une confirmation vous a été envoyée par email'}
+            ? tr(`Rendez-vous enregistré pour le ${state.guestPhone || 'numéro vérifié'} — le cabinet vous confirmera.`,
+                 `Appointment recorded for ${state.guestPhone || 'your verified number'} — the practice will confirm it.`,
+                 `تم تسجيل الموعد للرقم ${state.guestPhone || 'المُتحقق منه'} — ستؤكده العيادة قريباً.`)
+            : tr('Une confirmation vous a été envoyée par email', 'A confirmation email has been sent to you', 'تم إرسال تأكيد إلى بريدكم الإلكتروني')}
         </div>
 
         {/* Primary: guests are invited to create an account; patients see their RDV */}
@@ -176,7 +181,9 @@ export default function Confirm() {
             marginBottom: 12,
           }}
         >
-          {state.guestBooking ? 'Créer mon compte pour suivre mes rendez-vous' : 'Voir mes rendez-vous'}
+          {state.guestBooking
+            ? tr('Créer mon compte pour suivre mes rendez-vous', 'Create my account to track my appointments', 'إنشاء حسابي لمتابعة مواعيدي')
+            : tr('Voir mes rendez-vous', 'View my appointments', 'عرض مواعيدي')}
         </button>
 
         {/* Side-by-side buttons */}
@@ -195,7 +202,7 @@ export default function Confirm() {
               cursor: 'pointer',
             }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={15} /> Ajouter au calendrier</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={15} /> {tr('Ajouter au calendrier', 'Add to calendar', 'أضِف إلى التقويم')}</span>
           </button>
           <button
             onClick={() => go('home')}
@@ -211,7 +218,7 @@ export default function Confirm() {
               cursor: 'pointer',
             }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="home" size={15} /> Accueil</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="home" size={15} /> {tr('Accueil', 'Home', 'الرئيسية')}</span>
           </button>
         </div>
       </div>

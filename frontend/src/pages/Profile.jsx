@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BrandMark from '../components/BrandMark';
+import LangPill from '../components/LangPill';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
@@ -20,6 +21,10 @@ const GRAD    = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)'
 
 const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const FR_DOW = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
+const AR_DOW = ['إث','ثلا','أرب','خم','جم','سب','أح'];
+const EN_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const EN_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const pad2 = (n) => String(n).padStart(2, '0');
 const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
@@ -27,6 +32,9 @@ export default function Profile() {
   const { state, setState, go } = useApp();
   const { isMobile } = useViewport();
   const { selDoc, bookSlot, bookDate, patient } = state;
+  const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
+  const MONTHS = state.lang === 'ar' ? AR_MONTHS : state.lang === 'en' ? EN_MONTHS : FR_MONTHS;
+  const DOW = state.lang === 'ar' ? AR_DOW : state.lang === 'en' ? EN_DOW : FR_DOW;
 
   const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
@@ -139,12 +147,12 @@ export default function Profile() {
   const WaitlistCTA = () => (
     waitState === 'ok' || waitState === 'dup' ? (
       <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 700, color: '#0E7C52' }}>
-        ✓ {waitState === 'dup' ? 'Vous êtes déjà sur la liste pour ce jour.' : 'C\'est noté — vous recevrez un email si un créneau se libère ce jour.'}
+        ✓ {waitState === 'dup' ? tr('Vous êtes déjà sur la liste pour ce jour.', 'You are already on the list for this day.', 'أنتم مسجلون بالفعل في قائمة هذا اليوم.') : tr('C\'est noté — vous recevrez un email si un créneau se libère ce jour.', 'Noted — you will get an email if a slot frees up that day.', 'تم التسجيل — ستتوصلون ببريد إلكتروني إذا شغر موعد في هذا اليوم.')}
       </div>
     ) : (
       <button onClick={askWaitlist} disabled={waitState === 'saving'}
         style={{ display: 'block', margin: '10px auto 0', background: '#fff', color: '#0E7C52', border: '1.5px solid #16A06A', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: waitState === 'saving' ? 0.6 : 1 }}>
-        {waitState === 'err' ? 'Réessayer' : '🔔 M\'avertir si un créneau se libère'}
+        {waitState === 'err' ? tr('Réessayer', 'Retry', 'إعادة المحاولة') : '🔔 ' + tr('M\'avertir si un créneau se libère', 'Alert me if a slot frees up', 'أخبروني إذا شغر موعد')}
       </button>
     )
   );
@@ -287,8 +295,9 @@ export default function Profile() {
             onClick={() => go('search')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, color: DARK, cursor: 'pointer', marginBottom: 22, fontWeight: 500 }}
           >
-            ← Retour
+            ← {tr('Retour', 'Back', 'رجوع')}
           </button>
+          <div style={{ float: 'inline-end', marginTop: -44 }}><LangPill /></div>
 
           {/* Avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 18, marginBottom: 18 }}>
@@ -312,7 +321,7 @@ export default function Profile() {
                     <span style={{ color: MUTED }}>({doc.reviews} avis)</span>
                   </>
                 ) : (
-                  <span style={{ color: PRIMARY, fontWeight: 700, fontSize: 12.5, background: '#E7F6EE', borderRadius: 99, padding: '2px 10px' }}>Nouveau sur Tabibo</span>
+                  <span style={{ color: PRIMARY, fontWeight: 700, fontSize: 12.5, background: '#E7F6EE', borderRadius: 99, padding: '2px 10px' }}>{tr('Nouveau sur Tabibo', 'New on Tabibo', 'جديد على Tabibo')}</span>
                 )}
               </div>
             </div>
@@ -324,7 +333,7 @@ export default function Profile() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill={PRIMARY}>
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/>
               </svg>
-              <span style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>Conventionné</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>{tr('Conventionné', 'Insurance accepted', 'مُتعاقد مع التأمين')}</span>
             </div>
           )}
 
@@ -332,17 +341,17 @@ export default function Profile() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
               <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="clock" size={16} /></span>
-              <span style={{ color: MUTED }}>Expérience :</span>
+              <span style={{ color: MUTED }}>{tr('Expérience', 'Experience', 'الخبرة')} :</span>
               <span style={{ fontWeight: 600 }}>{doc.exp} ans</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
               <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="mic" size={16} /></span>
-              <span style={{ color: MUTED }}>Langues :</span>
+              <span style={{ color: MUTED }}>{tr('Langues', 'Languages', 'اللغات')} :</span>
               <span style={{ fontWeight: 600 }}>{doc.langs.join(', ')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: DARK }}>
               <span style={{ color: PRIMARY, display: 'flex' }}><Icon name="pin" size={16} /></span>
-              <span style={{ color: MUTED }}>Cabinet :</span>
+              <span style={{ color: MUTED }}>{tr('Cabinet', 'Practice', 'العيادة')} :</span>
               <span style={{ fontWeight: 600 }}>{doc.clinic}, {doc.city}</span>
             </div>
           </div>
@@ -351,14 +360,14 @@ export default function Profile() {
           {docLoc && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Localisation</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{tr('Localisation', 'Location', 'الموقع')}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setShowMap((v) => !v)} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 13px', fontSize: 12.5, fontWeight: 700, color: DARK, cursor: 'pointer' }}>
-                    {showMap ? 'Masquer la carte' : 'Voir sur la carte'}
+                    {showMap ? tr('Masquer la carte', 'Hide the map', 'إخفاء الخريطة') : tr('Voir sur la carte', 'View on the map', 'عرض على الخريطة')}
                   </button>
                   <a href={`https://www.google.com/maps/dir/?api=1&destination=${docLoc[0]},${docLoc[1]}`} target="_blank" rel="noopener noreferrer" style={{ background: GRAD, color: '#fff', borderRadius: 9, padding: '7px 13px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 6px 14px -7px rgba(22,160,106,0.7)' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                    Itinéraire
+                    {tr('Itinéraire', 'Directions', 'الاتجاهات')}
                   </a>
                 </div>
               </div>
@@ -368,14 +377,14 @@ export default function Profile() {
 
           {/* Bio */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 8 }}>À propos</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 8 }}>{tr('À propos', 'About', 'نبذة')}</div>
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, margin: 0 }}>{bioFor(doc)}</p>
           </div>
 
           {/* Tags */}
           {si.tags && (
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 10 }}>Actes médicaux</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 10 }}>{tr('Actes médicaux', 'Medical services', 'الخدمات الطبية')}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                 {si.tags.map((tag) => (
                   <span
@@ -393,7 +402,7 @@ export default function Profile() {
           {reviews.length > 0 && (
             <div style={{ marginTop: 24 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>Avis des patients</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{tr('Avis des patients', 'Patient reviews', 'آراء المرضى')}</div>
                 <span style={{ fontSize: 12.5, color: '#F59E0B', fontWeight: 700 }}>★ {doc.rating}</span>
                 <span style={{ fontSize: 12, color: MUTED }}>· {doc.reviews} avis vérifié{doc.reviews > 1 ? 's' : ''}</span>
               </div>
@@ -411,7 +420,7 @@ export default function Profile() {
                     {r.comment && <p style={{ margin: 0, fontSize: 13, color: '#4A5E57', lineHeight: 1.6 }}>{r.comment}</p>}
                     {r.reply && (
                       <div style={{ marginTop: 8, background: '#F0F9F4', border: '1px solid #CDE7DA', borderRadius: 10, padding: '9px 12px' }}>
-                        <div style={{ fontSize: 10.5, fontWeight: 800, color: '#0E7C52', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 3 }}>Réponse du praticien</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 800, color: '#0E7C52', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 3 }}>{tr('Réponse du praticien', 'Practitioner\'s reply', 'رد الطبيب')}</div>
                         <div style={{ fontSize: 12.5, color: '#0E5C40', lineHeight: 1.55 }}>{r.reply}</div>
                       </div>
                     )}
@@ -424,12 +433,12 @@ export default function Profile() {
 
         {/* Right: Booking card */}
         <div style={{ background: '#fff', borderRadius: 20, padding: isMobile ? 18 : 28, border: `1px solid ${BORDER}`, position: isMobile ? 'static' : 'sticky', top: 86, boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 16 }}>Choisissez une date et une heure</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: DARK, marginBottom: 16 }}>{tr('Choisissez une date et une heure', 'Choose a date and time', 'اختاروا التاريخ والساعة')}</div>
 
           {/* Next truly-free slot — one tap selects it. */}
           {nextFree && nextFree !== 'none' && (() => {
             const nd = new Date(`${nextFree.iso}T12:00:00`);
-            const label = nextFree.iso === todayISO ? "aujourd'hui" : `${FR_DOW[(nd.getDay() + 6) % 7]}. ${nd.getDate()} ${FR_MONTHS[nd.getMonth()].toLowerCase()}`;
+            const label = nextFree.iso === todayISO ? tr("aujourd'hui", 'today', 'اليوم') : `${DOW[(nd.getDay() + 6) % 7]}. ${nd.getDate()} ${state.lang === 'ar' ? MONTHS[nd.getMonth()] : MONTHS[nd.getMonth()].toLowerCase()}`;
             return (
               <button
                 onClick={() => { setViewY(nd.getFullYear()); setViewM(nd.getMonth()); setState({ bookDate: nextFree.iso, bookSlot: nextFree.slot }); }}
@@ -437,28 +446,28 @@ export default function Profile() {
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E7C52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                 <span style={{ flex: 1, fontSize: 13, color: '#0E5C40' }}>
-                  Prochain créneau : <strong>{label} à {nextFree.slot}</strong>
+                  {tr('Prochain créneau', 'Next available slot', 'أقرب موعد متاح')} : <strong>{label} {tr('à', 'at', 'على')} {nextFree.slot}</strong>
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: '#0E7C52', whiteSpace: 'nowrap' }}>Choisir →</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#0E7C52', whiteSpace: 'nowrap' }}>{tr('Choisir →', 'Select →', 'اختيار ←')}</span>
               </button>
             );
           })()}
           {nextFree === 'none' && (
             <div style={{ fontSize: 12.5, color: MUTED, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 14px', marginBottom: 14 }}>
-              Aucun créneau libre sous 14 jours — contactez le cabinet directement.
+              {tr('Aucun créneau libre sous 14 jours — contactez le cabinet directement.', 'No free slot within 14 days — please contact the practice directly.', 'لا يوجد موعد متاح خلال 14 يوماً — يرجى الاتصال بالعيادة مباشرة.')}
             </div>
           )}
 
           {/* Month nav */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <button onClick={prevMonth} disabled={atFirstMonth} aria-label="Mois précédent" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, width: 44, height: 44, cursor: atFirstMonth ? 'default' : 'pointer', fontSize: 18, color: atFirstMonth ? '#C9D6D1' : DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{FR_MONTHS[viewM]} {viewY}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{MONTHS[viewM]} {viewY}</span>
             <button onClick={nextMonth} aria-label="Mois suivant" style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, width: 44, height: 44, cursor: 'pointer', fontSize: 18, color: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
           </div>
 
           {/* Weekday headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
-            {FR_DOW.map((d) => (
+            {DOW.map((d) => (
               <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: MUTED }}>{d}</div>
             ))}
           </div>
@@ -497,8 +506,8 @@ export default function Profile() {
 
           {/* Legend */}
           <div style={{ display: 'flex', gap: 14, marginBottom: 14, fontSize: 11, color: MUTED, flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: `1.5px solid ${PRIMARY}` }} /> Aujourd'hui</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: '#F4F6F5', border: `1px solid ${BORDER}` }} /> Indisponible</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: `1.5px solid ${PRIMARY}` }} /> {tr("Aujourd'hui", 'Today', 'اليوم')}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: '#F4F6F5', border: `1px solid ${BORDER}` }} /> {tr('Indisponible', 'Unavailable', 'غير متاح')}</span>
           </div>
 
           {/* Time slots */}
@@ -533,33 +542,33 @@ export default function Profile() {
                         }}
                       >
                         {slot}
-                        {blockState === 'booked' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>réservé</div>}
-                        {blockState === 'prayer' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>prière</div>}
+                        {blockState === 'booked' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>{tr('réservé', 'booked', 'محجوز')}</div>}
+                        {blockState === 'prayer' && <div style={{ fontSize: 8.5, fontWeight: 700, opacity: 0.9 }}>{tr('prière', 'prayer', 'صلاة')}</div>}
                       </button>
                     );
                   })}
                 </div>
                 {dayFull ? (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: '#B45309', fontSize: 12.5, background: '#FEF6E7', borderRadius: 10, border: '1px dashed #F0CE8E', fontWeight: 600 }}>
-                    Journée complète — ce médecin a atteint son maximum de consultations ce jour.
+                    {tr('Journée complète — ce médecin a atteint son maximum de consultations ce jour.', 'Fully booked — this doctor has reached the daily consultation limit.', 'اليوم مكتمل — بلغ هذا الطبيب الحد الأقصى للاستشارات في هذا اليوم.')}
                     {nextFree && nextFree !== 'none' && (
                       <button onClick={() => { const nd = new Date(`${nextFree.iso}T12:00:00`); setViewY(nd.getFullYear()); setViewM(nd.getMonth()); setState({ bookDate: nextFree.iso, bookSlot: nextFree.slot }); }}
                         style={{ display: 'block', margin: '10px auto 0', background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
-                        Aller au prochain créneau libre →
+                        {tr('Aller au prochain créneau libre →', 'Go to the next free slot →', 'الانتقال إلى أقرب موعد متاح ←')}
                       </button>
                     )}
                     {typeof doc?.id === 'string' && isSupabaseConfigured && <WaitlistCTA />}
                   </div>
                 ) : (daySlots.length === 0 || daySlots.every((s) => slotState(s) !== null)) && (
                   <div style={{ marginTop: 10, padding: '12px 14px', textAlign: 'center', color: MUTED, fontSize: 12.5, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
-                    Aucun créneau disponible ce jour — choisissez une autre date.
+                    {tr('Aucun créneau disponible ce jour — choisissez une autre date.', 'No slot available on this day — pick another date.', 'لا يوجد موعد متاح في هذا اليوم — اختاروا تاريخاً آخر.')}
                     {typeof doc?.id === 'string' && isSupabaseConfigured && daySlots.length > 0 && <WaitlistCTA />}
                   </div>
                 )}
               </>
             ) : (
               <div style={{ padding: '18px 14px', textAlign: 'center', color: MUTED, fontSize: 13, background: BG, borderRadius: 10, border: `1px dashed ${BORDER}` }}>
-                Touchez une date disponible dans le calendrier ci-dessus.
+                {tr('Touchez une date disponible dans le calendrier ci-dessus.', 'Tap an available date in the calendar above.', 'اختاروا تاريخاً متاحاً في التقويم أعلاه.')}
               </div>
             )}
           </div>
@@ -567,11 +576,11 @@ export default function Profile() {
           {/* Info box */}
           <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: MUTED }}>Honoraires</span>
+              <span style={{ fontSize: 13, color: MUTED }}>{tr('Honoraires', 'Fee', 'الأتعاب')}</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: DARK }}>{doc.price} MAD</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: MUTED }}>Durée</span>
+              <span style={{ fontSize: 13, color: MUTED }}>{tr('Durée', 'Duration', 'المدة')}</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>20 minutes</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -592,7 +601,7 @@ export default function Profile() {
               boxShadow: (!selectedDate || !selectedSlot) ? 'none' : '0 10px 22px -8px rgba(22,160,106,0.6)',
             }}
           >
-            {selectedDate && selectedSlot ? `Confirmer · ${selectedSlot}` : 'Choisissez une date et une heure'}
+            {selectedDate && selectedSlot ? `${tr('Confirmer', 'Confirm', 'تأكيد')} · ${selectedSlot}` : tr('Choisissez une date et une heure', 'Choose a date and time', 'اختاروا التاريخ والساعة')}
           </button>
         </div>
       </div>

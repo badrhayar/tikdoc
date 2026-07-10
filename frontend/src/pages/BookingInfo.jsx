@@ -6,6 +6,7 @@ import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
 import { createAppointment, guestBookingEnabled, guestBookingStart, guestBookingVerify } from '../lib/api';
 import { moroccoToUTCISO } from '../lib/time.js';
+import LangPill from '../components/LangPill';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -25,6 +26,7 @@ export default function BookingInfo() {
   const { isMobile } = useViewport();
   const col2 = isMobile ? '1fr' : '1fr 1fr';
   const { info = {}, payMethod = 'cash', selDoc, bookSlot, bookDate, patient, appUser } = state;
+  const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
 
   const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
@@ -222,8 +224,9 @@ export default function BookingInfo() {
           onClick={() => go('profile')}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, color: DARK, cursor: 'pointer', marginBottom: 20, fontWeight: 500 }}
         >
-          ← Retour
+          ← {tr('Retour', 'Back', 'رجوع')}
         </button>
+        <div style={{ float: 'inline-end', marginTop: -52 }}><LangPill /></div>
 
         {/* Doctor summary banner */}
         <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, #12875A 100%)`, borderRadius: 14, padding: '16px 22px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -236,15 +239,15 @@ export default function BookingInfo() {
 
         {/* Form card */}
         <div style={{ background: '#fff', borderRadius: 18, padding: 28, border: `1px solid ${BORDER}` }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>Vos informations</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>{tr('Vos informations', 'Your details', 'معلوماتكم')}</h1>
 
           {/* 2-col grid: name + CIN */}
           <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>
             <div>
-              <label style={labelStyle}>Nom complet</label>
+              <label style={labelStyle}>{tr('Nom complet', 'Full name', 'الاسم الكامل')}</label>
               <input
                 type="text"
-                placeholder="Votre nom complet"
+                placeholder={tr('Votre nom complet', 'Your full name', 'اسمكم الكامل')}
                 value={info.name || ''}
                 onChange={(e) => setInfo('name', e.target.value)}
                 style={inputStyle}
@@ -265,7 +268,7 @@ export default function BookingInfo() {
           {/* 2-col grid: phone + email */}
           <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>
             <div>
-              <label style={labelStyle}>Téléphone</label>
+              <label style={labelStyle}>{tr('Téléphone', 'Phone', 'الهاتف')}</label>
               <PhoneField value={info.phone || ''} onChange={(v) => setInfo('phone', v)} borderColor={BORDER} bg="#fff" />
             </div>
             <div>
@@ -282,7 +285,7 @@ export default function BookingInfo() {
 
           {/* Motif (full width) */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Motif de consultation</label>
+            <label style={labelStyle}>{tr('Motif de consultation', 'Reason for visit', 'سبب الزيارة')}</label>
             <select
               value={selectedMotif}
               onChange={(e) => setInfo('motif', e.target.value)}
@@ -296,9 +299,9 @@ export default function BookingInfo() {
 
           {/* Notes (full width) */}
           <div style={{ marginBottom: 24 }}>
-            <label style={labelStyle}>Notes <span style={{ fontWeight: 400, color: MUTED }}>(optionnel)</span></label>
+            <label style={labelStyle}>{tr('Notes', 'Notes', 'ملاحظات')} <span style={{ fontWeight: 400, color: MUTED }}>{tr('(optionnel)', '(optional)', '(اختياري)')}</span></label>
             <textarea
-              placeholder="Décrivez vos symptômes ou précisez votre motif..."
+              placeholder={tr('Décrivez vos symptômes ou précisez votre motif...', 'Describe your symptoms or clarify your reason...', 'صِفوا الأعراض أو وضّحوا سبب الزيارة...')}
               value={info.notes || ''}
               onChange={(e) => setInfo('notes', e.target.value)}
               rows={3}
@@ -311,7 +314,7 @@ export default function BookingInfo() {
 
           {/* Payment method */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 12 }}>Mode de paiement</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 12 }}>{tr('Mode de paiement', 'Payment method', 'طريقة الدفع')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {PAY_OPTIONS.map((opt) => {
                 const isActive = payMethod === opt.key;
@@ -334,8 +337,14 @@ export default function BookingInfo() {
                   >
                     <span style={{ fontSize: 22 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: DARK, marginBottom: 2 }}>{opt.label}</div>
-                      <div style={{ fontSize: 12, color: MUTED }}>{opt.sub}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: DARK, marginBottom: 2 }}>{
+                        opt.key === 'cash' ? tr('Espèces au cabinet', 'Cash at the practice', 'نقداً في العيادة') : opt.label
+                      }</div>
+                      <div style={{ fontSize: 12, color: MUTED }}>{
+                        opt.key === 'cash' ? tr('Payez directement au cabinet', 'Pay directly at the practice', 'ادفعوا مباشرة في العيادة')
+                        : opt.key === 'cmi' ? tr('Réseau monétique marocain', 'Moroccan card network', 'الشبكة النقدية المغربية')
+                        : tr('Paiement mobile (CIH Money, Orange Money...)', 'Mobile payment (CIH Money, Orange Money...)', 'الدفع عبر الهاتف (CIH Money، Orange Money...)')
+                      }</div>
                     </div>
                     <div style={{
                       width: 18, height: 18, borderRadius: '50%',
@@ -377,11 +386,11 @@ export default function BookingInfo() {
               fontFamily: 'Inter, sans-serif',
             }}
           >
-            Confirmer le rendez-vous
+            {tr('Confirmer le rendez-vous', 'Confirm the appointment', 'تأكيد الموعد')}
           </button>
           {isSupabaseConfigured && !appUser && guestOk && (
             <p style={{ margin: '10px 0 0', fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.5 }}>
-              Sans compte : vous recevrez un <strong>code de confirmation</strong> par WhatsApp pour valider votre numéro.
+              {tr('Sans compte : vous recevrez un code de confirmation par WhatsApp pour valider votre numéro.', 'No account: you will receive a WhatsApp confirmation code to verify your number.', 'بدون حساب : ستتوصلون برمز تأكيد عبر واتساب للتحقق من رقمكم.')}
             </p>
           )}
         </div>
@@ -394,9 +403,9 @@ export default function BookingInfo() {
             <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E7F6EE', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
             </div>
-            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: DARK }}>Confirmez votre numéro</h2>
+            <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: DARK }}>{tr('Confirmez votre numéro', 'Confirm your number', 'أكِّدوا رقمكم')}</h2>
             <p style={{ margin: '0 0 18px', fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>
-              Un code à 6 chiffres a été envoyé par WhatsApp au <strong style={{ color: DARK, direction: 'ltr', display: 'inline-block' }}>{otp.phone}</strong>.
+              {tr('Un code à 6 chiffres a été envoyé par WhatsApp au', 'A 6-digit code was sent by WhatsApp to', 'تم إرسال رمز من 6 أرقام عبر واتساب إلى')} <strong style={{ color: DARK, direction: 'ltr', display: 'inline-block' }}>{otp.phone}</strong>.
             </p>
             <input
               value={otpCode}
@@ -413,10 +422,10 @@ export default function BookingInfo() {
               disabled={otpBusy || otpCode.length !== 6}
               style={{ width: '100%', marginTop: 16, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 11, padding: 13, fontSize: 15, fontWeight: 700, cursor: (otpBusy || otpCode.length !== 6) ? 'default' : 'pointer', opacity: (otpBusy || otpCode.length !== 6) ? 0.6 : 1 }}
             >
-              {otpBusy ? 'Vérification…' : 'Confirmer mon rendez-vous'}
+              {otpBusy ? tr('Vérification…', 'Verifying…', 'جارٍ التحقق…') : tr('Confirmer mon rendez-vous', 'Confirm my appointment', 'تأكيد موعدي')}
             </button>
             <button onClick={startGuest} disabled={otpBusy} style={{ marginTop: 12, background: 'none', border: 'none', color: PRIMARY, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
-              Renvoyer le code
+              {tr('Renvoyer le code', 'Resend the code', 'إعادة إرسال الرمز')}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import LangPill from '../components/LangPill';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
@@ -14,6 +15,7 @@ const GRAD    = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)'
 
 export default function Search() {
   const { state, setState, go } = useApp();
+  const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
   const {
     scQ = '', scCity = 'all', scSpec = 'all', scSort = 'pertinence',
     scType = 'all', scConv = false, selPin, patient,
@@ -64,7 +66,7 @@ export default function Search() {
         <div style={{ fontSize: 12, color: MUTED }}>★ {pinDoc.rating} · {pinDoc.price} MAD</div>
       </div>
       <button onClick={() => { setState({ selDoc: pinDoc.id }); setMapFull(false); go('profile'); }} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}>
-        Voir le profil
+        {tr('Voir le profil', 'View profile', 'عرض الملف')}
       </button>
       <button onClick={() => setState({ selPin: null })} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, cursor: 'pointer', fontSize: 16, color: MUTED, width: 30, height: 30, flexShrink: 0 }}>×</button>
     </div>
@@ -112,9 +114,10 @@ export default function Search() {
           </button>
         ) : (
           <button onClick={() => go('plogin')} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}>
-            Se connecter
+            {tr('Se connecter', 'Sign in', 'تسجيل الدخول')}
           </button>
         )}
+        <LangPill style={{ marginInlineStart: 8 }} />
       </header>
 
       {/* ── Sticky filter bar ── */}
@@ -123,14 +126,14 @@ export default function Search() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '0 13px', flex: '1 1 180px', minWidth: 140 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A06A" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-            <input placeholder="Médecin, spécialité…" value={scQ} onChange={(e) => setState({ scQ: e.target.value })} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: DARK, padding: '11px 0', width: '100%' }} />
+            <input placeholder={tr('Médecin, spécialité…', 'Doctor, specialty…', 'طبيب، تخصص…')} value={scQ} onChange={(e) => setState({ scQ: e.target.value })} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: DARK, padding: '11px 0', width: '100%' }} />
           </div>
 
           {/* Mobile: a single "Filtres" button opens the panel */}
           {isMobile ? (
             <button onClick={() => setFiltersOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 44, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-              Filtres{activeFilterCount > 0 && <span style={{ background: PRIMARY, color: '#fff', borderRadius: 99, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
+              {tr('Filtres', 'Filters', 'الفلاتر')}{activeFilterCount > 0 && <span style={{ background: PRIMARY, color: '#fff', borderRadius: 99, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{activeFilterCount}</span>}
             </button>
           ) : (
             <>
@@ -139,7 +142,7 @@ export default function Search() {
                 {SPEC_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
               </select>
               <select value={scCity} onChange={(e) => setState({ scCity: e.target.value })} style={selectStyle}>
-                <option value="all">Toutes les villes</option>
+                <option value="all">{tr('Toutes les villes', 'All cities', 'كل المدن')}</option>
                 {CITY_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
               </select>
               <div style={{ display: 'flex', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 3, gap: 2 }}>
@@ -149,13 +152,13 @@ export default function Search() {
               </div>
               <button onClick={() => setState({ scConv: !scConv })} style={{ padding: '9px 15px', fontSize: 13, fontWeight: 600, borderRadius: 10, cursor: 'pointer', border: `1px solid ${scConv ? PRIMARY : BORDER}`, background: scConv ? '#E7F6EE' : '#fff', color: scConv ? PRIMARY : MUTED, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 11 }}>{scConv ? '✓' : '○'}</span>
-                Conventionné
+                {tr('Conventionné', 'Insurance', 'مع التأمين')}
               </button>
               <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, marginLeft: 'auto' }}>
-                <option value="pertinence">Pertinence</option>
+                <option value="pertinence">{tr('Pertinence', 'Relevance', 'الأنسب')}</option>
                 <option value="rating">Meilleures notes</option>
-                <option value="price_asc">Prix croissant</option>
-                <option value="price_desc">Prix décroissant</option>
+                <option value="price_asc">{tr('Prix croissant', 'Price: low to high', 'السعر تصاعدياً')}</option>
+                <option value="price_desc">{tr('Prix décroissant', 'Price: high to low', 'السعر تنازلياً')}</option>
               </select>
             </>
           )}
@@ -168,7 +171,7 @@ export default function Search() {
           <div onClick={() => setFiltersOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.45)', zIndex: 60 }} />
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 61, background: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -10px 40px rgba(13,43,30,0.25)', animation: 'saRise .22s ease' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Filtres</span>
+              <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{tr('Filtres', 'Filters', 'الفلاتر')}</span>
               <button onClick={() => setFiltersOpen(false)} style={{ width: 40, height: 40, borderRadius: 11, background: BG, border: `1px solid ${BORDER}`, fontSize: 20, color: MUTED, cursor: 'pointer' }}>×</button>
             </div>
 
@@ -180,7 +183,7 @@ export default function Search() {
 
             <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>Ville</label>
             <select value={scCity} onChange={(e) => setState({ scCity: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-              <option value="all">Toutes les villes</option>
+              <option value="all">{tr('Toutes les villes', 'All cities', 'كل المدن')}</option>
               {CITY_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
 
@@ -192,19 +195,19 @@ export default function Search() {
             </div>
 
             <button onClick={() => setState({ scConv: !scConv })} style={{ width: '100%', marginTop: 14, padding: '12px 15px', fontSize: 14, fontWeight: 600, borderRadius: 10, cursor: 'pointer', border: `1px solid ${scConv ? PRIMARY : BORDER}`, background: scConv ? '#E7F6EE' : '#fff', color: scConv ? PRIMARY : MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48 }}>
-              <span style={{ fontSize: 12 }}>{scConv ? '✓' : '○'}</span> Conventionné uniquement
+              <span style={{ fontSize: 12 }}>{scConv ? '✓' : '○'}</span> {tr('Conventionné uniquement', 'Insurance-accepted only', 'المتعاقدون مع التأمين فقط')}
             </button>
 
-            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>Trier par</label>
+            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '14px 0 6px' }}>{tr('Trier par', 'Sort by', 'ترتيب حسب')}</label>
             <select value={scSort} onChange={(e) => setState({ scSort: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-              <option value="pertinence">Pertinence</option>
+              <option value="pertinence">{tr('Pertinence', 'Relevance', 'الأنسب')}</option>
               <option value="rating">Meilleures notes</option>
-              <option value="price_asc">Prix croissant</option>
-              <option value="price_desc">Prix décroissant</option>
+              <option value="price_asc">{tr('Prix croissant', 'Price: low to high', 'السعر تصاعدياً')}</option>
+              <option value="price_desc">{tr('Prix décroissant', 'Price: high to low', 'السعر تنازلياً')}</option>
             </select>
 
             <button onClick={() => setFiltersOpen(false)} style={{ width: '100%', marginTop: 20, padding: 14, borderRadius: 12, border: 'none', background: GRAD, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', minHeight: 50 }}>
-              Voir {list.length} médecin{list.length !== 1 ? 's' : ''}
+              {tr('Voir', 'Show', 'عرض')} {list.length} {tr(list.length !== 1 ? 'médecins' : 'médecin', list.length !== 1 ? 'doctors' : 'doctor', 'طبيب')}
             </button>
           </div>
         </>
@@ -231,17 +234,17 @@ export default function Search() {
           )}
 
           <p style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 16 }}>
-            {list.length} médecin{list.length !== 1 ? 's' : ''} <span style={{ color: MUTED, fontWeight: 500 }}>disponible{list.length !== 1 ? 's' : ''}</span>
+            {list.length} {tr(list.length !== 1 ? 'médecins' : 'médecin', list.length !== 1 ? 'doctors' : 'doctor', 'طبيب')} <span style={{ color: MUTED, fontWeight: 500 }}>{tr(list.length !== 1 ? 'disponibles' : 'disponible', 'available', 'متاح')}</span>
           </p>
 
           {list.length === 0 && (
             <div style={{ textAlign: 'center', padding: '48px 20px', color: MUTED }}>
               <div style={{ marginBottom: 16, color: "#CBD5D0", display:"flex", justifyContent:"center" }}><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></div>
               <div style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 8 }}>
-                {(scCity !== 'all' || scSpec !== 'all' || scQ) ? 'Aucun médecin trouvé pour ces critères' : 'Aucun médecin disponible pour le moment'}
+                {(scCity !== 'all' || scSpec !== 'all' || scQ) ? tr('Aucun médecin trouvé pour ces critères', 'No doctor matches these filters', 'لم يُعثر على طبيب بهذه المعايير') : tr('Aucun médecin disponible pour le moment', 'No doctors available yet', 'لا يوجد أطباء متاحون حالياً')}
               </div>
               <div style={{ fontSize: 14, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
-                Tabibo est tout nouveau — de nouveaux médecins nous rejoignent chaque semaine.
+                {tr('Tabibo est tout nouveau — de nouveaux médecins nous rejoignent chaque semaine.', 'Tabibo is brand new — new doctors join every week.', 'Tabibo جديد — أطباء جدد ينضمون إلينا كل أسبوع.')}
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
                 {(scCity !== 'all' || scSpec !== 'all' || scQ) && (
@@ -256,7 +259,7 @@ export default function Search() {
                   style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.88-.79-1.48-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.68-1.62-.93-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.1 4.49.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.3a8.3 8.3 0 0 1-4.2-1.2l-.3-.18-2.9.9.9-2.8-.2-.3A8.3 8.3 0 1 1 12 20.3z"/></svg>
-                  Inviter mon médecin sur Tabibo
+                  {tr('Inviter mon médecin sur Tabibo', 'Invite my doctor to Tabibo', 'دعوة طبيبي إلى Tabibo')}
                 </a>
               </div>
             </div>
@@ -288,12 +291,12 @@ export default function Search() {
                     <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600, marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.label}</div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                       <span style={{ color: '#F59E0B', fontWeight: 700 }}>★ {d.rating}</span>
-                      <span>· {d.reviews} avis</span>
+                      <span>· {d.reviews} {tr('avis', 'reviews', 'رأي')}</span>
                     </div>
                     <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.clinic}, {d.city}</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {d.conv && <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: '#E7F6EE', padding: '3px 9px', borderRadius: 20 }}>Conventionné</span>}
-                      {d.tele && <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', background: '#EFF6FF', padding: '3px 9px', borderRadius: 20 }}>Téléconsultation</span>}
+                      {d.conv && <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: '#E7F6EE', padding: '3px 9px', borderRadius: 20 }}>{tr('Conventionné', 'Insurance', 'مع التأمين')}</span>}
+                      {d.tele && <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', background: '#EFF6FF', padding: '3px 9px', borderRadius: 20 }}>{tr('Téléconsultation', 'Teleconsultation', 'استشارة عن بُعد')}</span>}
                     </div>
                   </div>
 
@@ -330,7 +333,7 @@ export default function Search() {
       {isMobile && mapFull && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#fff', display: 'flex', flexDirection: 'column', animation: 'saFade .18s ease' }}>
           <div style={{ height: 56, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: `1px solid ${BORDER}` }}>
-            <span style={{ fontWeight: 800, color: DARK, fontSize: 15 }}>{list.length} médecin{list.length !== 1 ? 's' : ''} sur la carte</span>
+            <span style={{ fontWeight: 800, color: DARK, fontSize: 15 }}>{list.length} {tr(list.length !== 1 ? 'médecins' : 'médecin', list.length !== 1 ? 'doctors' : 'doctor', 'طبيب')} {tr('sur la carte', 'on the map', 'على الخريطة')}</span>
             <button onClick={() => setMapFull(false)} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: DARK, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
               Liste
