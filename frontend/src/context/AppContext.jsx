@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor, fetchDoctorBySlug } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange, phoneLogin as sbPhoneLogin } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { setPageMeta, SCREEN_META } from '../lib/seo.js';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
 
 const DEFAULT_AVAIL = [
@@ -304,6 +305,14 @@ export function AppProvider({ children }) {
       else window.history.pushState({ screen: state.screen }, '', path);
     } catch (e) { /* ignore (e.g. sandboxed iframe) */ }
     firstUrlSync.current = false;
+  }, [state.screen]);
+
+  // Per-screen <title> + meta description (SEO + readable browser tabs).
+  // The doctor Profile overrides this with the doctor's own name.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const [t, d] = SCREEN_META[state.screen] || ['', ''];
+    if (state.screen !== 'profile') setPageMeta(t, d);
   }, [state.screen]);
 
   // Deep links: a shared booking link opens that doctor's profile. Supports

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Private app areas — nothing indexable there
+Disallow: /admin
+Disallow: /doctor
+Disallow: /dcal
+Disallow: /dappts
+Disallow: /paccount
+Disallow: /pmessages
+
+Sitemap: https://tabibo.ma/sitemap.xml

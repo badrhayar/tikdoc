@@ -9,6 +9,7 @@ import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff, joinWaitlist } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK, prayerSlotLabel } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { setPageMeta } from '../lib/seo.js';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -105,6 +106,14 @@ export default function Profile() {
     return work.some((r) => s >= toMin(r.start_time) && s < toMin(r.end_time))
       && !breaks.some((r) => s >= toMin(r.start_time) && s < toMin(r.end_time));
   };
+
+  // SEO: the profile page carries the doctor's own title/description.
+  useEffect(() => {
+    if (!doc) return;
+    const spec = si.label || 'Médecin';
+    setPageMeta(`${docDisplayName(doc.name, doc.spec)} — ${spec} à ${doc.city || 'Maroc'}`,
+      `Prenez rendez-vous en ligne avec ${docDisplayName(doc.name, doc.spec)}, ${spec.toLowerCase()} à ${doc.city || ''} — créneaux en temps réel sur Tabibo.`);
+  }, [doc?.id]);
 
   // Public reviews shown on the profile (real social proof).
   const [reviews, setReviews] = useState([]);
