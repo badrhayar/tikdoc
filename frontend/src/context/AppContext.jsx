@@ -12,6 +12,16 @@ const PROTECTED_SCREENS = new Set([
 ]);
 const restoreScreen = () => { try { return sessionStorage.getItem('tabibo_screen') || 'home'; } catch { return 'home'; } };
 
+// Did this page load come from a Supabase EMAIL LINK? (confirmation, etc.)
+// The hash is consumed by detectSessionInUrl, so we snapshot it at module load.
+// Used to route the freshly-confirmed user to the right screen even when the
+// redirect lands on the site root (e.g. Redirect URLs not configured yet).
+let authLinkType = null;
+try {
+  const mHash = (window.location.hash || '').match(/type=([a-z_]+)/);
+  if (mHash) authLinkType = mHash[1];
+} catch (_) { /* SSR-safe */ }
+
 // ── Browser-grade navigation ─────────────────────────────────────────────────
 // Every screen gets a real URL (/search, /doctor, /dappts…) so the browser
 // back/forward buttons, refresh and link-sharing all behave like a real site.
@@ -155,20 +165,8 @@ export function AppProvider({ children }) {
       return null;
     }
     try {
-      let u = await getCurrentAppUser();
+      const u = await getCurrentAppUser();
       if (!u) { dispatch({ appUser: null }); return null; }
-      // A patient signing in with a pending DOCTOR registration (same email →
-      // same account) upgrades in place; their patient history is kept.
-      if (u.role === 'patient') {
-        try {
-          const pd = JSON.parse(localStorage.getItem('tabibo_pending_dreg') || 'null');
-          if (pd?.upgrade === true) {
-            const { upgradeToDoctor } = await import('../lib/api');
-            await upgradeToDoctor(u.id);
-            u = { ...u, role: 'doctor' };
-          }
-        } catch (_) { /* stays patient; they can retry the doctor signup */ }
-      }
       dispatch({
         appUser: u,
         patient: u.role === 'patient'
@@ -177,6 +175,13 @@ export function AppProvider({ children }) {
       });
       // Admins land on the hidden admin console.
       if (u.role === 'admin') dispatch({ screen: 'admin' });
+      // Fresh email-confirmation link: land the user on the RIGHT page no
+      // matter where Supabase redirected. Doctors see their "dossier en cours
+      // de vérification" screen; patients see the welcome/confirmed page.
+      if (authLinkType === 'signup') {
+        authLinkType = null;   // one-shot
+        dispatch({ screen: u.role === 'doctor' ? 'doctor' : 'verified' });
+      }
       const appts = await fetchMyAppointments();
       const patch = { myAppointments: appts };
       // Doctor screens (Calendar / History / Statistics) read `consultations`.

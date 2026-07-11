@@ -25,6 +25,7 @@ const PinIcon = ({ size = 13 }) => (
 export default function ForPatients() {
   const { state, go } = useApp();
   const { lang } = state;
+  const loggedIn = !!state.appUser || !!state.patient;
   const t = I18N[lang] || I18N.fr;
   const dir = t.dir || 'ltr';
   const { isMobile } = useViewport();
@@ -114,28 +115,44 @@ export default function ForPatients() {
             >
               {lang === 'ar' ? 'ابحث عن طبيب' : lang === 'en' ? 'Find a doctor' : 'Trouver un médecin'}
             </button>
-            <button
-              onClick={() => go('plogin')}
-              style={{
-                background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`,
-                borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
-                width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
-              }}
-            >
-              {lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Sign in' : 'Se connecter'}
-            </button>
-            <button
-              onClick={() => go('pregister')}
-              style={{
-                background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`,
-                borderRadius: 10, padding: '13px 20px',
-                fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
-                width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
-              }}
-            >
-              {lang === 'ar' ? 'إنشاء حسابي' : lang === 'en' ? 'Create my account' : 'Créer mon compte'}
-            </button>
+            {loggedIn ? (
+              <button
+                onClick={() => go('paccount')}
+                style={{
+                  background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`,
+                  borderRadius: 10, padding: '13px 20px',
+                  fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
+                  width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
+                }}
+              >
+                {lang === 'ar' ? 'فضائي' : lang === 'en' ? 'My space' : 'Mon espace'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => go('plogin')}
+                  style={{
+                    background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`,
+                    borderRadius: 10, padding: '13px 20px',
+                    fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
+                    width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
+                  }}
+                >
+                  {lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Sign in' : 'Se connecter'}
+                </button>
+                <button
+                  onClick={() => go('pregister')}
+                  style={{
+                    background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`,
+                    borderRadius: 10, padding: '13px 20px',
+                    fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', whiteSpace: 'nowrap',
+                    width: isMobile ? '100%' : undefined, flex: isMobile ? undefined : 1,
+                  }}
+                >
+                  {lang === 'ar' ? 'إنشاء حسابي' : lang === 'en' ? 'Create my account' : 'Créer mon compte'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>

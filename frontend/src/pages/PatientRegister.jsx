@@ -214,7 +214,8 @@ export default function PatientRegister() {
             <div style={{ background: '#FEF9EC', border: '1px solid #F6E0AE', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: '#9A6510', marginBottom: 6 }}>Cet email a déjà un compte Tabibo</div>
               <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#7A6210', lineHeight: 1.6 }}>
-                Pas besoin d'en créer un autre — connectez-vous avec cet email pour accéder à votre espace et réserver vos rendez-vous.
+                Chaque adresse email ne peut servir qu'à un seul compte (patient ou médecin). Connectez-vous
+                avec cet email — ou utilisez une autre adresse pour créer un nouveau compte.
               </p>
               <button onClick={() => go('plogin')} style={{ background: '#16A06A', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Se connecter

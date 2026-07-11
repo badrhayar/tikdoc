@@ -488,17 +488,12 @@ export default function DoctorRegister() {
               <div style={{ background: '#FEF9EC', border: '1px solid #F6E0AE', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: '#9A6510', marginBottom: 6 }}>Cet email a déjà un compte Tabibo</div>
                 <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#7A6210', lineHeight: 1.6 }}>
-                  Pas besoin d'en créer un autre : connectez-vous avec ce compte — il sera <strong>transformé en compte médecin</strong>
-                  (vous gardez votre historique patient) et le dossier que vous venez de remplir sera transmis automatiquement à notre équipe.
+                  Chaque adresse email ne peut servir qu'à <strong>un seul compte</strong> (patient ou médecin).
+                  Si c'est votre compte médecin, connectez-vous. Sinon, utilisez une <strong>autre adresse email</strong> pour
+                  votre compte médecin — votre formulaire est conservé, il suffit de changer l'email ci-dessus.
                 </p>
-                <button onClick={() => {
-                  try {
-                    const pd = JSON.parse(localStorage.getItem('tabibo_pending_dreg') || 'null');
-                    if (pd) localStorage.setItem('tabibo_pending_dreg', JSON.stringify({ ...pd, upgrade: true }));
-                  } catch (_) {}
-                  go('login');
-                }} style={{ background: '#16A06A', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  Se connecter et transformer mon compte
+                <button onClick={() => go('login')} style={{ background: '#16A06A', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  Se connecter
                 </button>
               </div>
             )}
