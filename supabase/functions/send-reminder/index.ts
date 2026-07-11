@@ -22,6 +22,7 @@
 //         {{4}}. Répondez ANNULER pour annuler. — Tabibo"
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildPushPayload } from "https://esm.sh/@block65/webcrypto-web-push@1.0.2";
 
 const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
 const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
@@ -60,6 +61,39 @@ function docTitle(name: string, spec?: string) {
   return spec && NON_DR_SPECS.has(spec) ? clean : `Dr. ${clean}`;
 }
 const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
+
+// ── Web Push (free channel on the patient's home screen) ────────────────────
+// Inert until the VAPID secrets exist. Subscriptions gone stale (404/410) are
+// pruned so the table stays clean.
+const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
+const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:support@tabibo.ma";
+const pushReady = !!(VAPID_PUBLIC && VAPID_PRIVATE);
+
+async function sendPushToUser(
+  admin: ReturnType<typeof createClient>,
+  userId: string | null,
+  message: { title: string; body: string; url?: string; tag?: string },
+) {
+  if (!pushReady || !userId) return;
+  try {
+    const { data: subs } = await admin.from("push_subscriptions")
+      .select("id, endpoint, p256dh, auth").eq("user_id", userId);
+    for (const s of (subs ?? []) as any[]) {
+      try {
+        const payload = await buildPushPayload(
+          { data: JSON.stringify(message), options: { ttl: 3600 * 12 } },
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          { subject: VAPID_SUBJECT, publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE },
+        );
+        const res = await fetch(s.endpoint, payload);
+        if (res.status === 404 || res.status === 410) {
+          await admin.from("push_subscriptions").delete().eq("id", s.id);
+        }
+      } catch (_) { /* one bad subscription must not stop the rest */ }
+    }
+  } catch (_) { /* push is best-effort */ }
+}
 
 // A polished, brand-consistent email (email-client-safe tables).
 function apptEmail(d: { name: string; title: string; sentence: string; ctaLabel: string; subLine: string; accent: string; accentSoft: string; emoji: string; url: string }) {
@@ -182,11 +216,22 @@ async function sendTemplate(to: string, params: string[], tplName: string) {
 // each attempt. Works email-only when WhatsApp isn't set up.
 async function sendOne(
   admin: ReturnType<typeof createClient>,
-  appt: { id: string; doctor_id: string; datetime: string; patient_name: string; phone: string; email?: string; doctor_name: string },
+  appt: { id: string; doctor_id: string; datetime: string; patient_name: string; phone: string; email?: string; doctor_name: string; patient_user_id?: string | null },
   template: string,
 ) {
   const when = new Date(appt.datetime);
   const params = [appt.patient_name || "patient", dateFmt.format(when), timeFmt.format(when), appt.doctor_name || "votre médecin"];
+  // Push (best-effort, free channel) — mirrors whatever this send is about.
+  const PUSH_TITLES: Record<string, string> = {
+    j1: "⏰ Rappel de rendez-vous", j2: "⏰ Rappel de rendez-vous",
+    confirmation: "📅 Rendez-vous enregistré", confirmed: "✅ Rendez-vous confirmé",
+    rescheduled: "🔁 Rendez-vous reporté", cancelled: "🗓️ Rendez-vous annulé",
+  };
+  sendPushToUser(admin, appt.patient_user_id ?? null, {
+    title: PUSH_TITLES[template] ?? "Tabibo",
+    body: `${params[1]} à ${params[2]} — ${params[3]}`,
+    url: "/paccount", tag: `appt-${appt.id}`,
+  });
   const bodyText = `Rappel RDV — ${params.join(" · ")}`;
   const waReady = !!(WA_TOKEN && WA_PHONE_ID);
   const now = new Date().toISOString();
@@ -230,14 +275,15 @@ async function sendOne(
 async function dueAppointments(admin: ReturnType<typeof createClient>, fromISO: string, toISO: string) {
   const { data } = await admin
     .from("appointments")
-    .select("id, doctor_id, datetime, status, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
+    .select("id, doctor_id, datetime, status, patient_id, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
     .gte("datetime", fromISO).lte("datetime", toISO)
     .in("status", ["pending", "confirmed"]);
   return (data ?? []).map((a: any) => ({
     id: a.id, doctor_id: a.doctor_id, datetime: a.datetime,
-    patient_name: a.patient?.full_name ?? a.patient_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
+    patient_name: a.patient_name ?? a.patient?.full_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
     email: a.patient?.email ?? "",
     doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
+    patient_user_id: a.patient_id ?? null,
   }));
 }
 
@@ -295,6 +341,7 @@ Deno.serve(async (req) => {
         patient_name: a.patient?.full_name ?? a.patient_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
         email: a.patient?.email ?? "",
         doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
+        patient_user_id: a.patient_id ?? null,
       }, template);
       return json(r);
     }
@@ -306,7 +353,7 @@ Deno.serve(async (req) => {
       if (!authz.isService) return json({ ok: false, error: "forbidden" }, 403);
       if (!RESEND_API_KEY) return json({ ok: true, skipped: "no RESEND_API_KEY" });
       const { data: rows } = await admin.from("slot_waitlist")
-        .select("id, patient:users!slot_waitlist_patient_id_fkey(full_name, email)")
+        .select("id, patient_id, patient:users!slot_waitlist_patient_id_fkey(full_name, email)")
         .eq("doctor_id", p.doctor_id).eq("date", p.date).is("notified_at", null);
       if (!rows?.length) return json({ ok: true, notified: 0 });
       const { data: doc } = await admin.from("doctors")
@@ -336,6 +383,11 @@ Deno.serve(async (req) => {
           notified++;
           await admin.from("slot_waitlist").update({ notified_at: new Date().toISOString() }).eq("id", r.id);
         }
+        sendPushToUser(admin, r.patient_id ?? null, {
+          title: "🔔 Un créneau s'est libéré",
+          body: `${docName} — ${dateStr}. Réservez vite !`,
+          url: "/search", tag: `waitlist-${r.id}`,
+        });
       }
       return json({ ok: true, notified });
     }
@@ -372,7 +424,45 @@ Deno.serve(async (req) => {
           r.ok ? sent++ : failed++;
         }
       }
-      return json({ ok: true, sent, skipped, failed });
+      // ── Follow-up recalls due today ("revoir dans X mois") ──────────────
+      let recalls = 0;
+      if (RESEND_API_KEY) {
+        const todayCasa = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Casablanca" });
+        const { data: due } = await admin.from("appointments")
+          .select("id, patient_id, patient_name, followup_on, patient:users(full_name, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
+          .lte("followup_on", todayCasa).is("followup_sent_at", null)
+          .eq("status", "completed").limit(200);
+        for (const a of (due ?? []) as any[]) {
+          const email = a.patient?.email;
+          const name = a.patient_name ?? a.patient?.full_name ?? "Patient";
+          const docName = docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty);
+          if (email) {
+            const html = apptEmail({
+              name, url: APP_URL,
+              accent: "#16A06A", accentSoft: "#E7F6EE", emoji: "🩺",
+              title: "C'est le moment de votre visite de suivi",
+              sentence: `lors de votre dernière consultation, <strong>${esc(docName)}</strong> a recommandé une visite de suivi — c'est le moment idéal pour la programmer.`,
+              ctaLabel: "Reprendre rendez-vous",
+              subLine: "Réservez votre rendez-vous sur",
+            });
+            const res = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ from: FROM, to: email, subject: `Visite de suivi chez ${docName} — Tabibo`, html }),
+            });
+            if (res.ok) recalls++;
+          }
+          sendPushToUser(admin, a.patient_id ?? null, {
+            title: "🩺 Visite de suivi recommandée",
+            body: `${docName} vous recommande une visite de suivi — reprenez rendez-vous.`,
+            url: "/search", tag: `followup-${a.id}`,
+          });
+          // Mark handled even without email so we never loop on the same visit.
+          await admin.from("appointments").update({ followup_sent_at: new Date().toISOString() }).eq("id", a.id);
+        }
+      }
+
+      return json({ ok: true, sent, skipped, failed, recalls });
     }
 
     return json({ ok: false, error: "unknown type" }, 400);

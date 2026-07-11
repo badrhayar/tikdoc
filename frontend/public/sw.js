@@ -2,7 +2,7 @@
    Tabibo service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tabibo-v59";
+const CACHE_VERSION = "tabibo-v60";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -174,4 +174,32 @@ self.addEventListener("message", (event) => {
       ))
     );
   }
+});
+
+// ── Web Push (rappels sur l'écran d'accueil) ────────────────────────────────
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_) {}
+  const title = data.title || "Tabibo";
+  event.waitUntil(self.registration.showNotification(title, {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-96.png",
+    data: { url: data.url || "/" },
+    dir: "auto",
+    tag: data.tag || undefined,
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification?.data?.url || "/";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ("focus" in c) { c.navigate(url); return c.focus(); }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

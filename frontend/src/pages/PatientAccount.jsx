@@ -4,8 +4,9 @@ import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 import LangPill from '../components/LangPill';
+import { pushSupported, pushState, enablePush, disablePush } from '../lib/push';
 import QRCode from 'qrcode';
-import { downloadICS, createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, downloadDocument, fetchMyPrescriptions } from '../lib/api';
+import { fetchRelatives, addRelative, deleteRelative, downloadICS, createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, downloadDocument, fetchMyPrescriptions } from '../lib/api';
 import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
 import ChatImage from '../components/ChatImage';
 import PhoneField from '../components/PhoneField';
@@ -53,6 +54,40 @@ const DOC_ICONS = { Ordonnance:'clipboard', Résultat:'flask', 'Compte-rendu':'h
 export default function PatientAccount() {
   const { state, setState, go, authSignOut } = useApp();
   const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
+
+  // ── Mes proches — the family members this account books for ────────────────
+  const [relatives, setRelatives] = useState([]);
+  const [relForm, setRelForm] = useState({ name: '', relation: 'Enfant', dob: '' });
+  const [relBusy, setRelBusy] = useState(false);
+  useEffect(() => {
+    if (!state.appUser?.id) return;
+    let active = true;
+    fetchRelatives(state.appUser.id).then((r) => active && setRelatives(r)).catch(() => {});
+    return () => { active = false; };
+  }, [state.appUser?.id]);
+  const handleAddRelative = async () => {
+    const name = relForm.name.trim();
+    if (name.length < 2) { setState({ toast: tr('Indiquez le nom du proche.', 'Enter the family member\'s name.', 'أدخلوا اسم القريب.'), toastShow: true }); return; }
+    setRelBusy(true);
+    try {
+      const row = await addRelative(state.appUser.id, { fullName: name, relation: relForm.relation, dob: relForm.dob || null });
+      setRelatives((l) => [...l, row]);
+      setRelForm({ name: '', relation: 'Enfant', dob: '' });
+    } catch (e) { setState({ toast: 'Échec : ' + (e?.message || 'erreur'), toastShow: true }); }
+    finally { setRelBusy(false); }
+  };
+  // Push notifications opt-in (visible only when VAPID is configured).
+  const [pushSt, setPushSt] = useState('unsupported');
+  useEffect(() => { pushState().then(setPushSt); }, []);
+  const togglePush = async () => {
+    if (pushSt === 'on') setPushSt(await disablePush());
+    else setPushSt(await enablePush(state.appUser.id));
+  };
+
+  const handleDeleteRelative = async (id) => {
+    setRelatives((l) => l.filter((r) => r.id !== id));
+    try { await deleteRelative(id); } catch (_) {}
+  };
   const { isMobile } = useViewport();
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
@@ -460,10 +495,55 @@ export default function PatientAccount() {
             </button>
           </div>
 
+          {/* Mes proches — book for the whole household */}
+          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW, marginBottom:18 }}>
+            <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Mes proches', 'My family', 'أفراد عائلتي')}</h2>
+            <p style={{ margin:'4px 0 14px', fontSize:12.5, color:MUT, lineHeight:1.55 }}>
+              {tr('Réservez pour vos enfants ou vos parents depuis ce compte — au moment de la réservation, choisissez « pour qui » est le rendez-vous.',
+                  'Book for your children or parents from this account — at booking time, choose who the appointment is for.',
+                  'احجزوا لأطفالكم أو والديكم من هذا الحساب — عند الحجز، اختاروا لمن هذا الموعد.')}
+            </p>
+            {relatives.length > 0 && (
+              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
+                {relatives.map((r) => (
+                  <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, border:`1px solid ${BORDER}`, borderRadius:11, padding:'9px 13px' }}>
+                    <div style={{ width:32, height:32, borderRadius:9, background:'#E7F6EE', color:'#138257', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>{initials(r.full_name)}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{r.full_name}</div>
+                      <div style={{ fontSize:11.5, color:MUT }}>{r.relation || ''}{r.dob ? ` · ${new Date(r.dob).toLocaleDateString('fr-FR')}` : ''}</div>
+                    </div>
+                    <button onClick={() => handleDeleteRelative(r.id)} style={{ background:'none', border:'none', color:'#C2466A', fontSize:12, fontWeight:700, cursor:'pointer' }}>{tr('Retirer', 'Remove', 'إزالة')}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <input value={relForm.name} onChange={(e) => setRelForm((f) => ({ ...f, name: e.target.value }))} placeholder={tr('Nom du proche', 'Family member name', 'اسم القريب')}
+                style={{ flex:'1 1 140px', minWidth:120, height:42, boxSizing:'border-box', border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 12px', fontSize:13, color:DARK, fontFamily:'inherit' }} />
+              <select value={relForm.relation} onChange={(e) => setRelForm((f) => ({ ...f, relation: e.target.value }))}
+                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }}>
+                {['Enfant','Parent','Conjoint(e)','Autre'].map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <input type="date" value={relForm.dob} onChange={(e) => setRelForm((f) => ({ ...f, dob: e.target.value }))}
+                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }} />
+              <button onClick={handleAddRelative} disabled={relBusy}
+                style={{ background:G, color:'#fff', border:'none', borderRadius:10, padding:'0 18px', height:42, fontSize:13, fontWeight:700, cursor:'pointer', opacity:relBusy?0.6:1 }}>
+                {relBusy ? '…' : '+ ' + tr('Ajouter', 'Add', 'إضافة')}
+              </button>
+            </div>
+          </div>
+
           {/* Notifications — derived from the patient's real appointments */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
               <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Notifications', 'Notifications', 'الإشعارات')}</h2>
+              {pushSupported() && pushSt !== 'unsupported' && (
+                <button onClick={togglePush} disabled={pushSt === 'denied'}
+                  title={pushSt === 'denied' ? tr('Notifications bloquées dans le navigateur', 'Notifications blocked in the browser', 'الإشعارات محظورة في المتصفح') : ''}
+                  style={{ background: pushSt === 'on' ? '#E7F6EE' : '#fff', color: pushSt === 'on' ? '#0E7C52' : MUT, border:`1px solid ${pushSt === 'on' ? '#CDE7DA' : BORDER}`, borderRadius:9, padding:'6px 12px', fontSize:12, fontWeight:700, cursor: pushSt === 'denied' ? 'not-allowed' : 'pointer', opacity: pushSt === 'denied' ? 0.5 : 1 }}>
+                  {pushSt === 'on' ? '🔔 ' + tr('Activées', 'Enabled', 'مفعّلة') : '🔕 ' + tr('Activer sur cet appareil', 'Enable on this device', 'تفعيل على هذا الجهاز')}
+                </button>
+              )}
               {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}
             </div>
             {realNotifs.length === 0 ? (
@@ -513,6 +593,7 @@ export default function PatientAccount() {
                       </div>
                       <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{(state.lang === 'ar' ? STATUS_AR : state.lang === 'en' ? STATUS_EN : STATUS_FR)[a.status] || a.status}</span>
                     </div>
+                    {a.forName && <div style={{ fontSize:12, color:'#0E7C52', fontWeight:700, marginBottom:2 }}>👤 {tr('Pour', 'For', 'لـ')} : {a.forName}</div>}
                     <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
                     {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginTop:4 }}>

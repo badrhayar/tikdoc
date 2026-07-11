@@ -131,7 +131,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
 
   // ── Record payment on completion (terminé) — amount collected + method ───────
   const [payModal, setPayModal] = useState(null); // { id, amount, method, note, isLocal }
-  const openPay = (appt) => setPayModal({ id: appt.id, amount: String(appt.fee || ''), method: 'cash', note: appt.consultNote || '', isLocal: isLocal(appt.id) });
+  const openPay = (appt) => setPayModal({ id: appt.id, amount: String(appt.fee || ''), method: 'cash', note: appt.consultNote || '', followupMonths: 0, isLocal: isLocal(appt.id) });
   const recordPayment = async () => {
     const p = payModal; if (!p) return;
     const amount = Number(p.amount) || 0;
@@ -155,7 +155,10 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       return;
     }
     try {
-      await markAppointmentPaid(p.id, { amount, method: p.method, consultNote: note });
+      const followupOn = p.followupMonths > 0
+        ? (() => { const d = new Date(); d.setMonth(d.getMonth() + p.followupMonths); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()
+        : null;
+      await markAppointmentPaid(p.id, { amount, method: p.method, consultNote: note, followupOn });
       // Post-visit email: thank-you + "laissez un avis" — feeds the doctor's
       // public rating (fire-and-forget; guests without email are skipped server-side).
       notifyApptEmail(p.id, 'completed');
@@ -533,6 +536,20 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                 rows={3}
                 style={{ width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 13.5, boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
               />
+              {/* Rappel de suivi — turns one visit into a recurring relationship */}
+              {!payModal.isLocal && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Rappel de suivi <span style={{ fontWeight: 400 }}>(le patient sera invité à reprendre rendez-vous)</span></label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[[0, 'Aucun'], [1, '1 mois'], [3, '3 mois'], [6, '6 mois'], [12, '12 mois']].map(([m, lbl]) => (
+                      <button key={m} onClick={() => setPayModal({ ...payModal, followupMonths: m })}
+                        style={{ border: `1.5px solid ${payModal.followupMonths === m ? PRIMARY : BORDER}`, background: payModal.followupMonths === m ? '#E7F6EE' : '#fff', color: payModal.followupMonths === m ? '#0E7C52' : MUTED, borderRadius: 18, padding: '7px 13px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>

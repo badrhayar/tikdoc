@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import PhoneField from '../components/PhoneField';
 import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
-import { createAppointment, guestBookingEnabled, guestBookingStart, guestBookingVerify } from '../lib/api';
+import { createAppointment, guestBookingEnabled, guestBookingStart, guestBookingVerify, fetchRelatives } from '../lib/api';
 import { moroccoToUTCISO } from '../lib/time.js';
 import LangPill from '../components/LangPill';
 
@@ -27,6 +27,17 @@ export default function BookingInfo() {
   const col2 = isMobile ? '1fr' : '1fr 1fr';
   const { info = {}, payMethod = 'cash', selDoc, bookSlot, bookDate, patient, appUser } = state;
   const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
+
+  // "Pour qui est ce rendez-vous ?" — the account holder or one of their proches.
+  const [relatives, setRelatives] = useState([]);
+  const [bookFor, setBookFor] = useState('me');          // 'me' | relative id
+  useEffect(() => {
+    if (!isSupabaseConfigured || !appUser?.id) { setRelatives([]); return; }
+    let active = true;
+    fetchRelatives(appUser.id).then((r) => active && setRelatives(r)).catch(() => {});
+    return () => { active = false; };
+  }, [appUser?.id]);
+  const bookForRel = bookFor === 'me' ? null : relatives.find((r) => r.id === bookFor) || null;
 
   const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
   const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
@@ -130,6 +141,8 @@ export default function BookingInfo() {
           datetime:  iso,
           reason:    selectedMotif,
           notes:     info.notes || '',
+          relativeId:  bookForRel?.id || null,
+          patientName: bookForRel?.full_name || null,
         });
         setState({ lastAppointmentId: appt.id });
         await reloadAppointments();
@@ -240,6 +253,28 @@ export default function BookingInfo() {
         {/* Form card */}
         <div style={{ background: '#fff', borderRadius: 18, padding: 28, border: `1px solid ${BORDER}` }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: DARK, margin: '0 0 24px 0' }}>{tr('Vos informations', 'Your details', 'معلوماتكم')}</h1>
+
+          {/* Pour qui ? — family booking (signed-in accounts with proches) */}
+          {isSupabaseConfigured && appUser && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>{tr('Pour qui est ce rendez-vous ?', 'Who is this appointment for?', 'لمن هذا الموعد؟')}</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[{ id: 'me', full_name: tr('Moi', 'Me', 'أنا'), relation: null }, ...relatives].map((r) => {
+                  const active = bookFor === (r.id === 'me' ? 'me' : r.id);
+                  return (
+                    <button key={r.id} onClick={() => setBookFor(r.id === 'me' ? 'me' : r.id)}
+                      style={{ border: `1.5px solid ${active ? PRIMARY : BORDER}`, background: active ? '#E7F6EE' : '#fff', color: active ? '#0E7C52' : DARK, borderRadius: 20, padding: '8px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      {r.full_name}{r.relation ? <span style={{ fontWeight: 500, color: MUTED }}> · {r.relation}</span> : null}
+                    </button>
+                  );
+                })}
+                <button onClick={() => go('paccount')} title={tr('Gérer mes proches', 'Manage my family', 'إدارة أفراد عائلتي')}
+                  style={{ border: `1.5px dashed ${BORDER}`, background: '#fff', color: MUTED, borderRadius: 20, padding: '8px 15px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  + {tr('Ajouter un proche', 'Add a family member', 'إضافة قريب')}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 2-col grid: name + CIN */}
           <div style={{ display: 'grid', gridTemplateColumns: col2, gap: 16, marginBottom: 16 }}>

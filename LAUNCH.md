@@ -38,6 +38,20 @@ Canal par défaut : **email** (marche dès que `RESEND_API_KEY` est posé, zéro
 Meta). Pour WhatsApp, créer les templates approuvés côté Meta et poser les secrets
 `WHATSAPP_*` (voir l'en-tête de `supabase/functions/send-reminder/index.ts`).
 
+### 1a-bis · Notifications push (optionnel, gratuit)
+
+Canal gratuit sur l'écran d'accueil du patient (rappels J-1, créneau libéré,
+confirmations). Générer une paire de clés VAPID puis poser les secrets :
+
+```bash
+npx web-push generate-vapid-keys
+supabase secrets set VAPID_PUBLIC_KEY=<publicKey> VAPID_PRIVATE_KEY=<privateKey> VAPID_SUBJECT=mailto:support@tabibo.ma
+```
+
+Et côté Vercel : `VITE_VAPID_PUBLIC_KEY=<publicKey>` (même clé publique).
+Redéployer `send-reminder` + le frontend. Sans ces clés, la fonctionnalité
+reste invisible (aucun bouton, aucun envoi).
+
 ### 1b · Réservation sans compte (vérifiée par code) — optionnelle
 
 La fonction `guest-booking` permet aux patients de réserver avec nom + téléphone,

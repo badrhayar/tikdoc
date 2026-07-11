@@ -137,6 +137,27 @@ export async function deleteTimeOff(id) {
   if (error) throw error;
 }
 
+// ── Mes proches (family members the account books for) ─────────────────────
+export async function fetchRelatives(userId) {
+  const { data, error } = await supabase.from('patient_relatives')
+    .select('*').eq('user_id', userId).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addRelative(userId, { fullName, relation = null, dob = null, sex = null }) {
+  const { data, error } = await supabase.from('patient_relatives')
+    .insert({ user_id: userId, full_name: fullName.trim(), relation, dob: dob || null, sex: sex || null })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRelative(id) {
+  const { error } = await supabase.from('patient_relatives').delete().eq('id', id);
+  if (error) throw error;
+}
+
 /** Join the freed-slot waitlist for a doctor + date. Returns 'ok' | 'dup'. */
 export async function joinWaitlist(doctorId, dateISO, patientId) {
   const { error } = await supabase
@@ -228,7 +249,7 @@ async function doctorDefaultFee(doctorId) {
   return f != null ? Number(f) || null : null;
 }
 
-export async function createAppointment({ patientId, doctorId, datetime, reason, notes, fee = null }) {
+export async function createAppointment({ patientId, doctorId, datetime, reason, notes, fee = null, relativeId = null, patientName = null }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
@@ -238,6 +259,9 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
       reason: reason || null,
       notes: notes || null,
       status: 'pending',
+      // Booking for a relative: their name becomes the visit's patient name.
+      relative_id: relativeId,
+      patient_name: patientName,
       // Expected price: caller may pass it; otherwise default to the doctor's fee.
       fee: fee != null ? Number(fee) || null : await doctorDefaultFee(doctorId),
     })
@@ -307,7 +331,11 @@ export function mapAppointment(row, nameById = {}) {
     doctorId: row.doctor_id,
     patientId: row.patient_id,
     doctorName: nameById[row.doctor_id] || 'Médecin',
-    patientName: row.patient?.full_name || row.patient_name || 'Patient',
+    // patient_name is only ever set intentionally (guest booking, or a visit
+    // booked FOR a relative) — when present it IS the patient, so it wins.
+    patientName: row.patient_name || row.patient?.full_name || 'Patient',
+    forName: row.patient_name || null,
+    relativeId: row.relative_id || null,
     patientPhone: row.patient?.phone || row.patient_phone || '',
     patientSex: normSex(row.patient?.sex),
     patientAge: ageFromDob(row.patient?.dob),
@@ -409,7 +437,7 @@ export async function updateAppointmentStatus(id, status) {
  * cancelled/no_show, which stay as-is). amount/method are normalised.
  * @param {object} opts { amount (MAD), method ('cash'|'card'|'wallet') }
  */
-export async function markAppointmentPaid(id, { amount, method, consultNote } = {}) {
+export async function markAppointmentPaid(id, { amount, method, consultNote, followupOn = null } = {}) {
   // Resolve the current status so we never resurrect a cancelled/no_show visit.
   let nextStatus = 'completed';
   const { data: cur } = await supabase.from('appointments').select('status').eq('id', id).maybeSingle();
@@ -417,6 +445,8 @@ export async function markAppointmentPaid(id, { amount, method, consultNote } = 
 
   const patch = {
     paid: true,
+    // Optional recall: the dispatcher invites the patient to rebook that day.
+    followup_on: followupOn || null,
     amount_paid: amount != null ? Number(amount) || 0 : null,
     pay_method: method || null,
     status: nextStatus,
