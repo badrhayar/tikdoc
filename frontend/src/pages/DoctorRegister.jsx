@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS, cityCoord } from '../shared.jsx';
@@ -51,6 +52,23 @@ export default function DoctorRegister() {
     if (isCaptchaEnabled() && !captcha) { setError('Veuillez confirmer que vous n’êtes pas un robot.'); return; }
     setBusy(true);
     try {
+      // Stash the profile payload BEFORE signUp: if email confirmation is on
+      // there is no session yet, and AppContext finishes the registration from
+      // this stash on the doctor's first real login.
+      let sLat, sLng;
+      if (dreg.loc && typeof dreg.loc.lat === 'number') { sLat = dreg.loc.lat; sLng = dreg.loc.lng; }
+      else { [sLat, sLng] = cityCoord(dreg.city); }
+      try {
+        localStorage.setItem('tabibo_pending_dreg', JSON.stringify({
+          profile: {
+            lat: sLat, lng: sLng, specialty: dreg.spec, city: dreg.city,
+            clinicAddress: dreg.address, feeMad: dreg.fee, languages: ['Français', 'Arabe'],
+            cnssCnopss: !!(state.dregCnss || state.dregCnops), teleconsultation: false,
+            bio: '', cnom: dreg.ordre,
+          },
+          notify: { doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre },
+        }));
+      } catch (_) { /* private mode — the direct path below still works */ }
       const res = await authSignUp({
         email: dreg.email.trim(),
         password: dreg.pass,
@@ -91,6 +109,7 @@ export default function DoctorRegister() {
       }
       // Email the admins that a doctor is awaiting review.
       notifyVerification({ type: 'new_registration', doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre });
+      try { localStorage.removeItem('tabibo_pending_dreg'); } catch (_) {}
       // Show the doctor the "pending review" screen.
       setState({
         myDoctor: doctorRow,
@@ -421,8 +440,8 @@ export default function DoctorRegister() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 24 }}>
               <div>
                 <label style={labelStyle}>Mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
-                <input
-                  type="password"
+                <PasswordInput
+                  
                   placeholder="••••••••"
                   value={dreg.pass || ''}
                   onChange={(e) => setDreg('pass', e.target.value)}
@@ -431,8 +450,8 @@ export default function DoctorRegister() {
               </div>
               <div>
                 <label style={labelStyle}>Confirmer le mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
-                <input
-                  type="password"
+                <PasswordInput
+                  
                   placeholder="••••••••"
                   value={dreg.pass2 || ''}
                   onChange={(e) => setDreg('pass2', e.target.value)}
@@ -451,7 +470,9 @@ export default function DoctorRegister() {
             )}
             {needConfirm && (
               <div style={{ background: '#E7F6EE', color: '#138257', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>
-                Compte créé ✓ Confirmez votre email, puis connectez-vous pour finaliser votre profil.
+                Compte créé ✓ Un email de confirmation vient de vous être envoyé — cliquez sur le lien,
+                puis connectez-vous : votre dossier sera transmis automatiquement à notre équipe (réponse sous 24h).
+                Vous pourrez téléverser vos documents depuis votre espace après connexion.
               </div>
             )}
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import PasswordInput from '../../components/PasswordInput';
 import { SPEC_INFO, SPEC_OPTS, CITY_OPTS } from '../../shared.jsx';
 import LocationPicker from '../../components/LocationPicker';
 import { saveDoctorServices, updateDoctorFields, updateMyProfile, uploadAvatar, setMySlug } from '../../lib/api';
@@ -76,6 +77,12 @@ function InputField({ label, value, onChange, type = 'text' }) {
       <label style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>
         {label}
       </label>
+      {type === 'password' ? (
+        <PasswordInput value={value} onChange={e => onChange(e.target.value)} style={{
+          border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px', fontSize: 14,
+          color: DARK, outline: 'none', background: '#fff',
+        }} />
+      ) : (
       <input
         type={type}
         value={value}
@@ -92,6 +99,7 @@ function InputField({ label, value, onChange, type = 'text' }) {
           boxSizing: 'border-box',
         }}
       />
+      )}
     </div>
   );
 }

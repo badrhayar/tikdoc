@@ -20,7 +20,7 @@ const URL_SCREENS = new Set([
   'home', 'search', 'profile', 'confirm', 'pinfo', 'plogin',
   'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
   'docregister', 'admin', 'forgotpw', 'resetpw', 'contact', 'pmessages',
-  'confidentialite', 'rxverify',
+  'confidentialite', 'rxverify', 'verified',
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
   'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff',
 ]);
@@ -64,7 +64,7 @@ const initialState = {
   aboCycle: 'monthly', aboInvoiceOpen: false, aboInvoiceData: null,
   invoiceOpen: false, invoiceRow: null,
   appUser: null, myAppointments: [], authBusy: false, authError: '',
-  myDoctor: null,
+  myDoctor: null, myDoctorLoaded: false,
   // Appointments the doctor adds manually (kept separate so a Supabase refresh
   // of `myAppointments`/`consultations` never wipes them).
   manualAppts: [], manualConsults: [],
@@ -171,13 +171,29 @@ export function AppProvider({ children }) {
       if (u.role === 'doctor') {
         patch.consultations = appts.map(apptToConsultation);
         try {
-          const md = await fetchMyDoctor();
+          let md = await fetchMyDoctor();
+          // Email-confirmation flow: signUp had no session, so the profile row
+          // couldn't be created at registration time. The form was stashed in
+          // localStorage — finish the registration now, on first real login.
+          if (!md) {
+            try {
+              const raw = localStorage.getItem('tabibo_pending_dreg');
+              if (raw) {
+                const pd = JSON.parse(raw);
+                const { createDoctorProfile, notifyVerification } = await import('../lib/api');
+                md = await createDoctorProfile(u.id, pd.profile);
+                notifyVerification({ type: 'new_registration', ...pd.notify });
+                localStorage.removeItem('tabibo_pending_dreg');
+              }
+            } catch (_) { /* stays pending-with-no-row; the gate keeps them out */ }
+          }
           patch.myDoctor = md;
           // Use the doctor's saved services as the app-wide source of truth.
           if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
           // Load the real patient roster (replaces demo data).
           try { if (md?.id) patch.patients = await fetchMyPatients(md.id); } catch (_) {}
         } catch (e) { /* ignore */ }
+        patch.myDoctorLoaded = true;
       } else if (u.role !== 'admin') {
         // A non-doctor account may be a secretary/assistant of a cabinet. RLS
         // (owns_doctor now includes active staff) lets them manage that cabinet.
@@ -310,7 +326,7 @@ export function AppProvider({ children }) {
     // Purge any runtime-cached API data so nothing personal survives on a
     // shared device after logout (the SW also no longer caches API responses).
     try { navigator.serviceWorker?.controller?.postMessage('CLEAR_RUNTIME'); } catch (e) { /* ignore */ }
-    dispatch({ appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home', myDoctor: null, isStaff: false });
+    dispatch({ appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home', myDoctor: null, myDoctorLoaded: false, isStaff: false });
   };
   const reloadAppointments = async () => {
     try {

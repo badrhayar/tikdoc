@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
@@ -128,8 +129,8 @@ export default function DoctorLogin() {
                 Mot de passe oublié ?
               </a>
             </div>
-            <input
-              type="password"
+            <PasswordInput
+              
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
@@ -180,8 +181,8 @@ export default function PatientRegister() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 28 }}>
             <div>
               <label style={labelStyle}>Mot de passe <span style={{ color: '#C2466A' }}>*</span></label>
-              <input
-                type="password"
+              <PasswordInput
+                
                 placeholder="••••••••"
                 value={reg.pass}
                 onChange={(e) => setReg('pass', e.target.value)}
@@ -190,8 +191,8 @@ export default function PatientRegister() {
             </div>
             <div>
               <label style={labelStyle}>Confirmer <span style={{ color: '#C2466A' }}>*</span></label>
-              <input
-                type="password"
+              <PasswordInput
+                
                 placeholder="••••••••"
                 value={reg.pass2 || ''}
                 onChange={(e) => setReg('pass2', e.target.value)}

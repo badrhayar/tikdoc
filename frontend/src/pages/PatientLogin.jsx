@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
 import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { GOOGLE_SVG } from '../shared.jsx';
@@ -124,8 +125,8 @@ export default function PatientLogin() {
               Mot de passe oublié ?
             </a>
           </div>
-          <input
-            type="password"
+          <PasswordInput
+            
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

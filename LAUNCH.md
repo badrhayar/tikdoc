@@ -10,7 +10,8 @@ d'elle-même quand chaque médecin invitera ses propres patients.
 - [ ] `supabase functions deploy` — les 5 fonctions (notify-verification, send-reminder, phone-login, invite-patient, **admin-delete-user**).
 - [ ] Secrets des fonctions posés : `RESEND_API_KEY`, `APP_URL=https://tabibo.ma` (+ WhatsApp `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` si canal WhatsApp).
 - [ ] Resend : domaine `tabibo.ma` vérifié (DNS SPF/DKIM) → les emails partent de `@tabibo.ma`, pas du mode test.
-- [ ] Supabase Auth : **activer l'enforcement CAPTCHA** (Turnstile) + configurer le Site URL `https://tabibo.ma`.
+- [ ] Supabase Auth : **activer l'enforcement CAPTCHA** (Turnstile) + configurer le Site URL `https://tabibo.ma`
+      **et ajouter `https://tabibo.ma/verified` dans Redirect URLs** (sinon les liens de confirmation d'email cassent).
 - [ ] Vercel : `VITE_APP_URL=https://tabibo.ma`, `VITE_SUPABASE_URL/ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_MAPTILER_KEY` en production. Brancher la branche de prod.
 - [ ] **Rappels — activer le cron** (voir §1a) : le job pg_cron existe déjà (migration `reminders_cron`), il ne reste qu'à poser les 2 secrets Vault.
 - [ ] Supabase → Settings → Database : **activer les sauvegardes quotidiennes** (backups).

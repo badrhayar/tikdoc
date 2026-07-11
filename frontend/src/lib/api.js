@@ -896,6 +896,11 @@ export async function adminSetSubscription(doctorId, status) {
 }
 
 /** Fire a verification email (Edge Function). Resolves quietly if unavailable. */
+/** One-time patient welcome email (server guards with users.welcomed_at). */
+export async function notifyWelcome() {
+  try { await notifyVerification({ type: 'welcome' }); } catch (_) { /* best effort */ }
+}
+
 export async function notifyVerification(payload) {
   try {
     const { data, error } = await supabase.functions.invoke('notify-verification', {

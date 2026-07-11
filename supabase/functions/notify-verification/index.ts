@@ -85,11 +85,11 @@ function shell(title: string, body: string) {
     </div></body></html>`;
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
+async function sendEmail(to: string, subject: string, html: string, replyTo?: string | null) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from: FROM, to, subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   const body = await res.text();
   if (!res.ok) console.error("Resend error", body);
@@ -184,6 +184,31 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: recipients.length }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (p.type === "welcome") {
+      // One-time patient welcome. Recipient = the CALLER's own account (never a
+      // body-supplied address); users.welcomed_at makes it strictly once.
+      const me = authz.me as any;
+      if (!me || me.role !== "patient" || !me.email) return json({ ok: true, skipped: "not a patient" });
+      const { data: row } = await admin.from("users").select("welcomed_at, full_name").eq("id", me.id).maybeSingle();
+      if ((row as any)?.welcomed_at) return json({ ok: true, skipped: "already welcomed" });
+      const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
+      const firstName = String((row as any)?.full_name ?? "").split(" ")[0] || "et bienvenue";
+      const body = `
+        <p>Bonjour ${esc(firstName)}, et bienvenue sur <strong>Tabibo</strong> !</p>
+        <p>Votre adresse email est confirmée et votre compte est prêt. Voici ce que vous pouvez faire dès maintenant :</p>
+        <ul style="font-size:14px;line-height:1.9;color:#42504B;padding-left:20px">
+          <li><strong>Réserver un rendez-vous</strong> en ligne, 24h/24 — confirmation immédiate.</li>
+          <li><strong>Ajouter vos proches</strong> (enfants, parents) et réserver pour eux.</li>
+          <li>Recevoir vos <strong>rappels automatiques</strong> pour ne plus jamais oublier un rendez-vous.</li>
+          <li>Retrouver vos <strong>ordonnances et documents</strong> au même endroit.</li>
+        </ul>
+        <p style="margin-top:18px"><a href="${APP_URL}/search" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Trouver un médecin</a></p>
+        <p style="margin-top:18px">Prenez soin de vous,<br/>L'équipe Tabibo</p>`;
+      await sendEmail(me.email, "Bienvenue sur Tabibo — votre compte est prêt", shell("Bienvenue sur Tabibo !", body));
+      await admin.from("users").update({ welcomed_at: new Date().toISOString() }).eq("id", me.id);
+      return json({ ok: true, welcomed: true });
+    }
+
     if (p.type === "payment_declared") {
       // A doctor signalled a transfer → notify admins to validate.
       const { data: admins } = await admin.from("users").select("email").eq("role", "admin");
@@ -202,6 +227,9 @@ Deno.serve(async (req) => {
 
     if (p.type === "decision" && p.doctorEmail) {
       if (!authz.isAdmin) return json({ ok: false, error: "forbidden" }, 403);
+      // "Répondez à cet email" must actually reach a human → reply-to an admin.
+      const { data: adm } = await admin.from("users").select("email").eq("role", "admin").limit(1);
+      const replyTo = (adm?.[0] as any)?.email ?? null;
       if (p.status === "approved") {
         const body = `
           <p>Bonjour Dr. ${esc(p.doctorName)},</p>
@@ -209,7 +237,7 @@ Deno.serve(async (req) => {
           <p>Votre profil est désormais visible par les patients et vous pouvez gérer votre agenda, vos rendez-vous et votre cabinet depuis votre espace.</p>
           <p style="margin-top:18px"><a href="${p.appUrl ?? "https://tabibo.ma"}" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Accéder à mon espace</a></p>
           <p style="margin-top:18px">Bienvenue parmi nous,<br/>L'équipe Tabibo</p>`;
-        await sendEmail(p.doctorEmail, "Votre compte Tabibo a été approuvé ✓", shell("Votre compte est approuvé", body));
+        await sendEmail(p.doctorEmail, "Votre compte Tabibo a été approuvé ✓", shell("Votre compte est approuvé", body), replyTo);
       } else {
         const reason = p.reason ?? "Dossier incomplet";
         const note = p.note ? `<p style="background:#F4F8F5;border-radius:10px;padding:12px 14px;font-size:14px"><strong>Détails :</strong> ${esc(p.note)}</p>` : "";
@@ -220,7 +248,7 @@ Deno.serve(async (req) => {
           ${note}
           <p>Vous pouvez corriger votre dossier et soumettre à nouveau vos documents. Pour toute question, répondez simplement à cet email.</p>
           <p style="margin-top:18px">Cordialement,<br/>L'équipe Tabibo</p>`;
-        await sendEmail(p.doctorEmail, "Mise à jour de votre inscription Tabibo", shell("Inscription non validée", body));
+        await sendEmail(p.doctorEmail, "Mise à jour de votre inscription Tabibo", shell("Inscription non validée", body), replyTo);
       }
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }

@@ -27,6 +27,7 @@ const DoctorRegister = lazy(() => import('./pages/DoctorRegister'));
 const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
 const Admin          = lazy(() => import('./pages/Admin'));
 const DoctorPending  = lazy(() => import('./pages/DoctorPending'));
+const Verified       = lazy(() => import('./pages/Verified'));
 const DoctorBlocked  = lazy(() => import('./pages/DoctorBlocked'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
@@ -60,6 +61,7 @@ const SCREEN_MAP = {
   resetpw:     ResetPassword,
   contact:     Contact,
   pmessages:   PatientMessages,
+  verified:    Verified,
   confidentialite: Confidentialite,
   rxverify:    PrescriptionVerify,
 };
@@ -98,7 +100,11 @@ function AppShell() {
   // blocked / expired subscription → blocked screen.
   const md = state.myDoctor;
   const isDoctor = state.appUser?.role === 'doctor';
-  const notApproved = isDoctor && md && md.verification_status && md.verification_status !== 'approved';
+  // SECURITY: a doctor with NO profile row (interrupted registration) must be
+  // treated as not approved — never default into the cabinet. While the row is
+  // still loading we show the pending screen too (safe direction), swapped for
+  // the cabinet the instant an approved profile arrives.
+  const notApproved = isDoctor && (!md || (md.verification_status && md.verification_status !== 'approved'));
   const sub = isDoctor && md ? subscriptionState(md) : null;
   const blockedDoctor = isDoctor && md && md.verification_status === 'approved' && sub && !sub.canUse;
 

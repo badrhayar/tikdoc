@@ -16,6 +16,9 @@ export async function signUp({ email, password, fullName, phone, role = 'patient
     password,
     options: {
       captchaToken,
+      // Confirmation links land on OUR page (role-aware "email confirmé"),
+      // never on the Supabase default Site URL.
+      emailRedirectTo: `${window.location.origin}/verified`,
       data: { full_name: fullName, phone: phone || null, role, cin_or_inpe: cinOrInpe || null, sex: sex || null, dob: dob || null },
     },
   });

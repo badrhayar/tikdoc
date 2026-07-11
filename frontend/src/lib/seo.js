@@ -43,4 +43,5 @@ export const SCREEN_META = {
   paccount:    ['Mon espace patient', ''],
   pmessages:   ['Mes messages', ''],
   doctor:      ['Espace cabinet', ''],
+  verified:    ['Email confirmé', ''],
 };

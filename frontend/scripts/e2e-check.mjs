@@ -14,7 +14,7 @@ const BASE = `http://localhost:${PORT}`;
 const SCREENS = [
   'home', 'search', 'profile', 'confirm', 'pinfo', 'plogin',
   'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
-  'docregister', 'admin', 'contact', 'pmessages', 'confidentialite',
+  'docregister', 'admin', 'contact', 'pmessages', 'confidentialite', 'verified',
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
   'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff',
 ];

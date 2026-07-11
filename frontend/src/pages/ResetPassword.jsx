@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { updatePassword } from '../lib/auth';
 
@@ -45,10 +46,10 @@ export default function ResetPassword() {
         <p style={{ fontSize: 14, color: MUTED, margin: '0 0 24px' }}>Choisissez un nouveau mot de passe pour votre compte.</p>
 
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 6 }}>Nouveau mot de passe</label>
-        <input type="password" placeholder="••••••••" value={pass} onChange={(e) => setPass(e.target.value)} style={{ ...input, marginBottom: 16 }} />
+        <PasswordInput  placeholder="••••••••" value={pass} onChange={(e) => setPass(e.target.value)} style={{ ...input, marginBottom: 16 }} />
 
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 6 }}>Confirmer</label>
-        <input type="password" placeholder="••••••••" value={pass2} onChange={(e) => setPass2(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} style={{ ...input, marginBottom: 18, borderColor: pass2 && pass2 !== pass ? '#C2466A' : INPUT_BORDER }} />
+        <PasswordInput  placeholder="••••••••" value={pass2} onChange={(e) => setPass2(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} style={{ ...input, marginBottom: 18, borderColor: pass2 && pass2 !== pass ? '#C2466A' : INPUT_BORDER }} />
 
         {error && <div style={{ background: '#FCE7EE', color: '#C2466A', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>{error}</div>}
 
