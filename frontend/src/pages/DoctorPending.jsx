@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CREDENTIAL_DOCS } from '../shared.jsx';
-import { uploadCredential, doctorResubmit, notifyVerification } from '../lib/api';
+import BrandMark from '../components/BrandMark';
+import { uploadCredential, doctorResubmit, notifyVerification, fetchMyCredentialDocs } from '../lib/api';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -19,6 +20,35 @@ export default function DoctorPending() {
   const [resubmit, setResubmit] = useState(false);
   const [docFiles, setDocFiles] = useState({});
   const [busy, setBusy] = useState(false);
+
+  // Does the dossier already contain documents? (The email-confirmation detour
+  // can strand a registration without them — offer to complete it here.)
+  const [docsCount, setDocsCount] = useState(null);
+  useEffect(() => {
+    if (!d?.id) { setDocsCount(null); return; }
+    let active = true;
+    fetchMyCredentialDocs(d.id).then((r) => active && setDocsCount(r.length)).catch(() => active && setDocsCount(null));
+    return () => { active = false; };
+  }, [d?.id]);
+
+  // Upload the selected files without flipping the verification status
+  // (used when the dossier is pending but arrived without documents).
+  const doComplete = async () => {
+    const missing = CREDENTIAL_DOCS.filter((c) => c.required && !docFiles[c.key]);
+    if (missing.length) { setState({ toast: 'Documents obligatoires manquants.', toastShow: true }); return; }
+    if (!state.appUser?.id || !d?.id) return;
+    setBusy(true);
+    try {
+      for (const c of CREDENTIAL_DOCS) {
+        const file = docFiles[c.key];
+        if (file) await uploadCredential({ file, userId: state.appUser.id, doctorId: d.id, docType: c.key });
+      }
+      setDocsCount(Object.values(docFiles).filter(Boolean).length);
+      setState({ toast: 'Documents transmis ✓ — votre dossier est complet.', toastShow: true });
+    } catch (e) {
+      setState({ toast: 'Téléversement échoué : ' + (e?.message || 'erreur'), toastShow: true });
+    } finally { setBusy(false); }
+  };
 
   const doResubmit = async () => {
     const missing = CREDENTIAL_DOCS.filter((c) => c.required && !docFiles[c.key]);
@@ -52,7 +82,7 @@ export default function DoctorPending() {
     <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', padding: 22 }}>
       <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 18, padding: 36, maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 14px 40px -18px rgba(13,43,30,0.22)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 22 }}>
-          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 30, height: 30, borderRadius: 8 }} />
+          <BrandMark size={30} />
           <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 19, color: DARK }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
         </div>
 
@@ -119,6 +149,30 @@ export default function DoctorPending() {
             <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: '0 0 20px' }}>
               Merci Dr. {name}. Nos équipes examinent vos documents (CIN, diplômes, inscription à l'Ordre). Vous recevrez un email dès que votre compte sera validé — généralement sous 24 à 48 h.
             </p>
+            {docsCount === 0 && (
+              <div style={{ textAlign: 'start', background: '#FEF9EC', border: '1px solid #F6E0AE', borderRadius: 12, padding: '14px 16px', marginBottom: 18 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: '#9A6510', marginBottom: 4 }}>⚠ Il manque vos documents</div>
+                <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#7A6210', lineHeight: 1.55 }}>
+                  Votre dossier a été transmis sans documents (CIN, diplôme, Ordre…). Téléversez-les maintenant —
+                  notre équipe ne peut pas valider un dossier incomplet.
+                </p>
+                {CREDENTIAL_DOCS.map((c) => {
+                  const f = docFiles[c.key];
+                  return (
+                    <div key={c.key} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: DARK, marginBottom: 5 }}>{c.label} {c.required ? <span style={{ color: '#C2466A' }}>*</span> : <span style={{ color: MUTED, fontWeight: 400 }}>(si spécialiste)</span>}</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 9, border: `1.5px dashed ${f ? PRIMARY : INPUT_BORDER}`, background: f ? '#EAF6F0' : '#fff', borderRadius: 10, padding: '10px 12px', cursor: 'pointer' }}>
+                        <span style={{ flex: 1, fontSize: 12.5, color: f ? DARK : MUTED, fontWeight: f ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f ? f.name : 'Choisir un fichier…'}</span>
+                        <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={(e) => setDocFiles((m) => ({ ...m, [c.key]: e.target.files?.[0] || undefined }))} />
+                      </label>
+                    </div>
+                  );
+                })}
+                <button onClick={doComplete} disabled={busy} style={{ width: '100%', marginTop: 6, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}>
+                  {busy ? 'Envoi…' : 'Envoyer mes documents'}
+                </button>
+              </div>
+            )}
             <button onClick={() => authSignOut()} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Se déconnecter</button>
           </>
         )}

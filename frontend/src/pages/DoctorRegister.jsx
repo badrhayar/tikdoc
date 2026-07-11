@@ -7,6 +7,7 @@ import LocationPicker from '../components/LocationPicker';
 import PhoneField from '../components/PhoneField';
 import Icon from '../components/Icon';
 import { createDoctorProfile, uploadCredential, notifyVerification } from '../lib/api';
+import { savePendingDocs, clearPendingDocs } from '../lib/pendingDocs';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
 
 const PRIMARY = '#16A06A';
@@ -70,6 +71,7 @@ export default function DoctorRegister() {
           notify: { doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre },
         }));
       } catch (_) { /* private mode — the direct path below still works */ }
+      try { await savePendingDocs(docFiles); } catch (_) { /* docs re-uploadable from the pending screen */ }
       const res = await authSignUp({
         email: dreg.email.trim(),
         password: dreg.pass,
@@ -114,6 +116,7 @@ export default function DoctorRegister() {
       // Email the admins that a doctor is awaiting review.
       notifyVerification({ type: 'new_registration', doctorName: dreg.name, doctorEmail: dreg.email, specialty: dreg.spec, city: dreg.city, inpe: dreg.inpe, cnom: dreg.ordre });
       try { localStorage.removeItem('tabibo_pending_dreg'); } catch (_) {}
+      clearPendingDocs();
       // Show the doctor the "pending review" screen.
       setState({
         myDoctor: doctorRow,

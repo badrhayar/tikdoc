@@ -478,10 +478,10 @@ export default function PatientAccount() {
                     {a.forName && <div style={{ fontSize:12, color:'#0E7C52', fontWeight:700, marginBottom:2 }}>👤 {tr('Pour', 'For', 'لـ')} : {a.forName}</div>}
                     <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
                     {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginTop:4 }}>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'stretch', gap:8, marginTop:4 }}>
                       <span style={{ fontSize:11.5, color:G }}>✓ {tr("Annulation gratuite jusqu'à 24h avant le rendez-vous.", 'Free cancellation up to 24h before the visit.', 'إلغاء مجاني حتى 24 ساعة قبل الموعد.')}</span>
                       {a.status !== 'cancelled' && a.status !== 'completed' && (
-                        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                           <button onClick={() => downloadICS(a)} title="Ajouter à votre agenda (Google, Apple, Outlook)" style={{ background:'#EEF3FB', color:'#2C5BA6', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v6M9 17h6"/></svg>
                             {tr('Agenda', 'Calendar', 'التقويم')}

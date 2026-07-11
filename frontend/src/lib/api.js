@@ -137,6 +137,14 @@ export async function deleteTimeOff(id) {
   if (error) throw error;
 }
 
+/** The signed-in doctor's own submitted credential documents. */
+export async function fetchMyCredentialDocs(doctorId) {
+  const { data, error } = await supabase
+    .from('doctor_documents').select('id, doc_type').eq('doctor_id', doctorId);
+  if (error) throw error;
+  return data || [];
+}
+
 /** Patient → doctor account upgrade (same email keeps its history). The role
  *  trigger allows exactly this transition; the doctor space stays admin-gated. */
 export async function upgradeToDoctor(userId) {

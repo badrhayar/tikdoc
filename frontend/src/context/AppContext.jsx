@@ -192,8 +192,19 @@ export function AppProvider({ children }) {
               const raw = localStorage.getItem('tabibo_pending_dreg');
               if (raw) {
                 const pd = JSON.parse(raw);
-                const { createDoctorProfile, notifyVerification } = await import('../lib/api');
+                const { createDoctorProfile, uploadCredential, notifyVerification } = await import('../lib/api');
                 md = await createDoctorProfile(u.id, pd.profile);
+                // The credential FILES were stashed in IndexedDB at registration
+                // (they can't ride in localStorage) — upload them now so the
+                // admin reviews a COMPLETE dossier, not an empty one.
+                try {
+                  const { loadPendingDocs, clearPendingDocs } = await import('../lib/pendingDocs');
+                  const files = await loadPendingDocs();
+                  for (const [docType, file] of Object.entries(files)) {
+                    try { await uploadCredential({ file, userId: u.id, doctorId: md.id, docType }); } catch (_) {}
+                  }
+                  clearPendingDocs();
+                } catch (_) { /* the pending screen offers re-upload */ }
                 notifyVerification({ type: 'new_registration', ...pd.notify });
                 localStorage.removeItem('tabibo_pending_dreg');
               }
