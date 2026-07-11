@@ -15,8 +15,6 @@ const Landing        = lazy(() => import('./pages/Landing'));
 const Search         = lazy(() => import('./pages/Search'));
 const Profile        = lazy(() => import('./pages/Profile'));
 const Confirm        = lazy(() => import('./pages/Confirm'));
-const Invoice        = lazy(() => import('./pages/Invoice'));
-const SMS            = lazy(() => import('./pages/SMS'));
 const BookingInfo    = lazy(() => import('./pages/BookingInfo'));
 const PatientLogin   = lazy(() => import('./pages/PatientLogin'));
 const PatientRegister = lazy(() => import('./pages/PatientRegister'));
@@ -48,8 +46,6 @@ const SCREEN_MAP = {
   search:      Search,
   profile:     Profile,
   confirm:     Confirm,
-  invoice:     Invoice,
-  sms:         SMS,
   pinfo:       BookingInfo,
   plogin:      PatientLogin,
   pregister:   PatientRegister,

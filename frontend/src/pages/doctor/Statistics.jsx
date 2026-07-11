@@ -13,18 +13,17 @@ const HEADER_BG = '#EDF5F0';
 
 const PERIODS = ['7 jours', '30 jours', '3 mois', '1 an'];
 
-const DAILY_VALUES = [850, 1200, 950, 1400, 1050, 800, 200];
 const DAILY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-const DAILY_MAX = Math.max(...DAILY_VALUES);
 
 const I = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+// Icons for the mini-stat tiles (values are computed from real data below).
 const MINI_STATS = [
-  { icon: <svg {...I}><path d="M6 3v6a6 6 0 0 0 12 0V3"/><path d="M4 3h4M16 3h4"/><path d="M18 15a3 3 0 0 1-3 3H9"/><circle cx="6" cy="20" r="2"/></svg>, label: 'Patients fidèles', value: '118' },
-  { icon: <svg {...I}><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 6.9-1z"/></svg>, label: 'Note moyenne', value: '4.8/5' },
-  { icon: <svg {...I}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, label: 'Avis reçus', value: '34' },
-  { icon: <svg {...I}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0 0 20.5 15"/></svg>, label: 'Taux de retour', value: '78%' },
-  { icon: <svg {...I}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>, label: 'Score Tabibo', value: '94/100' },
-  { icon: <svg {...I}><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>, label: 'Téléconsultations', value: '17%' },
+  { icon: <svg {...I}><path d="M6 3v6a6 6 0 0 0 12 0V3"/><path d="M4 3h4M16 3h4"/><path d="M18 15a3 3 0 0 1-3 3H9"/><circle cx="6" cy="20" r="2"/></svg> },
+  { icon: <svg {...I}><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 6.9-1z"/></svg> },
+  { icon: <svg {...I}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+  { icon: <svg {...I}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0 0 20.5 15"/></svg> },
+  { icon: <svg {...I}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg> },
+  { icon: <svg {...I}><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg> },
 ];
 
 const SVC_COLORS = [PRIMARY, '#3B82F6', '#8B5CF6', '#F59E0B', MUTED, '#E11D48'];

@@ -12,7 +12,7 @@ import { spawn } from 'node:child_process';
 const PORT = 4399;
 const BASE = `http://localhost:${PORT}`;
 const SCREENS = [
-  'home', 'search', 'profile', 'confirm', 'invoice', 'sms', 'pinfo', 'plogin',
+  'home', 'search', 'profile', 'confirm', 'pinfo', 'plogin',
   'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
   'docregister', 'admin', 'contact', 'pmessages', 'confidentialite',
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',

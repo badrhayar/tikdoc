@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import LangPill from '../components/LangPill';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, nextLabel, doctorCoords, docDisplayName } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -303,7 +303,6 @@ export default function Search() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
                     <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 16, color: DARK, whiteSpace: 'nowrap' }}>{d.price} <span style={{ fontSize: 12, color: MUTED }}>MAD</span></div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      {!isMobile && <div style={{ fontSize: 12, color: MUTED, textAlign: 'right', marginBottom: 8 }}>Disponible {nextLabel(d.next)}</div>}
                       <button
                         onClick={(e) => { e.stopPropagation(); setState({ selDoc: d.id }); go('profile'); }}
                         style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: isMobile ? '9px 14px' : '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 6px 14px -6px rgba(22,160,106,0.6)' }}

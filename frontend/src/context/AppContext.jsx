@@ -5,30 +5,6 @@ import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { setPageMeta, SCREEN_META } from '../lib/seo.js';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
 
-const DEFAULT_AVAIL = [
-  { on: true,  ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '18:00' }] },
-  { on: true,  ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '18:00' }] },
-  { on: true,  ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '18:00' }] },
-  { on: true,  ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '18:00' }] },
-  { on: true,  ranges: [{ from: '09:00', to: '12:00' }] },
-  { on: false, ranges: [] },
-  { on: false, ranges: [] },
-];
-
-const MOCK_DOCS = [
-  { id: 1, patient: 'Salma Benali',     type: 'Résultat',     name: 'Bilan sanguin Mars 2024',   date: '2024-03-15', url: '#' },
-  { id: 2, patient: 'Omar Tazi',        type: 'Ordonnance',   name: 'Ordonnance HTA',             date: '2024-04-02', url: '#' },
-  { id: 3, patient: 'Fatima Zohra',     type: 'Compte-rendu', name: 'Échographie pelvienne',      date: '2024-04-20', url: '#' },
-  { id: 4, patient: 'Youssef Amrani',   type: 'Résultat',     name: 'Radio thorax',               date: '2024-05-01', url: '#' },
-  { id: 5, patient: 'Nadia Chraibi',    type: 'Ordonnance',   name: 'Ordonnance contraception',   date: '2024-05-10', url: '#' },
-];
-
-const MOCK_PDOCS = [
-  { id: 1, doctor: 'Dr. Leila Marmioui', type: 'Résultat',     name: 'Bilan sanguin Mars 2024',  date: '2024-03-15', url: '#' },
-  { id: 2, doctor: 'Dr. Leila Marmioui', type: 'Ordonnance',   name: 'Ordonnance vitamines',     date: '2024-04-10', url: '#' },
-  { id: 3, doctor: 'Dr. Karim Berrada',  type: 'Compte-rendu', name: 'Consultation cardiologie', date: '2024-05-05', url: '#' },
-];
-
 // Screens that require being signed in (reset to home if there's no session).
 const PROTECTED_SCREENS = new Set([
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
@@ -41,7 +17,7 @@ const restoreScreen = () => { try { return sessionStorage.getItem('tabibo_screen
 // back/forward buttons, refresh and link-sharing all behave like a real site.
 // Must mirror App.jsx's SCREEN_MAP + DOCTOR_SCREENS.
 const URL_SCREENS = new Set([
-  'home', 'search', 'profile', 'confirm', 'invoice', 'sms', 'pinfo', 'plogin',
+  'home', 'search', 'profile', 'confirm', 'pinfo', 'plogin',
   'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
   'docregister', 'admin', 'forgotpw', 'resetpw', 'contact', 'pmessages',
   'confidentialite', 'rxverify',
@@ -83,10 +59,8 @@ const initialState = {
   naMatch: null, naSuggestOpen: false,
   addPatientOpen: false, patientAdded: false,
   newPatient: { name: '', cin: '', phone: '', email: '', dob: '', sex: 'Femme', address: '', city: 'Casablanca', blood: '', allergies: '', chronic: '', insurance: 'CNSS', notes: '' },
-  avail: DEFAULT_AVAIL,
-  prayer: { Dhohr: true, Asr: true, Maghrib: false },
-  docs: MOCK_DOCS, docFilter: 'all', newDoc: { patient: '', type: 'Résultat', name: '' },
-  pdocs: MOCK_PDOCS, pNewDoc: { doctor: 'Dr. Leila Marmioui', type: 'Résultat', name: '' },
+  docs: [], docFilter: 'all', newDoc: { patient: '', type: 'Résultat', name: '' },
+  pdocs: [], pNewDoc: { type: 'Résultat', name: '' },
   aboCycle: 'monthly', aboInvoiceOpen: false, aboInvoiceData: null,
   invoiceOpen: false, invoiceRow: null,
   appUser: null, myAppointments: [], authBusy: false, authError: '',
@@ -103,60 +77,9 @@ const initialState = {
     { id: 4, name: 'Suivi',                 price: 200, duration: '15' },
   ],
   newSvcMotif: 'Consultation générale', newSvcPrice: '',
-  chats: [
-    { id:1, with:'Amina Benali', role:'patient', ci:0, unread:2, lastMsg:"Est-ce que je dois prendre à jeun ?", lastTime:'09:14',
-      messages:[
-        { id:1, from:'patient', type:'text', text:'Bonjour docteur, j\'ai une question concernant mon ordonnance', time:'09:10' },
-        { id:2, from:'doctor',  type:'text', text:'Bonjour Amina, bien sûr, je vous écoute 😊', time:'09:12' },
-        { id:3, from:'patient', type:'text', text:'Est-ce que je dois prendre le médicament à jeun ?', time:'09:14' },
-      ]
-    },
-    { id:2, with:'Youssef El Fassi', role:'patient', ci:1, unread:0, lastMsg:'Merci beaucoup docteur !', lastTime:'08:40',
-      messages:[
-        { id:1, from:'doctor',  type:'text', text:'Bonjour Youssef, vos résultats sont bons', time:'08:35' },
-        { id:2, from:'patient', type:'text', text:'Merci beaucoup docteur !', time:'08:40' },
-      ]
-    },
-    { id:3, with:'Meryem Zouari', role:'patient', ci:2, unread:1, lastMsg:'Je confirme le rendez-vous de demain', lastTime:'hier',
-      messages:[
-        { id:1, from:'patient', type:'text', text:'Bonjour, je voulais confirmer le rendez-vous de demain à 14h', time:'hier' },
-        { id:2, from:'doctor',  type:'text', text:'Oui c\'est bien noté, à demain !', time:'hier' },
-        { id:3, from:'patient', type:'text', text:'Je confirme le rendez-vous de demain', time:'hier' },
-      ]
-    },
-    { id:4, with:'Secrétaire', role:'secretary', ci:3, unread:0, lastMsg:'Planning de demain envoyé', lastTime:'hier',
-      messages:[
-        { id:1, from:'secretary', type:'text', text:'Docteur, j\'ai mis à jour le planning de demain', time:'hier' },
-        { id:2, from:'doctor',    type:'text', text:'Merci, j\'ai vu. Rajoutez Mme Tazi à 16h30 svp', time:'hier' },
-        { id:3, from:'secretary', type:'text', text:'Planning de demain envoyé', time:'hier' },
-      ]
-    },
-    { id:5, with:'Fatima Zahra Alaoui', role:'patient', ci:4, unread:0, lastMsg:'D\'accord merci', lastTime:'lun.',
-      messages:[
-        { id:1, from:'patient', type:'text', text:'Bonjour, puis-je avoir un renouvellement d\'ordonnance ?', time:'lun.' },
-        { id:2, from:'doctor',  type:'text', text:'Oui je vous l\'envoie dans la journée', time:'lun.' },
-        { id:3, from:'patient', type:'text', text:'D\'accord merci', time:'lun.' },
-      ]
-    },
-  ],
+  chats: [],
   activeChatId: 1,
-  consultations: [
-    { id:1,  patient:'Amina Benali',        age:34, sex:'F', service:'Consultation générale', date:'2024-05-15', time:'09:00', amount:300, pay:'Espèces',  status:'Payé',      notes:'' },
-    { id:2,  patient:'Youssef El Fassi',    age:45, sex:'M', service:'Bilan complet',         date:'2024-05-15', time:'10:30', amount:500, pay:'CMI',      status:'Payé',      notes:'' },
-    { id:3,  patient:'Fatima Zahra Alaoui', age:28, sex:'F', service:'Téléconsultation',      date:'2024-05-14', time:'09:00', amount:250, pay:'M-Wallet', status:'Payé',      notes:'' },
-    { id:4,  patient:'Omar Chraibi',        age:52, sex:'M', service:'Suivi',                 date:'2024-05-14', time:'11:00', amount:200, pay:'Espèces',  status:'Payé',      notes:'' },
-    { id:5,  patient:'Leila Tazi',          age:31, sex:'F', service:'Consultation générale', date:'2024-05-13', time:'14:00', amount:300, pay:'CMI',      status:'Payé',      notes:'' },
-    { id:6,  patient:'Hassan Mansouri',     age:67, sex:'M', service:'Bilan complet',         date:'2024-05-13', time:'15:30', amount:500, pay:'Espèces',  status:'Payé',      notes:'' },
-    { id:7,  patient:'Nadia Kettani',       age:24, sex:'F', service:'Téléconsultation',      date:'2024-05-12', time:'08:30', amount:250, pay:'M-Wallet', status:'Payé',      notes:'' },
-    { id:8,  patient:'Khalid Berrada',      age:41, sex:'M', service:'Consultation générale', date:'2024-05-11', time:'10:00', amount:300, pay:'Espèces',  status:'En attente',notes:'' },
-    { id:9,  patient:'Sara Idrissi',        age:36, sex:'F', service:'Suivi',                 date:'2024-05-10', time:'09:30', amount:200, pay:'CMI',      status:'Payé',      notes:'' },
-    { id:10, patient:'Mehdi Alaoui',        age:29, sex:'M', service:'Bilan complet',         date:'2024-05-09', time:'11:00', amount:500, pay:'Espèces',  status:'Payé',      notes:'' },
-    { id:11, patient:'Rim Benjelloun',      age:43, sex:'F', service:'Consultation générale', date:'2024-05-08', time:'14:30', amount:300, pay:'M-Wallet', status:'Payé',      notes:'' },
-    { id:12, patient:'Tarik Squalli',       age:55, sex:'M', service:'Téléconsultation',      date:'2024-05-07', time:'16:00', amount:250, pay:'CMI',      status:'Payé',      notes:'' },
-    { id:13, patient:'Houda Bennis',        age:38, sex:'F', service:'Suivi',                 date:'2024-05-06', time:'09:00', amount:200, pay:'Espèces',  status:'Payé',      notes:'' },
-    { id:14, patient:'Adil Naciri',         age:49, sex:'M', service:'Bilan complet',         date:'2024-05-05', time:'10:30', amount:500, pay:'CMI',      status:'Payé',      notes:'' },
-    { id:15, patient:'Zineb El Amrani',     age:22, sex:'F', service:'Consultation générale', date:'2024-05-04', time:'15:00', amount:300, pay:'Espèces',  status:'En attente',notes:'' },
-  ],
+  consultations: [],
   now: Date.now(),
   patients: DEMO_PATIENTS,
   doctors: [],
