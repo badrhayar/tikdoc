@@ -75,7 +75,7 @@ export default function OnboardingChecklist({ state, go }) {
     <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 22px', marginBottom: 22, boxShadow: '0 1px 3px rgba(13,43,30,0.05)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>Bienvenue sur Tabibo 👋 Lancez votre cabinet en 6 étapes</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>Bienvenue sur Tabibo — lancez votre cabinet en 6 étapes</div>
           <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{doneCount}/{steps.length} terminées — vos patients pourront réserver en ligne dès que tout est prêt.</div>
         </div>
         <button onClick={dismiss} title="Masquer" style={{ background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Masquer</button>

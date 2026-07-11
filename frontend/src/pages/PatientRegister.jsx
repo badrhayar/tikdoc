@@ -5,6 +5,7 @@ import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
 import PhoneField from '../components/PhoneField';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
+import { authErrorMessage } from '../lib/auth';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -21,12 +22,14 @@ export default function PatientRegister() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
   const [needConfirm, setNeedConfirm] = useState(false);
   const [captcha, setCaptcha] = useState('');
   const [captchaKey, setCaptchaKey] = useState(0);
   const resetCaptcha = () => { setCaptcha(''); setCaptchaKey((k) => k + 1); };
 
   const setReg = (field, value) => {
+    if (field === 'email') { setEmailExists(false); setError(''); }
     setState({ reg: { ...state.reg, [field]: value } });
   };
 
@@ -59,8 +62,9 @@ export default function PatientRegister() {
         go('checkemail');         // full-page "check your inbox" step
       }
     } catch (e) {
-      if (e?.code === 'email_exists') { setError('Cet email est déjà enregistré sur Tabibo — connectez-vous ci-dessous (« Se connecter »).'); }
-      else       setError(e?.message || 'Inscription impossible.');
+      const info = authErrorMessage(e);
+      if (info.code === 'email_exists') { setEmailExists(true); setError(''); }
+      else setError(info.message);
       resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
@@ -205,6 +209,18 @@ export default function PatientRegister() {
               )}
             </div>
           </div>
+
+          {emailExists && (
+            <div style={{ background: '#FEF9EC', border: '1px solid #F6E0AE', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: '#9A6510', marginBottom: 6 }}>Cet email a déjà un compte Tabibo</div>
+              <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#7A6210', lineHeight: 1.6 }}>
+                Pas besoin d'en créer un autre — connectez-vous avec cet email pour accéder à votre espace et réserver vos rendez-vous.
+              </p>
+              <button onClick={() => go('plogin')} style={{ background: '#16A06A', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Se connecter
+              </button>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#FCE7EE', color: '#C2466A', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>

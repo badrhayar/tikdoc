@@ -152,7 +152,7 @@ export default function Profile() {
     ) : (
       <button onClick={askWaitlist} disabled={waitState === 'saving'}
         style={{ display: 'block', margin: '10px auto 0', background: '#fff', color: '#0E7C52', border: '1.5px solid #16A06A', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: waitState === 'saving' ? 0.6 : 1 }}>
-        {waitState === 'err' ? tr('Réessayer', 'Retry', 'إعادة المحاولة') : '🔔 ' + tr('M\'avertir si un créneau se libère', 'Alert me if a slot frees up', 'أخبروني إذا شغر موعد')}
+        {waitState === 'err' ? tr('Réessayer', 'Retry', 'إعادة المحاولة') : (<span style={{ display:'inline-flex', alignItems:'center', gap:6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>{tr('M\'avertir si un créneau se libère', 'Alert me if a slot frees up', 'أخبروني إذا شغر موعد')}</span>)}
       </button>
     )
   );

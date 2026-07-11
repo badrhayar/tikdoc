@@ -78,7 +78,29 @@ export default function PatientAccount() {
   };
   // Push notifications opt-in (visible only when VAPID is configured).
   const [pushSt, setPushSt] = useState('unsupported');
-  useEffect(() => { pushState().then(setPushSt); }, []);
+  useEffect(() => {
+    let active = true;
+    pushState().then(async (st) => {
+      if (!active) return;
+      // Notifications ON by default: if this device has never decided
+      // (permission 'default', not yet subscribed), auto-request once so the
+      // patient is opted in without hunting for a button. They can disable it
+      // here anytime. Denied/unsupported are left as-is. Guarded per browser
+      // so a patient who turned it off isn't re-prompted every visit.
+      if (st === 'off' && state.appUser?.id) {
+        let asked = false;
+        try { asked = localStorage.getItem('tabibo_push_asked') === '1'; } catch (_) {}
+        if (!asked && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          try { localStorage.setItem('tabibo_push_asked', '1'); } catch (_) {}
+          const res = await enablePush(state.appUser.id);
+          if (active) setPushSt(res);
+          return;
+        }
+      }
+      setPushSt(st);
+    });
+    return () => { active = false; };
+  }, [state.appUser?.id]);
   const togglePush = async () => {
     if (pushSt === 'on') setPushSt(await disablePush());
     else setPushSt(await enablePush(state.appUser.id));
@@ -475,7 +497,7 @@ export default function PatientAccount() {
                       </div>
                       <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{(state.lang === 'ar' ? STATUS_AR : state.lang === 'en' ? STATUS_EN : STATUS_FR)[a.status] || a.status}</span>
                     </div>
-                    {a.forName && <div style={{ fontSize:12, color:'#0E7C52', fontWeight:700, marginBottom:2 }}>👤 {tr('Pour', 'For', 'لـ')} : {a.forName}</div>}
+                    {a.forName && <div style={{ fontSize:12, color:'#0E7C52', fontWeight:700, marginBottom:2, display:'inline-flex', alignItems:'center', gap:5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{tr('Pour', 'For', 'لـ')} : {a.forName}</div>}
                     <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
                     {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'stretch', gap:8, marginTop:4 }}>
@@ -741,8 +763,13 @@ export default function PatientAccount() {
               {pushSupported() && pushSt !== 'unsupported' && (
                 <button onClick={togglePush} disabled={pushSt === 'denied'}
                   title={pushSt === 'denied' ? tr('Notifications bloquées dans le navigateur', 'Notifications blocked in the browser', 'الإشعارات محظورة في المتصفح') : ''}
-                  style={{ background: pushSt === 'on' ? '#E7F6EE' : '#fff', color: pushSt === 'on' ? '#0E7C52' : MUT, border:`1px solid ${pushSt === 'on' ? '#CDE7DA' : BORDER}`, borderRadius:9, padding:'6px 12px', fontSize:12, fontWeight:700, cursor: pushSt === 'denied' ? 'not-allowed' : 'pointer', opacity: pushSt === 'denied' ? 0.5 : 1 }}>
-                  {pushSt === 'on' ? '🔔 ' + tr('Activées', 'Enabled', 'مفعّلة') : '🔕 ' + tr('Activer sur cet appareil', 'Enable on this device', 'تفعيل على هذا الجهاز')}
+                  style={{ display:'inline-flex', alignItems:'center', gap:6, background: pushSt === 'on' ? '#E7F6EE' : '#fff', color: pushSt === 'on' ? '#0E7C52' : MUT, border:`1px solid ${pushSt === 'on' ? '#CDE7DA' : BORDER}`, borderRadius:9, padding:'6px 12px', fontSize:12, fontWeight:700, cursor: pushSt === 'denied' ? 'not-allowed' : 'pointer', opacity: pushSt === 'denied' ? 0.5 : 1 }}>
+                  {pushSt === 'on' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13.7 21a2 2 0 0 1-3.4 0"/><path d="M18.6 13A17 17 0 0 0 18 8"/><path d="M6 8a6 6 0 0 1 10-4.5"/><path d="M6 8c0 7-3 9-3 9h13"/><path d="M1 1l22 22"/></svg>
+                  )}
+                  {pushSt === 'on' ? tr('Activées', 'Enabled', 'مفعّلة') : tr('Activer sur cet appareil', 'Enable on this device', 'تفعيل على هذا الجهاز')}
                 </button>
               )}
               {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}

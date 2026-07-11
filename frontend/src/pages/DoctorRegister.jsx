@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { authErrorMessage } from '../lib/auth';
 import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
@@ -124,13 +125,13 @@ export default function DoctorRegister() {
       });
       go('doctor');
     } catch (e) {
-      if (e?.code === 'email_exists') {
+      if (authErrorMessage(e).code === 'email_exists') {
         // Same email, existing (patient) account → upgrade path. The doctor
         // form is already stashed; login triggers upgrade + dossier transfer.
         setError('');
         setEmailExists(true);
       } else {
-        setError(e?.message || 'Inscription impossible.');
+        setError(authErrorMessage(e).message);
       }
       resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {

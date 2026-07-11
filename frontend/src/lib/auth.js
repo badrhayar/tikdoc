@@ -10,6 +10,31 @@ import { supabase } from './supabaseClient';
  * picked up by the DB trigger to populate public.users.
  * @returns { user, session }  — session is null if email confirmation is on.
  */
+// Turn ANY auth error into a clean, human French message. Guarantees we never
+// render junk like "{}" or "[object Object]" in the UI, and maps the common
+// Supabase/GoTrue errors to friendly text. Returns { code, message } —
+// code 'email_exists' lets forms show the "connectez-vous" path.
+export function authErrorMessage(e) {
+  const code = e?.code || '';
+  let raw = e?.message ?? e?.error_description ?? e?.msg ?? '';
+  raw = String(raw).trim();
+  if (raw === '{}' || raw === '[object Object]' || raw === 'null' || raw === 'undefined') raw = '';
+  const low = raw.toLowerCase();
+  if (code === 'email_exists' || /already registered|already exists|user already|email.*taken/.test(low))
+    return { code: 'email_exists', message: 'Cet email a déjà un compte Tabibo.' };
+  if (/invalid login credentials/.test(low))
+    return { code: 'bad_credentials', message: 'Email ou mot de passe incorrect.' };
+  if (/password.*(6|short|weak)/.test(low))
+    return { code: 'weak_password', message: 'Le mot de passe doit contenir au moins 6 caractères.' };
+  if (/captcha/.test(low))
+    return { code: 'captcha', message: 'Vérification anti-robot échouée — réessayez.' };
+  if (/rate limit|too many|429/.test(low))
+    return { code: 'rate_limit', message: 'Trop de tentatives — patientez quelques minutes puis réessayez.' };
+  if (/database error|unexpected_failure|saving new user/.test(low))
+    return { code: 'server', message: 'Création du compte impossible pour le moment. Réessayez dans un instant.' };
+  return { code: code || 'unknown', message: raw || 'Une erreur est survenue. Vérifiez vos informations et réessayez.' };
+}
+
 export async function signUp({ email, password, fullName, phone, role = 'patient', cinOrInpe, sex, dob, captchaToken }) {
   const { data, error } = await supabase.auth.signUp({
     email,

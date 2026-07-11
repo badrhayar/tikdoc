@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { authErrorMessage } from '../lib/auth';
 import PasswordInput from '../components/PasswordInput';
 import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
@@ -44,9 +45,7 @@ export default function PatientLogin() {
         else go('paccount');
       }
     } catch (e) {
-      setError(e?.message === 'Invalid login credentials'
-        ? 'Email ou mot de passe incorrect.'
-        : (e?.message || 'Connexion impossible.'));
+      setError(authErrorMessage(e).message);
       resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
