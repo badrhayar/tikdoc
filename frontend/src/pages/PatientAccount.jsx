@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
+import LangPill from '../components/LangPill';
 import QRCode from 'qrcode';
 import { downloadICS, createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, downloadDocument, fetchMyPrescriptions } from '../lib/api';
 import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
@@ -13,6 +14,8 @@ const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replac
 
 const SPEC_LABEL = (s) => SPEC_INFO[s]?.label || s || '';
 const STATUS_FR = { pending: 'En attente', confirmed: 'Confirmé', completed: 'Terminé', cancelled: 'Annulé', no_show: 'Absent' };
+const STATUS_EN = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
+const STATUS_AR = { pending: 'في الانتظار', confirmed: 'مؤكد', completed: 'منتهي', cancelled: 'ملغى', no_show: 'غائب' };
 const STATUS_PILL = {
   pending:   { bg: '#FEF3DC', fg: '#9A6510' },
   confirmed: { bg: '#E7F6EE', fg: '#138257' },
@@ -49,6 +52,7 @@ const DOC_ICONS = { Ordonnance:'clipboard', Résultat:'flask', 'Compte-rendu':'h
 
 export default function PatientAccount() {
   const { state, setState, go, authSignOut } = useApp();
+  const tr = (fr, en, ar) => (state.lang === 'en' ? en : state.lang === 'ar' ? ar : fr);
   const { isMobile } = useViewport();
   const { patient, now, cancelDone, reviewOpen, reviewStars, reviewDoctor, reviewText, reviewDone, pdocs, pNewDoc } = state;
 
@@ -345,20 +349,21 @@ export default function PatientAccount() {
             <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tabib<span style={{ color:G }}>o</span></span>
           </div>
           <div style={{ flex:1, minWidth:8 }} />
+          <LangPill style={{ flexShrink: 0 }} />
           {/* Staff members hop back to the cabinet they work for. */}
           {state.isStaff && (
             <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
-              {!isMobile && 'Espace cabinet'}
+              {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
             </button>
           )}
           <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight:44, display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? 'RDV' : 'Prendre un rendez-vous'}
+            <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
           </button>
           <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
             {isMobile ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            ) : 'Déconnexion'}
+            ) : tr('Déconnexion', 'Sign out', 'تسجيل الخروج')}
           </button>
         </div>
       </header>
@@ -375,7 +380,7 @@ export default function PatientAccount() {
             </button>
           </div>
           <div>
-            <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>Bonjour {firstName}</h1>
+            <h1 style={{ margin:'0 0 3px', fontSize:24, fontWeight:800, color:DARK }}>{tr('Bonjour', 'Hello', 'مرحباً')} {firstName}</h1>
             <p style={{ margin:0, fontSize:14, color:MUT }}>Gérez vos informations et vos rendez-vous.</p>
           </div>
         </div>
@@ -384,7 +389,7 @@ export default function PatientAccount() {
         <div style={{ background:'linear-gradient(135deg,#16A06A,#0E7E52)', borderRadius:18, padding:'22px 24px', marginBottom:22, display:'flex', alignItems:'center', gap:22, flexWrap:'wrap', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px), repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px)' }} />
           <div style={{ position:'relative', flex:1, minWidth: isMobile?140:230 }}>
-            <div style={{ fontSize:11.5, fontWeight:800, color:'#BFF0DA', textTransform:'uppercase', letterSpacing:.6, marginBottom:9 }}>⏱ Prochain rendez-vous</div>
+            <div style={{ fontSize:11.5, fontWeight:800, color:'#BFF0DA', textTransform:'uppercase', letterSpacing:.6, marginBottom:9 }}>⏱ {tr('Prochain rendez-vous', 'Next appointment', 'الموعد القادم')}</div>
             {nextAppt ? (
               <>
                 <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{docDisplayName(nextAppt.doctorName, nextAppt.spec)} · {SPEC_LABEL(nextAppt.spec)}</div>
@@ -392,7 +397,7 @@ export default function PatientAccount() {
               </>
             ) : (
               <>
-                <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>Aucun rendez-vous à venir</div>
+                <div style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{tr('Aucun rendez-vous à venir', 'No upcoming appointments', 'لا توجد مواعيد قادمة')}</div>
                 <div style={{ fontSize:13, color:'#DDF3E9', marginTop:4 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> Réservez votre prochaine consultation en quelques clics.</div>
               </>
             )}
@@ -415,7 +420,7 @@ export default function PatientAccount() {
             <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
             <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
               <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Nom complet</label>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Nom complet', 'Full name', 'الاسم الكامل')}</label>
                 <input value={pf?.full_name || ''} onChange={e => setPF('full_name', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
               </div>
               <div>
@@ -423,7 +428,7 @@ export default function PatientAccount() {
                 <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
               </div>
               <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Téléphone</label>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Téléphone', 'Phone', 'الهاتف')}</label>
                 <PhoneField value={pf?.phone || ''} onChange={v => setPF('phone', v)} />
               </div>
               <div>
@@ -451,14 +456,14 @@ export default function PatientAccount() {
               ))}
             </div>
             <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
-              {pfSaving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+              {pfSaving ? tr('Enregistrement…', 'Saving…', 'جارٍ الحفظ…') : tr('Enregistrer les modifications', 'Save changes', 'حفظ التعديلات')}
             </button>
           </div>
 
           {/* Notifications — derived from the patient's real appointments */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>Notifications</h2>
+              <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Notifications', 'Notifications', 'الإشعارات')}</h2>
               {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}
             </div>
             {realNotifs.length === 0 ? (
@@ -487,12 +492,12 @@ export default function PatientAccount() {
           <div style={{ display:'flex', flexDirection:'column', gap:22, minWidth:0 }}>
             {/* Upcoming */}
             <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
-              <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>Mes rendez-vous</h2>
+              <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>{tr('Mes rendez-vous', 'My appointments', 'مواعيدي')}</h2>
               {upcoming.length === 0 && (
                 <div style={{ border:`1px dashed ${BORDER_STRONG}`, borderRadius:13, padding:'22px 14px', textAlign:'center', color:MUT, fontSize:13 }}>
-                  Aucun rendez-vous à venir.
+                  {tr('Aucun rendez-vous à venir.', 'No upcoming appointments.', 'لا توجد مواعيد قادمة.')}
                   <div style={{ marginTop:10 }}>
-                    <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700 }}>Prendre un rendez-vous</button>
+                    <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700 }}>{tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}</button>
                   </div>
                 </div>
               )}
@@ -506,24 +511,24 @@ export default function PatientAccount() {
                         <div style={{ fontSize:14, fontWeight:700, color:DARK }}>{docDisplayName(a.doctorName, a.spec)}</div>
                         <div style={{ fontSize:12, color:G, fontWeight:600 }}>{SPEC_LABEL(a.spec)}</div>
                       </div>
-                      <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{STATUS_FR[a.status] || a.status}</span>
+                      <span style={{ fontSize:11.5, fontWeight:700, color:pill.fg, background:pill.bg, padding:'4px 10px', borderRadius:99 }}>{(state.lang === 'ar' ? STATUS_AR : state.lang === 'en' ? STATUS_EN : STATUS_FR)[a.status] || a.status}</span>
                     </div>
                     <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:2 }}><Icon name="calendar" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {fmtDate(a.datetime)} · {fmtTime(a.datetime)}</div>
                     {a.clinic && <div style={{ fontSize:12.5, color:'#5A6B65', marginBottom:11 }}><Icon name="pin" size={13} style={{ display:'inline', verticalAlign:'-2px', marginInlineEnd:4 }} /> {a.clinic}, {a.city}</div>}
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginTop:4 }}>
-                      <span style={{ fontSize:11.5, color:G }}>✓ Annulation gratuite jusqu'à 24h avant le rendez-vous.</span>
+                      <span style={{ fontSize:11.5, color:G }}>✓ {tr("Annulation gratuite jusqu'à 24h avant le rendez-vous.", 'Free cancellation up to 24h before the visit.', 'إلغاء مجاني حتى 24 ساعة قبل الموعد.')}</span>
                       {a.status !== 'cancelled' && a.status !== 'completed' && (
                         <div style={{ display:'flex', gap:8, flexShrink:0 }}>
                           <button onClick={() => downloadICS(a)} title="Ajouter à votre agenda (Google, Apple, Outlook)" style={{ background:'#EEF3FB', color:'#2C5BA6', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v6M9 17h6"/></svg>
-                            Agenda
+                            {tr('Agenda', 'Calendar', 'التقويم')}
                           </button>
                           <button onClick={() => setState({ teleRoom: `tabibo-appt-${a.id}` })} style={{ background:'#E7F6EE', color:'#138257', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                            Téléconsultation
+                            {tr('Téléconsultation', 'Teleconsultation', 'استشارة عن بُعد')}
                           </button>
                           <button onClick={() => cancelMyAppt(a.id)} style={{ background:'#FCE7EE', color:'#C2466A', border:'none', borderRadius:8, padding:'7px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                            Annuler
+                            {tr('Annuler', 'Cancel', 'إلغاء')}
                           </button>
                         </div>
                       )}
@@ -535,9 +540,9 @@ export default function PatientAccount() {
 
             {/* Past appointments */}
             <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
-              <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>Rendez-vous passés</h2>
+              <h2 style={{ margin:'0 0 14px', fontSize:16, fontWeight:800, color:DARK }}>{tr('Rendez-vous passés', 'Past appointments', 'المواعيد السابقة')}</h2>
               {past.length === 0 ? (
-                <div style={{ fontSize:13, color:MUT, padding:'8px 2px' }}>Aucun rendez-vous passé pour le moment.</div>
+                <div style={{ fontSize:13, color:MUT, padding:'8px 2px' }}>{tr('Aucun rendez-vous passé pour le moment.', 'No past appointments yet.', 'لا توجد مواعيد سابقة بعد.')}</div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:0, borderRadius:11, overflow:'hidden', border:`1px solid ${BORDER_STRONG}` }}>
                   {past.map((p, i) => {
@@ -552,7 +557,7 @@ export default function PatientAccount() {
                           <div style={{ fontSize:12, color:MUT }}>{SPEC_LABEL(p.spec)} · {fmtDate(p.datetime)}</div>
                         </div>
                         <button onClick={() => setState({ reviewOpen:true, reviewDoctor:p.doctorName, reviewApptId:p.id, reviewStars:5, reviewText:'' })} style={{ background:'#F4F8F5', color:DARK, border:'none', cursor:'pointer', padding:'8px 12px', borderRadius:8, fontSize:12, fontWeight:700, flexShrink:0 }}>
-                          Laisser un avis
+                          {tr('Laisser un avis', 'Leave a review', 'اترك رأيك')}
                         </button>
                       </div>
                     );
@@ -590,7 +595,7 @@ export default function PatientAccount() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
                 <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK, display:'flex', alignItems:'center', gap:8 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A06A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>
-                  Mes ordonnances
+                  {tr('Mes ordonnances', 'My prescriptions', 'وصفاتي الطبية')}
                 </h2>
                 <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{myRx.length}</span>
               </div>
@@ -626,10 +631,10 @@ export default function PatientAccount() {
             {/* Documents */}
             <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-                <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>Mes documents</h2>
+                <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Mes documents', 'My documents', 'مستنداتي')}</h2>
                 <span style={{ fontSize:11, fontWeight:700, color:'#3B6FB0', background:'#E8F1FC', padding:'3px 9px', borderRadius:99 }}>Sécurisé</span>
               </div>
-              <p style={{ margin:'0 0 14px', fontSize:12.5, color:MUT, lineHeight:1.5 }}>Ordonnances, résultats et factures échangés avec vos médecins.</p>
+              <p style={{ margin:'0 0 14px', fontSize:12.5, color:MUT, lineHeight:1.5 }}>{tr('Ordonnances, résultats et factures échangés avec vos médecins.', 'Prescriptions, results and invoices exchanged with your doctors.', 'وصفات ونتائج وفواتير متبادلة مع أطبائكم.')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:9, marginBottom:16 }}>
                 {(pdocs || []).map((d, i) => {
                   const isIn = d.dir === 'in';
@@ -654,7 +659,7 @@ export default function PatientAccount() {
                 })}
               </div>
               <div style={{ borderTop:'1px solid #F0F3F2', paddingTop:14 }}>
-                <div style={{ fontSize:12.5, fontWeight:800, color:DARK, marginBottom:10 }}>Envoyer un document à mon médecin</div>
+                <div style={{ fontSize:12.5, fontWeight:800, color:DARK, marginBottom:10 }}>{tr('Envoyer un document à mon médecin', 'Send a document to my doctor', 'إرسال مستند إلى طبيبي')}</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
                   <select value={pNewDoc?.doctorId || visitedDocs[0]?.id || ''} onChange={e => setState({ pNewDoc: { ...pNewDoc, doctorId: e.target.value } })} style={{ width:'100%', padding:'10px 12px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13, background:'#F8FBF9', outline:'none', cursor:'pointer' }}>
                     {visitedDocs.length === 0 && <option value="">Aucun médecin — prenez un rendez-vous</option>}
@@ -671,7 +676,7 @@ export default function PatientAccount() {
                     </button>
                   </div>
                   <button onClick={sendDoc} disabled={docBusy || !docFile} style={{ background:G, color:'#fff', border:'none', cursor: (docBusy || !docFile) ? 'default' : 'pointer', opacity: (docBusy || !docFile) ? 0.6 : 1, padding:11, borderRadius:10, fontSize:13.5, fontWeight:700 }}>
-                    {docBusy ? 'Envoi…' : 'Envoyer le document'}
+                    {docBusy ? tr('Envoi…', 'Sending…', 'جارٍ الإرسال…') : tr('Envoyer le document', 'Send the document', 'إرسال المستند')}
                   </button>
                 </div>
               </div>
@@ -797,7 +802,7 @@ export default function PatientAccount() {
               value={patientMsgInput}
               onChange={e => setPatientMsgInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMsg()}
-              placeholder="Envoyer un message à votre médecin…"
+              placeholder={tr('Envoyer un message à votre médecin…', 'Send a message to your doctor…', 'أرسلوا رسالة إلى طبيبكم…')}
               style={{ flex:1, minWidth:0, background:BG, border:`1px solid ${BORDER_STRONG}`, borderRadius:20, padding:'9px 14px', fontSize:13, outline:'none' }}
             />
             <button
@@ -814,7 +819,7 @@ export default function PatientAccount() {
       {reviewOpen && (
         <div style={{ position:'fixed', inset:0, background:'rgba(21,49,74,.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:24, zIndex:60 }}>
           <div style={{ background:'#fff', borderRadius:18, padding:30, maxWidth:400, width:'100%', boxShadow:'0 24px 60px rgba(21,49,74,.28)', animation:'saPop .3s ease' }}>
-            <div style={{ fontSize:12, fontWeight:700, color:G, textTransform:'uppercase', letterSpacing:.5, marginBottom:6 }}>Laisser un avis</div>
+            <div style={{ fontSize:12, fontWeight:700, color:G, textTransform:'uppercase', letterSpacing:.5, marginBottom:6 }}>{tr('Laisser un avis', 'Leave a review', 'اترك رأيك')}</div>
             <h2 style={{ margin:'0 0 4px', fontSize:19, fontWeight:800, color:DARK }}>{reviewDoctor}</h2>
             <p style={{ margin:'0 0 18px', fontSize:13, color:MUT }}>Votre avis aide les autres patients à choisir.</p>
             <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:18 }}>

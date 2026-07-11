@@ -702,6 +702,49 @@ export async function getCredentialUrl(path) {
 }
 
 /** Admin: doctors awaiting review (or filtered by status), with their user + docs. */
+/** Admin: recent client errors (last 7 days, newest first). */
+export async function fetchClientErrors(limit = 50) {
+  const since = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const { data, error } = await supabase.from('client_errors')
+    .select('*').gte('created_at', since)
+    .order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function clearClientErrors() {
+  const { error } = await supabase.from('client_errors').delete()
+    .lt('created_at', new Date().toISOString());
+  if (error) throw error;
+}
+
+/** Admin: per-doctor activation signals — the number that predicts renewals.
+ *  hours configured? photo? personal link? how many bookings received? */
+export async function fetchActivationStats() {
+  const { data: docs, error } = await supabase
+    .from('doctors')
+    .select('id, slug, specialty, city, subscription_status, blocked, trial_ends_at, billing_cycle, period_start, current_period_end, created_at, services, user:users!doctors_user_id_fkey(full_name, email, phone, avatar_url)')
+    .eq('verification_status', 'approved')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const ids = (docs || []).map((d) => d.id);
+  if (!ids.length) return [];
+  const [avail, appts] = await Promise.all([
+    supabase.from('availability').select('doctor_id').in('doctor_id', ids),
+    supabase.from('appointments').select('doctor_id, status').in('doctor_id', ids),
+  ]);
+  const hasHours = new Set((avail.data || []).map((r) => r.doctor_id));
+  const bookings = {};
+  (appts.data || []).forEach((a) => { bookings[a.doctor_id] = (bookings[a.doctor_id] || 0) + 1; });
+  return (docs || []).map((d) => ({
+    ...d,
+    hasHours: hasHours.has(d.id),
+    hasSlug: !!d.slug,
+    hasPhoto: !!d.user?.avatar_url,
+    bookings: bookings[d.id] || 0,
+  }));
+}
+
 export async function fetchDoctorsForReview(status = null) {
   // `doctors` has two FKs to users (user_id, reviewed_by) → disambiguate the embed.
   let q = supabase

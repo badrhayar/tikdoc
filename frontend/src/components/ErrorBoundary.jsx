@@ -1,3 +1,4 @@
+import { reportClientError } from '../lib/monitor.js';
 import { Component } from 'react';
 
 /**
@@ -17,6 +18,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
+    try { reportClientError(error?.message || 'ErrorBoundary', error?.stack); } catch (_) {}
     // eslint-disable-next-line no-console
     console.error('Tabibo UI error:', error, info?.componentStack);
   }

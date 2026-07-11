@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { installErrorMonitor } from './lib/monitor.js'
 import './index.css'
 import App from './App.jsx'
 
@@ -45,6 +46,7 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 try {
+  installErrorMonitor();
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <App />

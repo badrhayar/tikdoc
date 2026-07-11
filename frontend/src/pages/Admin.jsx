@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment, adminRenewSubscription, adminStopSubscription } from '../lib/api';
+import { fetchClientErrors, clearClientErrors, fetchActivationStats, fetchAllAccounts, adminDeleteUser, saveAppSettings, fetchAppSettings, fetchDoctorsForReview, reviewDoctor, getCredentialUrl, notifyVerification, sendTestEmail, adminSetBlocked, adminSetSubscription, adminConfirmPayment, adminAddPayment, adminRenewSubscription, adminStopSubscription } from '../lib/api';
 import LocationPicker from '../components/LocationPicker';
 import { initials, CREDENTIAL_DOCS, DECLINE_REASONS, subscriptionState, renewalInfo, fmtPeriod } from '../shared.jsx';
 
@@ -66,6 +66,21 @@ export default function Admin() {
   };
 
   const loadReview = () => fetchDoctorsForReview().then(setReviewList).catch((e) => setState({ toast: 'Chargement échoué : ' + (e?.message || ''), toastShow: true }));
+  // Activation dashboard — sorted least-activated first (those are the calls to make).
+  const [activation, setActivation] = useState(null);
+  useEffect(() => {
+    if (tab !== 'activation' || !isAdmin) return;
+    fetchActivationStats()
+      .then((rows) => setActivation(rows.sort((x, y) =>
+        (x.hasHours + x.hasSlug + x.hasPhoto + (x.bookings > 0)) - (y.hasHours + y.hasSlug + y.hasPhoto + (y.bookings > 0)))))
+      .catch((e) => setState({ toast: 'Chargement échoué : ' + (e?.message || ''), toastShow: true }));
+  }, [tab, isAdmin]);
+  // Client error log (7 days)
+  const [errLog, setErrLog] = useState(null);
+  useEffect(() => {
+    if (tab !== 'errors' || !isAdmin) return;
+    fetchClientErrors().then(setErrLog).catch(() => setErrLog([]));
+  }, [tab, isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -205,7 +220,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BORDER}`, marginBottom: 24 }}>
-          {[['review', 'Vérifications'], ['accounts', 'Comptes'], ['payments', 'Paiements'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)'], ['company', 'Société']].map(([k, label]) => (
+          {[['review', 'Vérifications'], ['activation', 'Activation'], ['accounts', 'Comptes'], ['payments', 'Paiements'], ['subs', 'Abonnements expirés'], ['billing', 'Facturation (RIB)'], ['company', 'Société'], ['errors', 'Erreurs']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '12px 18px', fontSize: 14, fontWeight: 700, color: tab === k ? PRIMARY : MUTED, borderBottom: tab === k ? `2px solid ${PRIMARY}` : '2px solid transparent', marginBottom: -2 }}>
               {label}
               {k === 'review' && pendingCount > 0 && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 800, color: '#fff', background: '#E2748A', borderRadius: 99, padding: '1px 7px' }}>{pendingCount}</span>}
@@ -295,6 +310,96 @@ export default function Admin() {
               </div>
             </div>
           </>
+        )}
+
+        {tab === 'errors' && (
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isMobile ? 14 : 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: DARK }}>Erreurs client (7 jours)</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 12.5, color: MUTED }}>Erreurs JavaScript non gérées, remontées automatiquement depuis les navigateurs des utilisateurs.</p>
+              </div>
+              {errLog?.length > 0 && (
+                <button onClick={() => { clearClientErrors().then(() => setErrLog([])).catch(() => {}); }}
+                  style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, color: '#C2466A', cursor: 'pointer' }}>Vider le journal</button>
+              )}
+            </div>
+            {errLog === null ? (
+              <div style={{ padding: 20, textAlign: 'center', color: MUTED, fontSize: 13 }}>Chargement…</div>
+            ) : errLog.length === 0 ? (
+              <div style={{ marginTop: 16, padding: 20, textAlign: 'center', color: '#0E7C52', fontSize: 13.5, fontWeight: 700, background: '#F0F9F4', borderRadius: 12 }}>✓ Aucune erreur remontée — tout roule.</div>
+            ) : (
+              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {errLog.map((e) => (
+                  <div key={e.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 11, padding: '11px 14px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#C2466A', wordBreak: 'break-word' }}>{e.message}</div>
+                    <div style={{ fontSize: 11.5, color: MUTED, marginTop: 3 }}>
+                      {new Date(e.created_at).toLocaleString('fr-FR')} · écran : {e.app_screen || '?'} · {e.url}
+                    </div>
+                    {e.stack && <pre style={{ margin: '8px 0 0', fontSize: 10.5, color: MUTED, background: BG, borderRadius: 8, padding: '8px 10px', overflowX: 'auto', maxHeight: 120 }}>{e.stack}</pre>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'activation' && (
+          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: isMobile ? 14 : 22 }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: DARK }}>Activation des médecins</h2>
+            <p style={{ margin: '4px 0 16px', fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
+              Un médecin est « activé » quand il a ses horaires, sa photo, son lien partagé et ses premières réservations —
+              c'est ce qui prédit le renouvellement après l'essai. Les moins activés sont en haut : ce sont les appels du jour.
+            </p>
+            {activation === null ? (
+              <div style={{ padding: 20, textAlign: 'center', color: MUTED, fontSize: 13 }}>Chargement…</div>
+            ) : activation.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', color: MUTED, fontSize: 13 }}>Aucun médecin approuvé pour le moment.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: BG }}>
+                      {['Médecin', 'Essai / abonnement', 'Horaires', 'Photo', 'Lien', 'RDV reçus', 'État'].map((h) => (
+                        <th key={h} style={{ textAlign: 'start', padding: '9px 12px', fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activation.map((d) => {
+                      const sub = subscriptionState(d);
+                      const score = (d.hasHours ? 1 : 0) + (d.hasPhoto ? 1 : 0) + (d.hasSlug ? 1 : 0) + (d.bookings > 0 ? 1 : 0);
+                      const Cell = ({ ok, label }) => (
+                        <td style={{ padding: '10px 12px', borderTop: `1px solid ${BORDER}` }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: ok ? '#0E7C52' : '#C2466A' }}>{ok ? '✓' : '✗'}{label ? ` ${label}` : ''}</span>
+                        </td>
+                      );
+                      return (
+                        <tr key={d.id}>
+                          <td style={{ padding: '10px 12px', borderTop: `1px solid ${BORDER}`, minWidth: 170 }}>
+                            <div style={{ fontWeight: 700, color: DARK }}>{d.user?.full_name || '—'}</div>
+                            <div style={{ fontSize: 11.5, color: MUTED }}>{d.city || ''} · {d.user?.phone || d.user?.email || ''}</div>
+                          </td>
+                          <td style={{ padding: '10px 12px', borderTop: `1px solid ${BORDER}`, fontSize: 12, color: sub.tone === 'danger' ? '#C2466A' : sub.tone === 'warn' ? '#9A6510' : '#0E7C52', fontWeight: 700, whiteSpace: 'nowrap' }}>{sub.label}</td>
+                          <Cell ok={d.hasHours} />
+                          <Cell ok={d.hasPhoto} />
+                          <Cell ok={d.hasSlug} />
+                          <td style={{ padding: '10px 12px', borderTop: `1px solid ${BORDER}`, fontWeight: 800, color: d.bookings > 0 ? '#0E7C52' : '#C2466A' }}>{d.bookings}</td>
+                          <td style={{ padding: '10px 12px', borderTop: `1px solid ${BORDER}` }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
+                              background: score === 4 ? '#E3F8EE' : score >= 2 ? '#FEF4DD' : '#FCE7EE',
+                              color: score === 4 ? '#0E7C52' : score >= 2 ? '#9A6510' : '#C2466A' }}>
+                              {score === 4 ? 'Activé' : score >= 2 ? 'En cours' : 'À relancer'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {tab === 'review' && (
