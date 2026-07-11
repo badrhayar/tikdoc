@@ -679,7 +679,10 @@ export default function PatientAccount() {
                 <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
               </div>
             </div>
-            <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
+            <div style={{ display:'flex', alignItems:'center', gap:10, margin:'22px 0 14px' }}>
+              <span style={{ fontSize:11.5, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.6, whiteSpace:'nowrap' }}>{tr('Informations médicales', 'Medical information', 'معلومات طبية')}</span>
+              <span style={{ flex:1, height:1, background:BORDER_STRONG }} />
+            </div>
             <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
                 <div key={field}>

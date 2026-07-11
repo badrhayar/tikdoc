@@ -105,18 +105,33 @@ export default function Search() {
             Tabib<span style={{ color: PRIMARY }}>o</span>
           </span>
         </button>
-        {patient ? (
-          <button onClick={() => go('paccount')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EAF6F0', border: '1px solid #C3E8D8', borderRadius: 24, padding: '6px 14px 6px 8px', cursor: 'pointer' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-              {initials(patient.name)}
+        {(() => {
+          const appUser = state.appUser;
+          const loggedIn = !!appUser || !!patient;
+          const isDoctorUser = appUser?.role === 'doctor' || state.isStaff;
+          const name = patient?.name || appUser?.full_name || '';
+          if (!loggedIn) return (
+            <button onClick={() => go('plogin')} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}>
+              {tr('Se connecter', 'Sign in', 'تسجيل الدخول')}
+            </button>
+          );
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isDoctorUser && (
+                <button onClick={() => go('doctor')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 24, padding: '7px 14px', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
+                  {!isMobile && tr('Espace cabinet', 'Practice', 'العيادة')}
+                </button>
+              )}
+              <button onClick={() => go('paccount')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EAF6F0', border: '1px solid #C3E8D8', borderRadius: 24, padding: '6px 14px 6px 8px', cursor: 'pointer' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                  {initials(name)}
+                </div>
+                {!isMobile && <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>{name?.split(' ')[0] || tr('Compte', 'Account', 'حسابي')}</span>}
+              </button>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>{patient.name?.split(' ')[0]}</span>
-          </button>
-        ) : (
-          <button onClick={() => go('plogin')} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}>
-            {tr('Se connecter', 'Sign in', 'تسجيل الدخول')}
-          </button>
-        )}
+          );
+        })()}
         <LangPill style={{ marginInlineStart: 8 }} />
       </header>
 

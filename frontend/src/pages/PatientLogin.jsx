@@ -32,11 +32,13 @@ export default function PatientLogin() {
     setBusy(true);
     try {
       const u = await authSignIn(email.trim(), password, captcha);
-      // Route by role so admins/doctors don't land on the patient account.
+      // The PATIENT door lands in the PATIENT space — even for doctor accounts
+      // (they hop to their cabinet via the "Espace cabinet" button). Only admins
+      // are redirected to their console. Doctors who want the cabinet directly
+      // use the doctor login door.
       if (u?.role === 'admin') go('admin');
-      else if (u?.role === 'doctor' || u?.isStaff) go('doctor');
       else {
-        // If the patient was mid-booking, send them back to finish it.
+        // If the user was mid-booking, send them back to finish it.
         const dest = state?.postLoginScreen;
         if (dest) { setState({ postLoginScreen: null }); go(dest); }
         else go('paccount');
