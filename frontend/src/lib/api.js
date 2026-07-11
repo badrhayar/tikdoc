@@ -137,6 +137,13 @@ export async function deleteTimeOff(id) {
   if (error) throw error;
 }
 
+/** Patient → doctor account upgrade (same email keeps its history). The role
+ *  trigger allows exactly this transition; the doctor space stays admin-gated. */
+export async function upgradeToDoctor(userId) {
+  const { error } = await supabase.from('users').update({ role: 'doctor' }).eq('id', userId);
+  if (error) throw error;
+}
+
 // ── Mes proches (family members the account books for) ─────────────────────
 export async function fetchRelatives(userId) {
   const { data, error } = await supabase.from('patient_relatives')

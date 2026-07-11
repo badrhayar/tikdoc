@@ -386,7 +386,7 @@ export default function PatientAccount() {
           <div style={{ flex:1, minWidth:8 }} />
           <LangPill style={{ flexShrink: 0 }} />
           {/* Staff members hop back to the cabinet they work for. */}
-          {state.isStaff && (
+          {(state.isStaff || state.appUser?.role === 'doctor') && (
             <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
               {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
@@ -449,125 +449,7 @@ export default function PatientAccount() {
           )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1.15fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
-          {/* Info form */}
-          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
-            <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Nom complet', 'Full name', 'الاسم الكامل')}</label>
-                <input value={pf?.full_name || ''} onChange={e => setPF('full_name', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>CIN</label>
-                <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Téléphone', 'Phone', 'الهاتف')}</label>
-                <PhoneField value={pf?.phone || ''} onChange={v => setPF('phone', v)} />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Email</label>
-                <input value={pf?.email || ''} disabled style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#EEF3F1', color:MUT, outline:'none', boxSizing:'border-box', direction:'ltr' }} />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Sexe</label>
-                <select value={pf?.sex || ''} onChange={e => setPF('sex', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
-                  <option value="">—</option><option value="Femme">Femme</option><option value="Homme">Homme</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Date de naissance</label>
-                <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
-              </div>
-            </div>
-            <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
-              {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
-                <div key={field}>
-                  <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
-                  <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
-                </div>
-              ))}
-            </div>
-            <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
-              {pfSaving ? tr('Enregistrement…', 'Saving…', 'جارٍ الحفظ…') : tr('Enregistrer les modifications', 'Save changes', 'حفظ التعديلات')}
-            </button>
-          </div>
-
-          {/* Mes proches — book for the whole household */}
-          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW, marginBottom:18 }}>
-            <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Mes proches', 'My family', 'أفراد عائلتي')}</h2>
-            <p style={{ margin:'4px 0 14px', fontSize:12.5, color:MUT, lineHeight:1.55 }}>
-              {tr('Réservez pour vos enfants ou vos parents depuis ce compte — au moment de la réservation, choisissez « pour qui » est le rendez-vous.',
-                  'Book for your children or parents from this account — at booking time, choose who the appointment is for.',
-                  'احجزوا لأطفالكم أو والديكم من هذا الحساب — عند الحجز، اختاروا لمن هذا الموعد.')}
-            </p>
-            {relatives.length > 0 && (
-              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
-                {relatives.map((r) => (
-                  <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, border:`1px solid ${BORDER}`, borderRadius:11, padding:'9px 13px' }}>
-                    <div style={{ width:32, height:32, borderRadius:9, background:'#E7F6EE', color:'#138257', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>{initials(r.full_name)}</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{r.full_name}</div>
-                      <div style={{ fontSize:11.5, color:MUT }}>{r.relation || ''}{r.dob ? ` · ${new Date(r.dob).toLocaleDateString('fr-FR')}` : ''}</div>
-                    </div>
-                    <button onClick={() => handleDeleteRelative(r.id)} style={{ background:'none', border:'none', color:'#C2466A', fontSize:12, fontWeight:700, cursor:'pointer' }}>{tr('Retirer', 'Remove', 'إزالة')}</button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              <input value={relForm.name} onChange={(e) => setRelForm((f) => ({ ...f, name: e.target.value }))} placeholder={tr('Nom du proche', 'Family member name', 'اسم القريب')}
-                style={{ flex:'1 1 140px', minWidth:120, height:42, boxSizing:'border-box', border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 12px', fontSize:13, color:DARK, fontFamily:'inherit' }} />
-              <select value={relForm.relation} onChange={(e) => setRelForm((f) => ({ ...f, relation: e.target.value }))}
-                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }}>
-                {['Enfant','Parent','Conjoint(e)','Autre'].map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-              <input type="date" value={relForm.dob} onChange={(e) => setRelForm((f) => ({ ...f, dob: e.target.value }))}
-                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }} />
-              <button onClick={handleAddRelative} disabled={relBusy}
-                style={{ background:G, color:'#fff', border:'none', borderRadius:10, padding:'0 18px', height:42, fontSize:13, fontWeight:700, cursor:'pointer', opacity:relBusy?0.6:1 }}>
-                {relBusy ? '…' : '+ ' + tr('Ajouter', 'Add', 'إضافة')}
-              </button>
-            </div>
-          </div>
-
-          {/* Notifications — derived from the patient's real appointments */}
-          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Notifications', 'Notifications', 'الإشعارات')}</h2>
-              {pushSupported() && pushSt !== 'unsupported' && (
-                <button onClick={togglePush} disabled={pushSt === 'denied'}
-                  title={pushSt === 'denied' ? tr('Notifications bloquées dans le navigateur', 'Notifications blocked in the browser', 'الإشعارات محظورة في المتصفح') : ''}
-                  style={{ background: pushSt === 'on' ? '#E7F6EE' : '#fff', color: pushSt === 'on' ? '#0E7C52' : MUT, border:`1px solid ${pushSt === 'on' ? '#CDE7DA' : BORDER}`, borderRadius:9, padding:'6px 12px', fontSize:12, fontWeight:700, cursor: pushSt === 'denied' ? 'not-allowed' : 'pointer', opacity: pushSt === 'denied' ? 0.5 : 1 }}>
-                  {pushSt === 'on' ? '🔔 ' + tr('Activées', 'Enabled', 'مفعّلة') : '🔕 ' + tr('Activer sur cet appareil', 'Enable on this device', 'تفعيل على هذا الجهاز')}
-                </button>
-              )}
-              {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}
-            </div>
-            {realNotifs.length === 0 ? (
-              <div style={{ fontSize:13, color:MUT, lineHeight:1.5, padding:'6px 2px' }}>
-                Vos rappels et confirmations de rendez-vous apparaîtront ici.
-              </div>
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
-                {realNotifs.map((n, i) => {
-                  const [bg, fg] = tint(n.ci);
-                  return (
-                    <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start' }}>
-                      <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Icon name={n.icon} size={16} /></span>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{n.title}</div>
-                        <div style={{ fontSize:12, color:MUT, lineHeight:1.4 }}>{n.text}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
+        <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1.2fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
           {/* Appointments column */}
           <div style={{ display:'flex', flexDirection:'column', gap:22, minWidth:0 }}>
             {/* Upcoming */}
@@ -762,6 +644,127 @@ export default function PatientAccount() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Profile / proches / notifications column */}
+          <div style={{ display:'flex', flexDirection:'column', gap:22, minWidth:0 }}>
+          {/* Info form */}
+          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
+            <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Nom complet', 'Full name', 'الاسم الكامل')}</label>
+                <input value={pf?.full_name || ''} onChange={e => setPF('full_name', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>CIN</label>
+                <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Téléphone', 'Phone', 'الهاتف')}</label>
+                <PhoneField value={pf?.phone || ''} onChange={v => setPF('phone', v)} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Email</label>
+                <input value={pf?.email || ''} disabled style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#EEF3F1', color:MUT, outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Sexe</label>
+                <select value={pf?.sex || ''} onChange={e => setPF('sex', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
+                  <option value="">—</option><option value="Femme">Femme</option><option value="Homme">Homme</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Date de naissance</label>
+                <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+              </div>
+            </div>
+            <h3 style={{ margin:'20px -24px 12px', fontSize:12, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.5, background:HEADER_BG, borderTop:`1px solid ${BORDER_STRONG}`, borderBottom:`1px solid ${BORDER_STRONG}`, padding:'8px 24px' }}>Informations médicales</h3>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
+              {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
+                <div key={field}>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
+                  <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                </div>
+              ))}
+            </div>
+            <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
+              {pfSaving ? tr('Enregistrement…', 'Saving…', 'جارٍ الحفظ…') : tr('Enregistrer les modifications', 'Save changes', 'حفظ التعديلات')}
+            </button>
+          </div>
+
+          {/* Mes proches — book for the whole household */}
+          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
+            <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Mes proches', 'My family', 'أفراد عائلتي')}</h2>
+            <p style={{ margin:'4px 0 14px', fontSize:12.5, color:MUT, lineHeight:1.55 }}>
+              {tr('Réservez pour vos enfants ou vos parents depuis ce compte — au moment de la réservation, choisissez « pour qui » est le rendez-vous.',
+                  'Book for your children or parents from this account — at booking time, choose who the appointment is for.',
+                  'احجزوا لأطفالكم أو والديكم من هذا الحساب — عند الحجز، اختاروا لمن هذا الموعد.')}
+            </p>
+            {relatives.length > 0 && (
+              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
+                {relatives.map((r) => (
+                  <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, border:`1px solid ${BORDER}`, borderRadius:11, padding:'9px 13px' }}>
+                    <div style={{ width:32, height:32, borderRadius:9, background:'#E7F6EE', color:'#138257', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>{initials(r.full_name)}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13.5, fontWeight:700, color:DARK }}>{r.full_name}</div>
+                      <div style={{ fontSize:11.5, color:MUT }}>{r.relation || ''}{r.dob ? ` · ${new Date(r.dob).toLocaleDateString('fr-FR')}` : ''}</div>
+                    </div>
+                    <button onClick={() => handleDeleteRelative(r.id)} style={{ background:'none', border:'none', color:'#C2466A', fontSize:12, fontWeight:700, cursor:'pointer' }}>{tr('Retirer', 'Remove', 'إزالة')}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <input value={relForm.name} onChange={(e) => setRelForm((f) => ({ ...f, name: e.target.value }))} placeholder={tr('Nom du proche', 'Family member name', 'اسم القريب')}
+                style={{ flex:'1 1 140px', minWidth:120, height:42, boxSizing:'border-box', border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 12px', fontSize:13, color:DARK, fontFamily:'inherit' }} />
+              <select value={relForm.relation} onChange={(e) => setRelForm((f) => ({ ...f, relation: e.target.value }))}
+                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }}>
+                {['Enfant','Parent','Conjoint(e)','Autre'].map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <input type="date" value={relForm.dob} onChange={(e) => setRelForm((f) => ({ ...f, dob: e.target.value }))}
+                style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }} />
+              <button onClick={handleAddRelative} disabled={relBusy}
+                style={{ background:G, color:'#fff', border:'none', borderRadius:10, padding:'0 18px', height:42, fontSize:13, fontWeight:700, cursor:'pointer', opacity:relBusy?0.6:1 }}>
+                {relBusy ? '…' : '+ ' + tr('Ajouter', 'Add', 'إضافة')}
+              </button>
+            </div>
+          </div>
+
+          {/* Notifications — derived from the patient's real appointments */}
+          <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:22, boxShadow:CARD_SHADOW }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+              <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:DARK }}>{tr('Notifications', 'Notifications', 'الإشعارات')}</h2>
+              {pushSupported() && pushSt !== 'unsupported' && (
+                <button onClick={togglePush} disabled={pushSt === 'denied'}
+                  title={pushSt === 'denied' ? tr('Notifications bloquées dans le navigateur', 'Notifications blocked in the browser', 'الإشعارات محظورة في المتصفح') : ''}
+                  style={{ background: pushSt === 'on' ? '#E7F6EE' : '#fff', color: pushSt === 'on' ? '#0E7C52' : MUT, border:`1px solid ${pushSt === 'on' ? '#CDE7DA' : BORDER}`, borderRadius:9, padding:'6px 12px', fontSize:12, fontWeight:700, cursor: pushSt === 'denied' ? 'not-allowed' : 'pointer', opacity: pushSt === 'denied' ? 0.5 : 1 }}>
+                  {pushSt === 'on' ? '🔔 ' + tr('Activées', 'Enabled', 'مفعّلة') : '🔕 ' + tr('Activer sur cet appareil', 'Enable on this device', 'تفعيل على هذا الجهاز')}
+                </button>
+              )}
+              {realNotifs.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:G, background:'#E7F6EE', padding:'3px 9px', borderRadius:99 }}>{realNotifs.length}</span>}
+            </div>
+            {realNotifs.length === 0 ? (
+              <div style={{ fontSize:13, color:MUT, lineHeight:1.5, padding:'6px 2px' }}>
+                Vos rappels et confirmations de rendez-vous apparaîtront ici.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                {realNotifs.map((n, i) => {
+                  const [bg, fg] = tint(n.ci);
+                  return (
+                    <div key={i} style={{ display:'flex', gap:11, alignItems:'flex-start' }}>
+                      <span style={{ width:34, height:34, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Icon name={n.icon} size={16} /></span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:DARK }}>{n.title}</div>
+                        <div style={{ fontSize:12, color:MUT, lineHeight:1.4 }}>{n.text}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           </div>
         </div>
 

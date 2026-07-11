@@ -23,6 +23,13 @@ export async function signUp({ email, password, fullName, phone, role = 'patient
     },
   });
   if (error) throw error;
+  // Supabase obfuscates duplicate signups (fake success with no identity) so
+  // attackers can't probe emails — surface it as a typed error for OUR forms.
+  if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    const dup = new Error('email_exists');
+    dup.code = 'email_exists';
+    throw dup;
+  }
   return data;
 }
 
@@ -83,4 +90,15 @@ export async function getSession() {
 export function onAuthChange(cb) {
   const { data } = supabase.auth.onAuthStateChange((event, session) => cb(event, session));
   return () => data.subscription.unsubscribe();
+}
+
+
+/** Re-send the signup confirmation email (rate-limited by Supabase). */
+export async function resendConfirmation(email) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: `${window.location.origin}/verified` },
+  });
+  if (error) throw error;
 }

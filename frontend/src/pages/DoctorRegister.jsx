@@ -30,6 +30,7 @@ export default function DoctorRegister() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [needConfirm, setNeedConfirm] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
   const [docFiles, setDocFiles] = useState({});   // { docType: File }
   const [captcha, setCaptcha] = useState('');
   const [captchaKey, setCaptchaKey] = useState(0);
@@ -79,7 +80,10 @@ export default function DoctorRegister() {
         captchaToken: captcha,
       });
       if (!res.session || !res.appUser) {
-        setNeedConfirm(true);   // email confirmation required → finish profile after first login
+        // Email confirmation required → dedicated full-page step (an inline
+        // banner was too easy to miss; doctors re-clicked "Créer mon compte").
+        setState({ confirmEmail: dreg.email.trim(), confirmRole: 'doctor' });
+        go('checkemail');
         return;
       }
       let dlat, dlng;
@@ -117,7 +121,14 @@ export default function DoctorRegister() {
       });
       go('doctor');
     } catch (e) {
-      setError(e?.message || 'Inscription impossible.');
+      if (e?.code === 'email_exists') {
+        // Same email, existing (patient) account → upgrade path. The doctor
+        // form is already stashed; login triggers upgrade + dossier transfer.
+        setError('');
+        setEmailExists(true);
+      } else {
+        setError(e?.message || 'Inscription impossible.');
+      }
       resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
@@ -468,11 +479,23 @@ export default function DoctorRegister() {
                 {error}
               </div>
             )}
-            {needConfirm && (
-              <div style={{ background: '#E7F6EE', color: '#138257', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>
-                Compte créé ✓ Un email de confirmation vient de vous être envoyé — cliquez sur le lien,
-                puis connectez-vous : votre dossier sera transmis automatiquement à notre équipe (réponse sous 24h).
-                Vous pourrez téléverser vos documents depuis votre espace après connexion.
+
+            {emailExists && (
+              <div style={{ background: '#FEF9EC', border: '1px solid #F6E0AE', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: '#9A6510', marginBottom: 6 }}>Cet email a déjà un compte Tabibo</div>
+                <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#7A6210', lineHeight: 1.6 }}>
+                  Pas besoin d'en créer un autre : connectez-vous avec ce compte — il sera <strong>transformé en compte médecin</strong>
+                  (vous gardez votre historique patient) et le dossier que vous venez de remplir sera transmis automatiquement à notre équipe.
+                </p>
+                <button onClick={() => {
+                  try {
+                    const pd = JSON.parse(localStorage.getItem('tabibo_pending_dreg') || 'null');
+                    if (pd) localStorage.setItem('tabibo_pending_dreg', JSON.stringify({ ...pd, upgrade: true }));
+                  } catch (_) {}
+                  go('login');
+                }} style={{ background: '#16A06A', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  Se connecter et transformer mon compte
+                </button>
               </div>
             )}
 

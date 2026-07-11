@@ -44,4 +44,5 @@ export const SCREEN_META = {
   pmessages:   ['Mes messages', ''],
   doctor:      ['Espace cabinet', ''],
   verified:    ['Email confirmé', ''],
+  checkemail:  ['Vérifiez votre boîte mail', ''],
 };

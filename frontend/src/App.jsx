@@ -28,6 +28,7 @@ const DoctorApp      = lazy(() => import('./pages/doctor/DoctorApp'));
 const Admin          = lazy(() => import('./pages/Admin'));
 const DoctorPending  = lazy(() => import('./pages/DoctorPending'));
 const Verified       = lazy(() => import('./pages/Verified'));
+const CheckEmail     = lazy(() => import('./pages/CheckEmail'));
 const DoctorBlocked  = lazy(() => import('./pages/DoctorBlocked'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
@@ -62,6 +63,7 @@ const SCREEN_MAP = {
   contact:     Contact,
   pmessages:   PatientMessages,
   verified:    Verified,
+  checkemail:  CheckEmail,
   confidentialite: Confidentialite,
   rxverify:    PrescriptionVerify,
 };

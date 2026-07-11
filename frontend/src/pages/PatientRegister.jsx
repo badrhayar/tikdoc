@@ -55,10 +55,12 @@ export default function PatientRegister() {
         if (dest) { setState({ postLoginScreen: null }); go(dest); }
         else go('paccount');       // logged in immediately (email confirmation off)
       } else {
-        setNeedConfirm(true);     // confirmation email required
+        setState({ confirmEmail: reg.email.trim(), confirmRole: 'patient' });
+        go('checkemail');         // full-page "check your inbox" step
       }
     } catch (e) {
-      setError(e?.message || 'Inscription impossible.');
+      if (e?.code === 'email_exists') { setError('Cet email est déjà enregistré sur Tabibo — connectez-vous ci-dessous (« Se connecter »).'); }
+      else       setError(e?.message || 'Inscription impossible.');
       resetCaptcha();   // tokens are single-use — refresh for the next attempt
     } finally {
       setBusy(false);
@@ -207,11 +209,6 @@ export default function PatientRegister() {
           {error && (
             <div style={{ background: '#FCE7EE', color: '#C2466A', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>
               {error}
-            </div>
-          )}
-          {needConfirm && (
-            <div style={{ background: '#E7F6EE', color: '#138257', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 16 }}>
-              Compte créé ✓ Vérifiez votre boîte mail pour confirmer, puis connectez-vous.
             </div>
           )}
 

@@ -43,9 +43,9 @@ export default function Verified() {
         {isDoctor ? (
           <>
             <p style={{ margin: '0 0 22px', color: MUTED, fontSize: 14, lineHeight: 1.65 }}>
-              {tr("Merci docteur. Votre dossier est transmis à notre équipe : il sera examiné sous 24h et vous recevrez un email dès la décision. Connectez-vous pour compléter vos documents.",
-                  'Thank you, doctor. Your file has been sent to our team: it will be reviewed within 24h and you will receive an email as soon as a decision is made. Sign in to complete your documents.',
-                  'شكراً دكتور. تم إرسال ملفكم إلى فريقنا : ستتم مراجعته خلال 24 ساعة وستتوصلون ببريد إلكتروني فور اتخاذ القرار. سجلوا الدخول لاستكمال وثائقكم.')}
+              {tr("Merci docteur. Votre dossier est transmis à notre équipe : il sera examiné sous 24 à 48h et vous recevrez un email dès la décision. Connectez-vous pour compléter vos documents.",
+                  'Thank you, doctor. Your file has been sent to our team: it will be reviewed within 24–48h and you will receive an email as soon as a decision is made. Sign in to complete your documents.',
+                  'شكراً دكتور. تم إرسال ملفكم إلى فريقنا : ستتم مراجعته خلال 24 إلى 48 ساعة وستتوصلون ببريد إلكتروني فور اتخاذ القرار. سجلوا الدخول لاستكمال وثائقكم.')}
             </p>
             <button onClick={() => go(user ? 'doctor' : 'login')}
               style={{ width: '100%', padding: '13px 0', background: G, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>

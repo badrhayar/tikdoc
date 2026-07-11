@@ -20,7 +20,7 @@ const URL_SCREENS = new Set([
   'home', 'search', 'profile', 'confirm', 'pinfo', 'plogin',
   'pregister', 'paccount', 'about', 'forpatients', 'fordoctors', 'login',
   'docregister', 'admin', 'forgotpw', 'resetpw', 'contact', 'pmessages',
-  'confidentialite', 'rxverify', 'verified',
+  'confidentialite', 'rxverify', 'verified', 'checkemail',
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
   'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff',
 ]);
@@ -155,8 +155,20 @@ export function AppProvider({ children }) {
       return null;
     }
     try {
-      const u = await getCurrentAppUser();
+      let u = await getCurrentAppUser();
       if (!u) { dispatch({ appUser: null }); return null; }
+      // A patient signing in with a pending DOCTOR registration (same email →
+      // same account) upgrades in place; their patient history is kept.
+      if (u.role === 'patient') {
+        try {
+          const pd = JSON.parse(localStorage.getItem('tabibo_pending_dreg') || 'null');
+          if (pd?.upgrade === true) {
+            const { upgradeToDoctor } = await import('../lib/api');
+            await upgradeToDoctor(u.id);
+            u = { ...u, role: 'doctor' };
+          }
+        } catch (_) { /* stays patient; they can retry the doctor signup */ }
+      }
       dispatch({
         appUser: u,
         patient: u.role === 'patient'
