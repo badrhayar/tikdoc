@@ -65,13 +65,19 @@ export default function BookingInfo() {
   // so strip any country-code / leading zero to get the local part.
   useEffect(() => {
     if (!appUser) return;
+    // Only (re)fill when the signed-in identity changes. `forUserId` stamps which
+    // account the form was filled for: same account on re-visit → keep what the
+    // user typed; a DIFFERENT account → overwrite, so account A's name/CIN/phone
+    // can never show up under account B (cross-account leak).
+    if (info?.forUserId === appUser.id) return;
     setState({
       info: {
         ...info,
-        name:  info.name  || appUser.full_name   || '',
-        cin:   info.cin   || appUser.cin_or_inpe || '',
-        phone: info.phone || appUser.phone        || '',
-        email: info.email || appUser.email       || '',
+        forUserId: appUser.id,
+        name:  appUser.full_name   || '',
+        cin:   appUser.cin_or_inpe || '',
+        phone: appUser.phone        || '',
+        email: appUser.email       || '',
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

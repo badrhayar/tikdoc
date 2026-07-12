@@ -11,6 +11,19 @@ node_modules/
 # Build output
 dist/
 
+# Manual backups (scripts/backup.sh output) — data, never commit
+backups/
+
+# TWA / Play Store build artifacts — keystore is PERMANENT, keep it out of git
+twa/*.keystore
+twa/*.jks
+twa/*.aab
+twa/*.apk
+twa/.gradle/
+twa/app/
+twa/android.keystore
+twa/*.keystore.txt
+
 # Supabase CLI local files
 .supabase/
 supabase/.temp/

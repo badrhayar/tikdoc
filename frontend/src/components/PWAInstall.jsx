@@ -101,9 +101,20 @@ export default function PWAInstall() {
           }}
         >
           <BrandMark size={32} />
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#15314A', lineHeight: 1.35 }}>
-            {ar ? 'ثبّت Tabibo على شاشتك الرئيسية' : "Installez Tabibo sur votre écran d'accueil"}
-          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: '#15314A', lineHeight: 1.3 }}>
+              {ar ? 'ثبّت Tabibo على شاشتك الرئيسية' : "Installez Tabibo sur votre écran d'accueil"}
+            </div>
+            {/* Honest heads-up: Android's Play Protect may flag the auto-generated
+                web-app wrapper. It's harmless — set the expectation so the scary
+                system dialog doesn't make people abandon the install. */}
+            <div style={{ fontSize: 11, color: '#6B7B76', lineHeight: 1.35, marginTop: 3, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1.5 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>{ar
+                ? 'إذا ظهر تنبيه أمان، اضغط «تثبيت على أي حال» — هذا عادي لتطبيق ويب وآمن تمامًا.'
+                : 'Si un avertissement s’affiche, appuyez sur « Installer quand même » — c’est normal pour une app web et sans risque.'}</span>
+            </div>
+          </div>
           <button onClick={installAndroid} style={installBtn}>{ar ? 'تثبيت' : 'Installer'}</button>
           <button onClick={dismissAndroid} aria-label={ar ? 'إغلاق' : 'Fermer'} style={{ background: '#F4F6F5', border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 18, color: '#6B7B76', cursor: 'pointer', flexShrink: 0 }}>×</button>
         </div>

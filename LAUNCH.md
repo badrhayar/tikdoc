@@ -14,7 +14,7 @@ d'elle-même quand chaque médecin invitera ses propres patients.
       **et ajouter `https://tabibo.ma/verified` dans Redirect URLs** (sinon les liens de confirmation d'email cassent).
 - [ ] Vercel : `VITE_APP_URL=https://tabibo.ma`, `VITE_SUPABASE_URL/ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_MAPTILER_KEY` en production. Brancher la branche de prod.
 - [ ] **Rappels — activer le cron** (voir §1a) : le job pg_cron existe déjà (migration `reminders_cron`), il ne reste qu'à poser les 2 secrets Vault.
-- [ ] Supabase → Settings → Database : **activer les sauvegardes quotidiennes** (backups).
+- [ ] Sauvegardes : plan Pro Supabase = backups quotidiens automatiques. **Sur le plan gratuit**, utiliser `scripts/backup.sh` (voir §1c) en attendant.
 
 ### 1a · Activer l'envoi des rappels (une seule fois, SQL editor Supabase)
 
@@ -64,6 +64,26 @@ Activation automatique dès que ces secrets existent :
 - `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE_OTP`
   (template Meta de catégorie **Authentication**, corps `{{1}}` = code).
 Sans ces secrets, les patients passent par le compte classique (aucun risque).
+
+### 1c · Sauvegardes manuelles (plan gratuit)
+
+Le plan gratuit n'inclut pas de backups automatiques. `scripts/backup.sh` fait
+un filet de sécurité complet : **dump de la base** (gzip) **+ tous les fichiers
+Storage** (documents, avatars, credentials, chat-media), dans un dossier
+horodaté, en gardant les **7 plus récents** (rotation automatique).
+
+```bash
+cp scripts/.env.example scripts/.env     # puis remplir les 3 valeurs
+./scripts/backup.sh                       # → backups/tabibo-AAAAMMJJ-HHMMSS/
+```
+
+Les 3 valeurs (dans `scripts/.env`, git-ignoré) : `SUPABASE_DB_URL` (Settings →
+Database → Connection string → URI), `SUPABASE_URL` et `SUPABASE_SERVICE_KEY`
+(Settings → API). Lancer une fois par jour (30 s) avant le lancement, ou via une
+tâche cron sur votre poste. **Restauration** — base :
+`gunzip -c backups/<stamp>/db.sql.gz | psql "$SUPABASE_DB_URL"` ; fichiers :
+ré-uploader les dossiers `storage/<bucket>/…`. Passer au plan Pro (backups
+quotidiens + point-in-time) dès que les premiers médecins payants le justifient.
 
 ## 2 · Configuration admin (jour 1, dans la console admin)
 

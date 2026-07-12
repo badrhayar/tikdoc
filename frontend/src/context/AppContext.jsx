@@ -354,7 +354,20 @@ export function AppProvider({ children }) {
     // Purge any runtime-cached API data so nothing personal survives on a
     // shared device after logout (the SW also no longer caches API responses).
     try { navigator.serviceWorker?.controller?.postMessage('CLEAR_RUNTIME'); } catch (e) { /* ignore */ }
-    dispatch({ appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home', myDoctor: null, myDoctorLoaded: false, isStaff: false });
+    dispatch({
+      appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home',
+      myDoctor: null, myDoctorLoaded: false, isStaff: false,
+      // Wipe every form / cache that holds personal data, so nothing from this
+      // account can leak into the next login on a shared device or account switch.
+      info: { name: '', phone: '', email: '', cin: '', motif: 'Consultation générale', notes: '' },
+      reg: { name: '', cin: '', phone: '', email: '', pass: '' },
+      pdocs: [], pNewDoc: { type: 'Résultat', name: '' },
+      newPatient: { name: '', cin: '', phone: '', email: '', dob: '', sex: 'Femme', address: '', city: 'Casablanca', blood: '', allergies: '', chronic: '', insurance: 'CNSS', notes: '' },
+      newAppt: { name: '', phone: '', cin: '', motif: 'Consultation générale', date: '2024-05-16', time: '09:00', notes: '' },
+      naMatch: null,
+      manualAppts: [], manualConsults: [], patients: [], chats: [],
+      bookForRel: null,
+    });
   };
   const reloadAppointments = async () => {
     try {

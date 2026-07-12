@@ -25,6 +25,12 @@ const sugTag = { fontSize: 11, fontWeight: 700, color: '#0E7C52', background: '#
 export default function Landing() {
   const { state, setState, go } = useApp();
   const { lang, langOpen, patient } = state;
+  // Account awareness: a logged-in doctor (or staff) is still "logged in" here,
+  // even though `patient` is null — show their account, not Se connecter/S'inscrire.
+  const appUser = state.appUser;
+  const loggedIn = !!appUser || !!patient;
+  const isDoctorUser = appUser?.role === 'doctor' || state.isStaff;
+  const loggedInName = patient?.name || appUser?.full_name || '';
   const t = I18N[lang] || I18N.fr;
   const dir = t.dir || 'ltr';
   const rtl = dir === 'rtl';
@@ -168,13 +174,21 @@ export default function Landing() {
                 )}
               </div>
 
-              {patient ? (
-                <button onClick={() => go('paccount')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EAF6F0', border: `1px solid #C3E8D8`, borderRadius: 24, padding: '6px 14px 6px 8px', cursor: 'pointer', minHeight: 44 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-                    {initials(patient.name)}
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>{patient.name?.split(' ')[0]}</span>
-                </button>
+              {loggedIn ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {isDoctorUser && (
+                    <button onClick={() => go('doctor')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 24, padding: '7px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 700, minHeight: 44 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
+                      {tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
+                    </button>
+                  )}
+                  <button onClick={() => go('paccount')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EAF6F0', border: `1px solid #C3E8D8`, borderRadius: 24, padding: '6px 14px 6px 8px', cursor: 'pointer', minHeight: 44 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: GRAD, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                      {initials(loggedInName)}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: DARK }}>{loggedInName?.split(' ')[0] || tr('Mon compte', 'My account', 'حسابي')}</span>
+                  </button>
+                </div>
               ) : (
                 <>
                   <button onClick={() => go('plogin')} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK, minHeight: 44 }}>
@@ -191,9 +205,9 @@ export default function Landing() {
           {/* Mobile: hamburger */}
           {isMobile && (
             <div style={{ marginInlineStart: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              {patient && (
+              {loggedIn && (
                 <button onClick={() => go('paccount')} aria-label="Compte" style={{ width: 40, height: 40, borderRadius: '50%', background: GRAD, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
-                  {initials(patient.name)}
+                  {initials(loggedInName)}
                 </button>
               )}
               <button
@@ -237,7 +251,14 @@ export default function Landing() {
 
             <div style={{ height: 1, background: BORDER, margin: '16px 0' }} />
 
-            {!patient && (
+            {loggedIn ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {isDoctorUser && (
+                  <button onClick={() => goMobile('doctor')} style={{ background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 11, padding: '13px', minHeight: 48, cursor: 'pointer', fontSize: 15, fontWeight: 700 }}>{tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}</button>
+                )}
+                <button onClick={() => goMobile('paccount')} style={{ background: GRAD, border: 'none', borderRadius: 11, padding: '13px', minHeight: 48, cursor: 'pointer', fontSize: 15, fontWeight: 700, color: '#fff' }}>{isDoctorUser ? tr('Mon espace patient', 'My patient space', 'فضائي كمريض') : tr('Mon espace', 'My space', 'فضائي')}</button>
+              </div>
+            ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 <button onClick={() => goMobile('plogin')} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 11, padding: '13px', minHeight: 48, cursor: 'pointer', fontSize: 15, fontWeight: 700, color: DARK }}>{t.btnLogin}</button>
                 <button onClick={() => goMobile('pregister')} style={{ background: GRAD, border: 'none', borderRadius: 11, padding: '13px', minHeight: 48, cursor: 'pointer', fontSize: 15, fontWeight: 700, color: '#fff' }}>{t.btnRegister}</button>
