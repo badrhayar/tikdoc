@@ -96,6 +96,13 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const todayCount = allAppts.filter((a) => moDateKeyOf(a.datetime) === todayKey).length;
 
+  // Rendez-vous réservés par les patients mais pas encore confirmés par le
+  // cabinet (aujourd'hui + à venir). Le médecin / la secrétaire les confirme
+  // en un clic depuis la page Rendez-vous.
+  const toConfirm = allAppts
+    .filter((a) => a.status === 'pending' && moDateKeyOf(a.datetime) >= todayKey)
+    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
   // ── "Ma journée" : waiting room + live end-of-day summary ───────────────────
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNowTick(Date.now()), 60000); return () => clearInterval(t); }, []);
@@ -255,6 +262,33 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Rendez-vous à confirmer — booked by patients, awaiting the cabinet's
+          confirmation. One click deep-links to Rendez-vous, filtered on "En attente". */}
+      {toConfirm.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #F6E0AE', borderRadius: 18, boxShadow: CARD_SHADOW, marginBottom: isMobile ? 16 : 26, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: isMobile ? '14px 16px' : '16px 22px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', width: 44, height: 44, borderRadius: 12, background: '#FEF4DD', color: '#9A6510', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span style={{ position: 'absolute', top: -4, insetInlineEnd: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 9, background: '#E2748A', color: '#fff', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>{toConfirm.length}</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: DARK, letterSpacing: '-0.3px' }}>
+                {toConfirm.length} rendez-vous à confirmer
+              </div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {toConfirm.slice(0, 3).map((a) => `${moTime(a.datetime)} ${a.patientName || 'Patient'}`).join('  ·  ')}
+                {toConfirm.length > 3 ? `  +${toConfirm.length - 3}` : ''}
+              </div>
+            </div>
+            <button onClick={() => { setState({ apptTab: 'En attente' }); go('dappts'); }}
+              style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              Confirmer les rendez-vous
+            </button>
+          </div>
         </div>
       )}
 

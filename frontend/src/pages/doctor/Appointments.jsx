@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
@@ -35,9 +35,16 @@ const PAYMENT_CONFIG = {
 const pad = (n) => String(n).padStart(2, '0');
 
 export default function Appointments({ state, setState, go, openNewAppt }) {
-  const [activeTab, setActiveTab] = useState('Tous');
+  // The dashboard's "à confirmer" card can deep-link here pre-filtered.
+  const [activeTab, setActiveTab] = useState(state?.apptTab || 'Tous');
   const [searchQ, setSearchQ] = useState('');
   const { isMobile } = useViewport();
+
+  // Consume the requested filter once, then clear it so a later visit starts on "Tous".
+  useEffect(() => {
+    if (state?.apptTab) setState({ apptTab: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tabs = ['Tous', 'Confirmé', 'En attente', 'Annulé', 'Terminé'];
 

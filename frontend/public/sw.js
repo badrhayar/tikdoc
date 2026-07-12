@@ -2,7 +2,7 @@
    Tabibo service worker
    Bump CACHE_VERSION to force every device to refresh its cache on next visit.
    ───────────────────────────────────────────────────────────────────────────── */
-const CACHE_VERSION = "tabibo-v72";
+const CACHE_VERSION = "tabibo-v73";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
