@@ -5,6 +5,7 @@ import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, SPEC_INFO, SPEC_OPTS, CITY_OPTS, tint, initials, doctorCoords, docDisplayName } from '../shared.jsx';
 import NearbyMap from '../components/NearbyMap';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import Pager, { usePager } from '../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -49,6 +50,9 @@ export default function Search() {
   else if (scSort === 'price_desc') list = [...list].sort((a, b) => b.price - a.price);
 
   const pinDoc = selPin ? doctors.find((d) => d.id === selPin) : null;
+
+  // Result cards page by 10 — the map keeps showing the FULL result set.
+  const listPager = usePager(list, 10);
 
   // Doctors with resolved map coordinates (shared by every map instance).
   const [mapFull, setMapFull] = useState(false);
@@ -281,7 +285,7 @@ export default function Search() {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-            {list.map((d, idx) => {
+            {listPager.items.map((d, idx) => {
               const si = SPEC_INFO[d.spec];
               const [bg, fg] = tint(idx);
               const isSelected = state.selDoc === d.id;
@@ -329,6 +333,7 @@ export default function Search() {
                 </div>
               );
             })}
+            <Pager pager={listPager} lang={state.lang} compact={isMobile} />
           </div>
         </div>
 

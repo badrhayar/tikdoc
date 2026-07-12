@@ -4,6 +4,7 @@ import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
 import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, markInConsultation, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO, moPartsOf } from '../../lib/time.js';
+import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -235,6 +236,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       appt.motif.toLowerCase().includes(searchQ.toLowerCase());
     return matchTab && matchSearch;
   });
+  const pager = usePager(filtered, 10);
 
   return (
     <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -328,7 +330,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((appt, idx) => {
+              {pager.items.map((appt, idx) => {
                 const statusBorder = STATUS_CONFIG[appt.statut]?.border || MUTED;
                 return (
                   <tr
@@ -482,24 +484,15 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 20px', borderTop: `1px solid ${BORDER_STRONG}`, background: HEADER_BG,
-        }}>
-          <span style={{ fontSize: 13, color: MUTED }}>
-            Affichage 1–{filtered.length} sur {rows.length} rendez-vous
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1.5px solid ${BORDER_STRONG}`, background: '#fff', color: DARK, cursor: 'pointer',
-            }}>← Précédent</button>
-            <button style={{
-              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1.5px solid ${PRIMARY}`, background: PRIMARY, color: '#fff', cursor: 'pointer',
-            }}>Suivant →</button>
-          </div>
+        {/* Pagination (real) — arrows on mobile, Précédent/Suivant on desktop */}
+        <div style={{ padding: '4px 20px 14px', borderTop: `1px solid ${BORDER_STRONG}`, background: HEADER_BG }}>
+          {pager.pages > 1 ? (
+            <Pager pager={pager} compact={isMobile} />
+          ) : (
+            <span style={{ display: 'block', paddingTop: 10, fontSize: 13, color: MUTED }}>
+              {filtered.length === 0 ? 'Aucun rendez-vous' : `Affichage 1–${filtered.length} sur ${filtered.length} rendez-vous`}
+            </span>
+          )}
         </div>
       </div>
 

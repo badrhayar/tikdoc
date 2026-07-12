@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { fetchDoctorReviews, replyToReview } from '../../lib/api';
+import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -96,6 +97,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
     fetchDoctorReviews(myDocId, 25).then((r) => active && setMyReviews(r)).catch(() => {});
     return () => { active = false; };
   }, [myDocId]);
+  const reviewsPager = usePager(myReviews, 5);
   const saveReply = async (id) => {
     const text = (replyDraft[id] ?? '').trim();
     setReplySaving(id);
@@ -585,7 +587,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {myReviews.map((r) => {
+            {reviewsPager.items.map((r) => {
               const editing = replyDraft[r.id] !== undefined;
               return (
                 <div key={r.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
@@ -625,6 +627,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
                 </div>
               );
             })}
+            <Pager pager={reviewsPager} compact={isMobile} />
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ import { useViewport } from '../../hooks/useViewport';
 import { updateAppointment, markAppointmentPaid, PAY_METHOD_FROM_FR } from '../../lib/api';
 import { buildReceiptPDF, pdfOpen } from '../../lib/pdf';
 import { moroccoToUTCISO } from '../../lib/time.js';
+import Pager, { usePager } from '../../components/Pager';
 
 const STATUS_TO_ENUM = { 'Payé': 'completed', 'En attente': 'pending', 'Annulé': 'cancelled', 'Terminé': 'completed', 'Absent': 'no_show' };
 
@@ -64,6 +65,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
     if (filterTo && (!c.date || c.date > filterTo)) return false;
     return true;
   });
+  const pager = usePager(filtered, 10);
 
   // KPIs are computed from the FILTERED rows. Money only counts PAID
   // consultations (en attente / annulé contribute 0), and the average basket
@@ -377,7 +379,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row, idx) => {
+            {pager.items.map((row, idx) => {
               const [tintBg, tintFg] = TINTS[idx % 6];
               const isEven = idx % 2 === 1;
               return (
@@ -494,11 +496,15 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
           </tbody>
         </table>
 
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: `1px solid ${BORDER}`, background: '#fff' }}>
-          <span style={{ fontSize: 13, color: MUTED }}>
-            Affichage <strong style={{ color: DARK }}>{filtered.length}</strong> sur <strong style={{ color: DARK }}>{totalCount}</strong> consultations
-          </span>
+        {/* Footer — real pagination when the history is longer than one page */}
+        <div style={{ padding: '4px 20px 14px', borderTop: `1px solid ${BORDER}`, background: '#fff' }}>
+          {pager.pages > 1 ? (
+            <Pager pager={pager} compact={isMobile} />
+          ) : (
+            <span style={{ display: 'block', paddingTop: 10, fontSize: 13, color: MUTED }}>
+              Affichage <strong style={{ color: DARK }}>{filtered.length}</strong> sur <strong style={{ color: DARK }}>{totalCount}</strong> consultations
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -73,10 +73,15 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const docLabel = fullName ? (/^dr/i.test(fullName) ? fullName : `Dr. ${fullName}`) : 'Docteur';
   const dateRaw = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' });
   const dateLabel = dateRaw.charAt(0).toUpperCase() + dateRaw.slice(1);
+  // All "today"/"this month" reckoning is done on the Morocco calendar,
+  // never the device clock.
+  const todayKey = moroccoNow().dateISO;      // 'YYYY-MM-DD' in Morocco
+  const monthKey = todayKey.slice(0, 7);      // 'YYYY-MM'
+  // The dashboard agenda is TODAY's timetable: every appointment of the day
+  // (the list scrolls when it's longer than the card), count in the header.
   const agenda = allAppts
-    .slice()
+    .filter((a) => moDateKeyOf(a.datetime) === todayKey)
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
-    .slice(0, 6)
     .map((a) => {
       return {
         time: moTime(a.datetime),
@@ -85,12 +90,9 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
         status: STATUS_FR[a.status] || a.status,
       };
     });
-  const apptCount = allAppts.length;
+  const apptCount = agenda.length;
 
-  // ── Real KPI values (computed from live data) — all "today"/"this month"
-  //    reckoning is done on the Morocco calendar, never the device clock. ──
-  const todayKey = moroccoNow().dateISO;      // 'YYYY-MM-DD' in Morocco
-  const monthKey = todayKey.slice(0, 7);      // 'YYYY-MM'
+  // ── Real KPI values (computed from live data) ──
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const todayCount = allAppts.filter((a) => moDateKeyOf(a.datetime) === todayKey).length;
 
@@ -279,18 +281,20 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
         <div style={{ flex: 1.2, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 18, overflow: 'hidden', boxShadow: CARD_SHADOW }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: `1px solid ${BORDER_STRONG}` }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15.5, color: DARK, letterSpacing: '-0.3px' }}>Agenda</div>
-              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{apptCount} rendez-vous au total</div>
+              <div style={{ fontWeight: 800, fontSize: 15.5, color: DARK, letterSpacing: '-0.3px' }}>Agenda du jour</div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{apptCount === 0 ? 'Aucun rendez-vous aujourd’hui' : `${apptCount} rendez-vous aujourd’hui`}</div>
             </div>
             <button onClick={() => go('dcal')} style={{ background: '#fff', color: PRIMARY, border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
               Voir le calendrier
             </button>
           </div>
 
-          <div>
+          {/* Self-scrolling day list: caps at ~6 rows, the mouse wheel (or a
+              finger) scrolls the rest without leaving the dashboard. */}
+          <div style={{ maxHeight: 396, overflowY: 'auto', overscrollBehavior: 'contain' }}>
             {agenda.length === 0 && (
               <div style={{ padding: '28px 22px', textAlign: 'center', color: MUTED, fontSize: 13.5 }}>
-                Aucun rendez-vous pour le moment.
+                Aucun rendez-vous aujourd’hui.
               </div>
             )}
             {agenda.map((appt, i) => (

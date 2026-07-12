@@ -5,6 +5,8 @@ import { DEMO_PATIENTS, CITY_OPTS } from '../../shared.jsx';
 import { updatePatient, fetchPrescriptions } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import Icon from '../../components/Icon';
+import Pager, { usePager } from '../../components/Pager';
+import { moroccoNow } from '../../lib/time.js';
 
 // Whole years between a birth date and today (for the age shown from the DOB).
 function ageFromDob(dob) {
@@ -136,7 +138,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   };
 
   // Quick actions from the fiche.
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = moroccoNow().dateISO;   // Morocco calendar day, not device/UTC
   const newApptFor = (p) => {
     setViewPatient(null);
     openNewAppt();
@@ -181,6 +183,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
       p.phone.includes(patientSearch);
     return matchFilter && matchSearch;
   });
+  const pager = usePager(filtered, 10);
 
   return (
     <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -279,7 +282,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
               </tr>
             </thead>
             <tbody>
-              {filtered.map((patient, idx) => (
+              {pager.items.map((patient, idx) => (
                 <tr
                   key={patient.id}
                   style={{
@@ -390,24 +393,15 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           </table>
         </div>
 
-        {/* Pagination */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 20px', borderTop: `1px solid ${BORDER_STRONG}`, background: HEADER_BG,
-        }}>
-          <span style={{ fontSize: 13, color: MUTED }}>
-            Affichage 1–{filtered.length} sur {totalCount} patients
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1.5px solid ${BORDER_STRONG}`, background: '#fff', color: DARK, cursor: 'pointer',
-            }}>← Précédent</button>
-            <button style={{
-              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: `1.5px solid ${PRIMARY}`, background: PRIMARY, color: '#fff', cursor: 'pointer',
-            }}>Suivant →</button>
-          </div>
+        {/* Pagination (real) — arrows on mobile, Précédent/Suivant on desktop */}
+        <div style={{ padding: '4px 20px 14px', borderTop: `1px solid ${BORDER_STRONG}`, background: HEADER_BG }}>
+          {pager.pages > 1 ? (
+            <Pager pager={pager} compact={isMobile} />
+          ) : (
+            <span style={{ display: 'block', paddingTop: 10, fontSize: 13, color: MUTED }}>
+              {filtered.length === 0 ? 'Aucun patient' : `Affichage 1–${filtered.length} sur ${filtered.length} patients`}
+            </span>
+          )}
         </div>
       </div>
 

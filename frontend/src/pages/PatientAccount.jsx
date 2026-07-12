@@ -10,6 +10,7 @@ import { fetchRelatives, addRelative, deleteRelative, downloadICS, createReview,
 import { buildPrescriptionPDF, pdfOpen, loadBrandLogo } from '../lib/pdf';
 import ChatImage from '../components/ChatImage';
 import PhoneField from '../components/PhoneField';
+import Pager, { usePager } from '../components/Pager';
 
 const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replace(/\/$/, '');
 
@@ -206,7 +207,11 @@ export default function PatientAccount() {
     };
   });
 
-  const myConsultations = past.slice(0, 5);
+  // Every long list gets the shared pager: 4–5 rows per page, arrows on mobile.
+  const upPager      = usePager(upcoming, 4);
+  const pastPager    = usePager(past, 5);
+  const consultPager = usePager(past, 5);     // "Mes consultations" now pages through the FULL history
+  const myConsultations = consultPager.items;
   const totalPaid = appts.filter(c => c.status === 'completed').reduce((s, c) => s + (c.fee || 0), 0);
 
   const apptTarget = useMemo(
@@ -331,6 +336,8 @@ export default function PatientAccount() {
     if (!state.appUser?.id) return;
     fetchMyPrescriptions().then(setMyRx).catch(() => {});
   }, [state.appUser?.id]);
+  const rxPager   = usePager(myRx, 5);
+  const docsPager = usePager(pdocs || [], 5);
   // Rebuild the exact same branded PDF on the patient's side (from the shared row).
   const openMyRx = async (p) => {
     const d = p.doctor || {};
@@ -488,7 +495,7 @@ export default function PatientAccount() {
                   </div>
                 </div>
               )}
-              {upcoming.map((a) => {
+              {upPager.items.map((a) => {
                 const pill = STATUS_PILL[a.status] || STATUS_PILL.pending;
                 return (
                   <div key={a.id} style={{ border:`1px solid ${BORDER}`, borderRadius:13, padding:14, marginBottom:10 }}>
@@ -524,6 +531,7 @@ export default function PatientAccount() {
                   </div>
                 );
               })}
+              <Pager pager={upPager} lang={state.lang} compact={isMobile} />
             </div>
 
             {/* Past appointments */}
@@ -533,10 +541,10 @@ export default function PatientAccount() {
                 <div style={{ fontSize:13, color:MUT, padding:'8px 2px' }}>{tr('Aucun rendez-vous passé pour le moment.', 'No past appointments yet.', 'لا توجد مواعيد سابقة بعد.')}</div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:0, borderRadius:11, overflow:'hidden', border:`1px solid ${BORDER_STRONG}` }}>
-                  {past.map((p, i) => {
+                  {pastPager.items.map((p, i) => {
                     const [bg, fg] = tint(i);
                     return (
-                      <div key={p.id} style={{ display:'flex', alignItems:'center', gap:11, background: i % 2 === 0 ? '#fff' : ROW_ALT, padding:'12px 13px', borderBottom: i < past.length - 1 ? `1px solid ${BORDER_STRONG}` : 'none' }}>
+                      <div key={p.id} style={{ display:'flex', alignItems:'center', gap:11, background: i % 2 === 0 ? '#fff' : ROW_ALT, padding:'12px 13px', borderBottom: i < pastPager.items.length - 1 ? `1px solid ${BORDER_STRONG}` : 'none' }}>
                         <div style={{ width:38, height:38, borderRadius:10, background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:800, flexShrink:0 }}>
                           {initials(p.doctorName)}
                         </div>
@@ -552,6 +560,7 @@ export default function PatientAccount() {
                   })}
                 </div>
               )}
+              <Pager pager={pastPager} lang={state.lang} compact={isMobile} />
             </div>
 
             {/* Mes médecins — the doctors this patient has actually consulted */}
@@ -594,7 +603,7 @@ export default function PatientAccount() {
                 </div>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
-                  {myRx.map((p, i) => {
+                  {rxPager.items.map((p, i) => {
                     const [tBg, tFg] = tint(i % 6);
                     const count = Array.isArray(p.items) ? p.items.length : 0;
                     return (
@@ -614,6 +623,7 @@ export default function PatientAccount() {
                   })}
                 </div>
               )}
+              <Pager pager={rxPager} lang={state.lang} compact={isMobile} />
             </div>
 
             {/* Documents */}
@@ -624,7 +634,7 @@ export default function PatientAccount() {
               </div>
               <p style={{ margin:'0 0 14px', fontSize:12.5, color:MUT, lineHeight:1.5 }}>{tr('Ordonnances, résultats et factures échangés avec vos médecins.', 'Prescriptions, results and invoices exchanged with your doctors.', 'وصفات ونتائج وفواتير متبادلة مع أطبائكم.')}</p>
               <div style={{ display:'flex', flexDirection:'column', gap:9, marginBottom:16 }}>
-                {(pdocs || []).map((d, i) => {
+                {docsPager.items.map((d, i) => {
                   const isIn = d.dir === 'in';
                   const [tBg, tFg] = tint(i % 6);
                   return (
@@ -645,6 +655,7 @@ export default function PatientAccount() {
                     </div>
                   );
                 })}
+                <Pager pager={docsPager} lang={state.lang} compact={isMobile} style={{ paddingTop: 4 }} />
               </div>
               <div style={{ borderTop:'1px solid #F0F3F2', paddingTop:14 }}>
                 <div style={{ fontSize:12.5, fontWeight:800, color:DARK, marginBottom:10 }}>{tr('Envoyer un document à mon médecin', 'Send a document to my doctor', 'إرسال مستند إلى طبيبي')}</div>
@@ -709,10 +720,12 @@ export default function PatientAccount() {
               <span style={{ flex:1, height:1, background:BORDER_STRONG }} />
             </div>
             <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', gap:14 }}>
+              {/* justifyContent:flex-end keeps the inputs on one line even when a
+                  label ("Maladies chroniques") wraps onto two in a narrow column. */}
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
-                <div key={field} style={{ minWidth:0 }}>
+                <div key={field} style={{ minWidth:0, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
-                  <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                  <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', minWidth:0, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                 </div>
               ))}
             </div>
@@ -850,9 +863,7 @@ export default function PatientAccount() {
               );
             })}
           </div>
-          <div style={{ marginTop:12, textAlign:'center' }}>
-            <button onClick={() => setState({ toast:"Historique complet bientôt disponible", toastShow:true })} style={{ background:'none', border:'none', fontSize:13, fontWeight:600, color:G, cursor:'pointer', textDecoration:'underline', minHeight:44 }}>Voir tout l'historique</button>
-          </div>
+          <Pager pager={consultPager} lang={state.lang} compact={isMobile} style={{ marginTop: 2 }} />
         </div>
 
         {/* Messagerie */}

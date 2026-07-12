@@ -3,6 +3,7 @@ import { useViewport } from '../../hooks/useViewport';
 import { uploadDocument, listDocuments, downloadDocument } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import { DEMO_PATIENTS } from '../../shared.jsx';
+import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -82,6 +83,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const filteredDocs = withMeta.filter(d =>
     docTab === 'Tous' ? true : docTab === 'Reçus' ? d.dir === 'received' : d.dir === 'sent'
   );
+  const docsPager = usePager(filteredDocs, 8);
 
   return (
     <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
@@ -335,7 +337,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                   Aucun document pour le moment.
                 </div>
               )}
-              {filteredDocs.map((doc, idx) => (
+              {docsPager.items.map((doc, idx) => (
                 <div
                   key={doc.id}
                   style={{
@@ -343,7 +345,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                     alignItems: 'center',
                     gap: 12,
                     padding: '14px 16px',
-                    borderBottom: idx < filteredDocs.length - 1 ? `1px solid ${BORDER}` : 'none',
+                    borderBottom: idx < docsPager.items.length - 1 ? `1px solid ${BORDER}` : 'none',
                     background: '#fff',
                     transition: 'background 0.12s',
                   }}
@@ -392,6 +394,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                 </div>
               ))}
             </div>
+            <Pager pager={docsPager} compact={isMobile} />
           </div>
         </div>
       </div>
