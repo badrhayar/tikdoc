@@ -55,7 +55,10 @@ const pathScreen = () => {
   } catch { return null; }
 };
 // The URL wins over the sessionStorage restore (deep links / refresh on a page).
-const initialScreen = () => pathScreen() || restoreScreen();
+// On a deep link (/dr-slug, ?doc, ?rx) start neutral on 'home' and let the
+// deep-link effect route once the doctor resolves — never flash a stale
+// sessionStorage screen (which could briefly show the wrong doctor).
+const initialScreen = () => (deepLink ? 'home' : (pathScreen() || restoreScreen()));
 
 const initialState = {
   screen: initialScreen(),

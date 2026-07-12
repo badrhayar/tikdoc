@@ -299,6 +299,18 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}));
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    // Unauthenticated deployment/health probe — confirms THIS code is live and
+    // which secrets are configured. Never returns the secret values themselves.
+    if (p?.type === "ping" || new URL(req.url).searchParams.get("ping") === "1") {
+      return json({
+        ok: true,
+        version: "cron-secret-v2",
+        cronSecretSet: CRON_SECRET.length > 0,
+        resendSet: RESEND_API_KEY.length > 0,
+        waConfigured: !!(WA_TOKEN && WA_PHONE_ID),
+      });
+    }
+
     const authz = await authorize(req, admin);
     if (!authz.ok) return json({ ok: false, error: "unauthorized" }, 401);
 
