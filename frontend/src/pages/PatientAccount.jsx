@@ -419,15 +419,15 @@ export default function PatientAccount() {
           <LangPill style={{ flexShrink: 0 }} />
           {/* Staff members hop back to the cabinet they work for. */}
           {(state.isStaff || state.appUser?.role === 'doctor') && (
-            <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+            <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:10, fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
               {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
             </button>
           )}
-          <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'9px 16px', borderRadius:9, fontSize:13.5, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight:44, display:'flex', alignItems:'center', gap:6 }}>
+          <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'7px 15px', borderRadius:10, fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight: isMobile?44:undefined, display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
           </button>
-          <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'9px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13.5, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:10, fontSize:13, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
             {isMobile ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
             ) : tr('Déconnexion', 'Sign out', 'تسجيل الخروج')}

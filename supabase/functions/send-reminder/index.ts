@@ -166,10 +166,16 @@ const SERVICE_KEYS = [
   Deno.env.get("SB_SECRET_KEY"),
 ].filter(Boolean) as string[];
 
+// A dedicated secret for the pg_cron dispatcher — decoupled from the service-role
+// key (which can rotate / differ between the dashboard and the injected env).
+// Set CRON_SECRET as a function secret AND as the Vault `tabibo_cron_key`, same value.
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
+
 async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   const deny = { ok: false, isService: false, isAdmin: false, me: null as any };
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return deny;
+  if (CRON_SECRET && token === CRON_SECRET) return { ok: true, isService: true, isAdmin: true, me: null as any };
   if (SERVICE_KEYS.includes(token)) return { ok: true, isService: true, isAdmin: true, me: null as any };
   const { data: { user } } = await admin.auth.getUser(token);
   if (!user) return deny;

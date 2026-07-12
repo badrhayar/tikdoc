@@ -19,13 +19,27 @@ d'elle-même quand chaque médecin invitera ses propres patients.
 ### 1a · Activer l'envoi des rappels (une seule fois, SQL editor Supabase)
 
 Le dispatcher horaire est déjà planifié mais reste inerte tant que ces 2 secrets
-n'existent pas (aucune fuite dans le repo). Coller dans le SQL editor, avec vos
-vraies valeurs :
+Vault n'existent pas (aucune fuite dans le repo) :
+- `tabibo_functions_url` = l'URL du projet (`https://<ref>.supabase.co`, rien après).
+- `tabibo_cron_key` = **la même chaîne que le secret de fonction `CRON_SECRET`** (une
+  valeur aléatoire que vous choisissez — voir ci-dessous). C'est le laissez-passer
+  du cron ; il est découplé de la clé `service_role` (qui peut être rotée / différer).
 
+Étapes :
+1. Générer une chaîne aléatoire : `openssl rand -hex 32`.
+2. Supabase → Edge Functions → **Manage secrets** → ajouter `CRON_SECRET` = cette chaîne.
+3. Dans le SQL editor :
 ```sql
 select vault.create_secret('https://<votre-ref>.supabase.co', 'tabibo_functions_url');
-select vault.create_secret('<service_role_ou_sb_secret_key>',  'tabibo_cron_key');
+select vault.create_secret('<LA-MEME-CHAINE-QUE-CRON_SECRET>', 'tabibo_cron_key');
 ```
+Si un secret existe déjà (erreur « duplicate »), mettez-le à jour :
+```sql
+select vault.update_secret((select id from vault.secrets where name='tabibo_cron_key'),
+                           '<LA-MEME-CHAINE-QUE-CRON_SECRET>');
+```
+4. Redéployer la fonction : `supabase functions deploy send-reminder` (ou via l'éditeur
+   de fonction du Dashboard). Le contrôle `CRON_SECRET` n'est actif qu'après ce déploiement.
 
 Ensuite le job `tabibo-reminders-hourly` appelle `send-reminder` chaque heure et
 envoie les rappels J-1 (activé par défaut) / J-2 (opt-in par médecin). Test manuel :
