@@ -7,7 +7,7 @@ import {
   updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail,
 } from '../../lib/api';
 import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
-import { moroccoNow } from '../../lib/time.js';
+import { moroccoNow, moDateKeyOf } from '../../lib/time.js';
 import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerSlotLabel } from '../../lib/prayer.js';
 
 const PRIMARY = '#16A06A';
@@ -221,7 +221,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const conflictsFor = (r) => [...(state?.manualAppts || []), ...(state?.myAppointments || [])]
     .filter((a) => {
       if (a.status !== 'pending' && a.status !== 'confirmed') return false;
-      const iso = isoOf(new Date(a.datetime));
+      const iso = moDateKeyOf(a.datetime);   // Morocco calendar day
       return iso >= r.start_date && iso <= r.end_date;
     })
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));

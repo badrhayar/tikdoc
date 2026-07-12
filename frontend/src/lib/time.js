@@ -43,6 +43,37 @@ export function moroccoToUTCISO(dateISO, hhmm) {
   return new Date(naive.getTime() - off * 60000).toISOString();
 }
 
+// ── Display helpers: render a UTC instant in Morocco wall-clock time ─────────
+// Every appointment is stored as a UTC instant. These read it back in Morocco
+// time so the hour a patient booked is the hour everyone sees — doctor, patient,
+// notifications — no matter what timezone the device is set to.
+
+/** { year, month(0-11), day, hour, minute, dateISO:'YYYY-MM-DD', time:'HH:MM' } in Morocco time. */
+export function moPartsOf(isoOrDate) {
+  const p = moroccoParts(isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate));
+  return {
+    ...p,
+    dateISO: `${p.year}-${p2(p.month + 1)}-${p2(p.day)}`,
+    time: `${p2(p.hour)}:${p2(p.minute)}`,
+  };
+}
+
+/** 'HH:MM' (Morocco) for a UTC instant. */
+export const moTime = (iso) => moPartsOf(iso).time;
+
+/** 'YYYY-MM-DD' (Morocco) for a UTC instant — the Morocco calendar day. */
+export const moDateKeyOf = (iso) => moPartsOf(iso).dateISO;
+
+/** Localized date label (Morocco tz). */
+export function moDateLabel(iso, locale = 'fr-FR', opts = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) {
+  return new Date(iso).toLocaleDateString(locale, { ...opts, timeZone: TZ });
+}
+
+/** Localized time label (Morocco tz). */
+export function moTimeLabel(iso, locale = 'fr-FR') {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+}
+
 export const slotToMinutes = (hhmm) => {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;

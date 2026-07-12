@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { updateAppointment, markAppointmentPaid, PAY_METHOD_FROM_FR } from '../../lib/api';
 import { buildReceiptPDF, pdfOpen } from '../../lib/pdf';
+import { moroccoToUTCISO } from '../../lib/time.js';
 
 const STATUS_TO_ENUM = { 'Payé': 'completed', 'En attente': 'pending', 'Annulé': 'cancelled', 'Terminé': 'completed', 'Absent': 'no_show' };
 
@@ -119,7 +120,8 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
         status: STATUS_TO_ENUM[editData.status] || 'pending',
       };
       if (editData.date && editData.time) {
-        fields.datetime = new Date(`${editData.date}T${editData.time}:00`).toISOString();
+        // Interpret the edited date+time as Morocco wall-clock, not device-local.
+        fields.datetime = moroccoToUTCISO(editData.date, editData.time);
       }
       await updateAppointment(editData.id, fields);
       // When marked "Payé", capture the real amount + method on the appointment.

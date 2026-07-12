@@ -29,9 +29,9 @@ function initials(name) {
 const fmtTime = (iso) => {
   try {
     const d = new Date(iso);
-    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' });
     const today = new Date().toDateString() === d.toDateString();
-    return today ? `Aujourd'hui ${time}` : `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} · ${time}`;
+    return today ? `Aujourd'hui ${time}` : `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', timeZone: 'Africa/Casablanca' })} · ${time}`;
   } catch { return ''; }
 };
 

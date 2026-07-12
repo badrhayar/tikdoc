@@ -3,6 +3,7 @@ import { useViewport } from '../hooks/useViewport';
 import { DOCTORS, BOOK_DAYS, docDisplayName } from '../shared.jsx';
 import Icon from '../components/Icon';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { moroccoToUTCISO } from '../lib/time';
 import LangPill from '../components/LangPill';
 
 const saPopKeyframes = `
@@ -30,7 +31,9 @@ export default function Confirm() {
   const addToCalendar = () => {
     const slot = state.bookSlot || '09:00';
     if (!state.bookDate) return;
-    const start = new Date(`${state.bookDate}T${slot}:00`);
+    // The slot is a Morocco wall-clock time → convert to the correct UTC instant
+    // so the .ics is right even when the patient's device is in another timezone.
+    const start = new Date(moroccoToUTCISO(state.bookDate, slot));
     const end = new Date(start.getTime() + 30 * 60000);
     const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const ics = [

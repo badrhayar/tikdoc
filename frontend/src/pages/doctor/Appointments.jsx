@@ -3,7 +3,7 @@ import { useViewport } from '../../hooks/useViewport';
 import { initials } from '../../shared.jsx';
 import Icon from '../../components/Icon';
 import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, markInConsultation, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
-import { moroccoToUTCISO } from '../../lib/time.js';
+import { moroccoToUTCISO, moPartsOf } from '../../lib/time.js';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -42,7 +42,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
 
   // Build display rows from the doctor's real + manually-added appointments.
   const rows = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].map((a, i) => {
-    const d = new Date(a.datetime);
+    const mp = moPartsOf(a.datetime);   // Morocco wall-clock, device-independent
     return {
       id: a.id,
       patientId: a.patientId || null,
@@ -52,8 +52,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       phone: a.patientPhone ? (String(a.patientPhone).startsWith('+') ? a.patientPhone : `+212 ${a.patientPhone}`) : '—',
       initials: initials(a.patientName || 'P'),
       color: PALETTE[i % PALETTE.length],
-      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      date: mp.dateISO,
+      time: mp.time,
       motif: a.reason || 'Consultation',
       statut: STATUS_FR[a.status] || a.status,
       // Real payment state from the appointment's captured columns.
@@ -142,10 +142,10 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       // exists yet (e.g. demo seeds), create one so history stays coherent.
       const hasConsult = (state.manualConsults || []).some(c => c.id === p.id);
       const src = (state.manualAppts || []).find(a => a.id === p.id);
-      const d = src ? new Date(src.datetime) : new Date();
+      const mp = moPartsOf(src ? src.datetime : new Date());
       const consultPatch = hasConsult
         ? (state.manualConsults || []).map(c => c.id === p.id ? { ...c, status: 'Payé', amount, pay: payFr, consultNote: note } : c)
-        : [{ id: p.id, patient: src?.patientName || 'Patient', age: '—', sex: '', service: src?.reason || 'Consultation', date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, amount, pay: payFr, status: 'Payé', notes: '', consultNote: note }, ...(state.manualConsults || [])];
+        : [{ id: p.id, patient: src?.patientName || 'Patient', age: '—', sex: '', service: src?.reason || 'Consultation', date: mp.dateISO, time: mp.time, amount, pay: payFr, status: 'Payé', notes: '', consultNote: note }, ...(state.manualConsults || [])];
       setState({
         manualAppts: (state.manualAppts || []).map(a => a.id === p.id ? { ...a, status: 'completed', paid: true, amountPaid: amount, payMethod: p.method, consultNote: note } : a),
         manualConsults: consultPatch,
@@ -209,9 +209,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   // ── Reschedule (doctor changes date/time → patient gets a WhatsApp) ──────────
   const [resched, setResched] = useState(null); // { id, date, time }
   const openResched = (appt) => {
-    const d = new Date(appt.datetime || Date.now());
-    const pad = (n) => String(n).padStart(2, '0');
-    setResched({ id: appt.id, date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` });
+    const mp = moPartsOf(appt.datetime || Date.now());   // prefill in Morocco time
+    setResched({ id: appt.id, date: mp.dateISO, time: mp.time });
   };
   const saveResched = async () => {
     const r = resched; if (!r) return;

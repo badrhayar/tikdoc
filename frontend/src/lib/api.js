@@ -5,6 +5,7 @@
 // can switch from mock data to Supabase with minimal changes.
 // ─────────────────────────────────────────────────────────────────────────────
 import { supabase } from './supabaseClient';
+import { moPartsOf } from './time';
 
 // Map a row from the public `doctor_directory` view to the shape the UI uses.
 function mapDoctor(row) {
@@ -404,7 +405,7 @@ const pad = (n) => String(n).padStart(2, '0');
 // Map a DB appointment to the legacy "consultation" shape used by the doctor's
 // Calendar / History / Statistics screens, so they all render real data.
 export function apptToConsultation(a) {
-  const d = new Date(a.datetime);
+  const mp = moPartsOf(a.datetime);   // Morocco wall-clock, device-independent
   // Payment status comes from the real `paid` flag, not the appointment status:
   // a completed visit that hasn't been settled stays "En attente".
   const status =
@@ -417,8 +418,8 @@ export function apptToConsultation(a) {
     age: a.patientAge ?? '—',
     sex: a.patientSex || '',
     service: a.reason || 'Consultation générale',
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    date: mp.dateISO,
+    time: mp.time,
     // What was actually collected when paid; otherwise the expected fee.
     amount: a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0),
     pay: a.paid && a.payMethod ? (PAY_METHOD_FR[a.payMethod] || a.payMethod) : '—',

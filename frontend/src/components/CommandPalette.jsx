@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { initials, tint } from '../shared.jsx';
+import { moPartsOf } from '../lib/time';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -65,8 +66,9 @@ export default function CommandPalette({ state, setState, go, isMobile }) {
   };
 
   const fmtAppt = (a) => {
-    const d = new Date(a.datetime);
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const mp = moPartsOf(a.datetime);   // Morocco time
+    const [, mm, dd] = mp.dateISO.split('-');
+    return `${dd}/${mm} · ${mp.time}`;
   };
 
   const Section = ({ title, children }) => (

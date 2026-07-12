@@ -24,18 +24,21 @@ const STATUS_PILL = {
   cancelled: { bg: '#FCE7EE', fg: '#C2466A' },
   no_show:   { bg: '#F3F4F6', fg: '#445064' },
 };
-const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-const fmtTime = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+// Appointment times are stored as UTC instants — always render them in Morocco
+// time so the hour shown matches the hour booked, on any device / any country.
+const MA_TZ = 'Africa/Casablanca';
+const fmtDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: MA_TZ });
+const fmtTime = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: MA_TZ });
 // Chat timestamp: time only for today, "Hier HH:MM", else a dated label so
 // messages from different days are clearly distinguished.
 const fmtMsgTime = (iso) => {
   const d = new Date(iso); const now = new Date();
-  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: MA_TZ });
   if (d.toDateString() === now.toDateString()) return time;
   const yest = new Date(now); yest.setDate(now.getDate() - 1);
   if (d.toDateString() === yest.toDateString()) return `Hier ${time}`;
   const sameYear = d.getFullYear() === now.getFullYear();
-  const dp = d.toLocaleDateString('fr-FR', sameYear ? { day: '2-digit', month: 'short' } : { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dp = d.toLocaleDateString('fr-FR', sameYear ? { day: '2-digit', month: 'short', timeZone: MA_TZ } : { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: MA_TZ });
   return `${dp} · ${time}`;
 };
 
@@ -471,7 +474,7 @@ export default function PatientAccount() {
           )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1.2fr 1fr', gap: isMobile?16:22, alignItems:'start' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'minmax(0,1.2fr) minmax(0,1fr)', gap: isMobile?16:22, alignItems:'start' }}>
           {/* Appointments column */}
           <div style={{ display:'flex', flexDirection:'column', gap:22, minWidth:0 }}>
             {/* Upcoming */}
@@ -673,41 +676,41 @@ export default function PatientAccount() {
           {/* Info form */}
           <div style={{ background:'#fff', border:`1px solid ${BORDER_STRONG}`, borderRadius:18, padding:24, boxShadow:CARD_SHADOW }}>
             <h2 style={{ margin:'0 0 16px', fontSize:16, fontWeight:800, color:DARK }}>Mes informations</h2>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr', gap:14 }}>
-              <div>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'minmax(0,1fr) minmax(0,1fr)', gap:14 }}>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Nom complet', 'Full name', 'الاسم الكامل')}</label>
                 <input value={pf?.full_name || ''} onChange={e => setPF('full_name', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
               </div>
-              <div>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>CIN</label>
-                <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+                <input value={pf?.cin_or_inpe || ''} onChange={e => setPF('cin_or_inpe', e.target.value)} style={{ width:'100%', minWidth:0, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
               </div>
-              <div>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{tr('Téléphone', 'Phone', 'الهاتف')}</label>
                 <PhoneField value={pf?.phone || ''} onChange={v => setPF('phone', v)} />
               </div>
-              <div>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Email</label>
-                <input value={pf?.email || ''} disabled style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#EEF3F1', color:MUT, outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+                <input value={pf?.email || ''} disabled style={{ width:'100%', minWidth:0, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#EEF3F1', color:MUT, outline:'none', boxSizing:'border-box', direction:'ltr' }} />
               </div>
-              <div>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Sexe</label>
                 <select value={pf?.sex || ''} onChange={e => setPF('sex', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
                   <option value="">—</option><option value="Femme">Femme</option><option value="Homme">Homme</option>
                 </select>
               </div>
-              <div>
+              <div style={{ minWidth:0 }}>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>Date de naissance</label>
-                <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
+                <input type="date" value={pf?.dob || ''} onChange={e => setPF('dob', e.target.value)} style={{ width:'100%', minWidth:0, padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:10, margin:'22px 0 14px' }}>
               <span style={{ fontSize:11.5, fontWeight:800, color:MUT, textTransform:'uppercase', letterSpacing:.6, whiteSpace:'nowrap' }}>{tr('Informations médicales', 'Medical information', 'معلومات طبية')}</span>
               <span style={{ flex:1, height:1, background:BORDER_STRONG }} />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'1fr 1fr 1fr', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile?'minmax(0,1fr)':'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', gap:14 }}>
               {[['Groupe sanguin','blood'],['Allergies','allergies'],['Maladies chroniques','chronic']].map(([label, field]) => (
-                <div key={field}>
+                <div key={field} style={{ minWidth:0 }}>
                   <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:MUT, marginBottom:6 }}>{label}</label>
                   <input value={pf?.[field] || ''} onChange={e => setPF(field, e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                 </div>

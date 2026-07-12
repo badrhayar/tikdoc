@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { STATUS_FR, fetchConversationPreviews, isImageMessage, markInConsultation, markArrived } from '../../lib/api';
+import { moTime, moDateKeyOf, moroccoNow } from '../../lib/time';
 import { useViewport } from '../../hooks/useViewport';
 import { initials as initialsOf, tint } from '../../shared.jsx';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
@@ -77,9 +78,8 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
     .slice(0, 6)
     .map((a) => {
-      const d = new Date(a.datetime);
       return {
-        time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+        time: moTime(a.datetime),
         name: a.patientName || 'Patient',
         motif: a.reason || 'Consultation',
         status: STATUS_FR[a.status] || a.status,
@@ -87,13 +87,12 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
     });
   const apptCount = allAppts.length;
 
-  // ── Real KPI values (computed from live data) ──
-  const today = new Date();
-  const sameDay = (d) => d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
-  const sameMonth = (d) => d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  // ── Real KPI values (computed from live data) — all "today"/"this month"
+  //    reckoning is done on the Morocco calendar, never the device clock. ──
+  const todayKey = moroccoNow().dateISO;      // 'YYYY-MM-DD' in Morocco
+  const monthKey = todayKey.slice(0, 7);      // 'YYYY-MM'
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])];
-  const parse = (iso) => new Date(`${iso}T00:00:00`);
-  const todayCount = allAppts.filter((a) => sameDay(new Date(a.datetime))).length;
+  const todayCount = allAppts.filter((a) => moDateKeyOf(a.datetime) === todayKey).length;
 
   // ── "Ma journée" : waiting room + live end-of-day summary ───────────────────
   const [nowTick, setNowTick] = useState(Date.now());
@@ -111,7 +110,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
       await markInConsultation(a.id, on);
     } catch (_) { /* optimistic; a refresh will reconcile */ }
   };
-  const todayAppts = allAppts.filter((a) => sameDay(new Date(a.datetime)) && a.status !== 'cancelled');
+  const todayAppts = allAppts.filter((a) => moDateKeyOf(a.datetime) === todayKey && a.status !== 'cancelled');
   const inConsultAtOf = (a) => a.inConsultAt || a.in_consultation_at || null;
   // A patient currently with the doctor: moved in, not yet finished.
   const inConsultation = todayAppts
@@ -123,11 +122,11 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
     .sort((a, b) => new Date(a.arrivedAt || a.arrived_at) - new Date(b.arrivedAt || b.arrived_at));
   const seenToday = todayAppts.filter((a) => a.status === 'completed').length;
   const collectedToday = todayAppts.filter((a) => a.paid).reduce((s, a) => s + (a.amountPaid || a.fee || 0), 0)
-    + (state?.manualConsults || []).filter((c) => c.status === 'Payé' && c.date && sameDay(parse(c.date)) && !todayAppts.some((a) => a.id === c.id)).reduce((s, c) => s + (c.amount || 0), 0);
+    + (state?.manualConsults || []).filter((c) => c.status === 'Payé' && c.date === todayKey && !todayAppts.some((a) => a.id === c.id)).reduce((s, c) => s + (c.amount || 0), 0);
   const expectedToday = todayAppts.filter((a) => a.status !== 'no_show').reduce((s, a) => s + (a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0)), 0);
   const remainingToday = todayAppts.filter((a) => a.status !== 'completed' && a.status !== 'no_show' && !(a.arrivedAt || a.arrived_at)).length;
   const waitMin = (a) => Math.max(1, Math.round((nowTick - new Date(a.arrivedAt || a.arrived_at).getTime()) / 60000));
-  const monthConsults = consults.filter((c) => c.date && sameMonth(parse(c.date)));
+  const monthConsults = consults.filter((c) => c.date && c.date.slice(0, 7) === monthKey);
   const monthRevenue = monthConsults.filter((c) => c.status === 'Payé').reduce((s, c) => s + (c.amount || 0), 0);
   const monthPatients = new Set(monthConsults.map((c) => (c.patient || '').toLowerCase()).filter(Boolean)).size;
   const rating = state?.myDoctor?.rating ? `${state.myDoctor.rating}` : '—';
