@@ -63,7 +63,7 @@ export default function AuthChoice() {
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setOpen((v) => (v === 'login' ? null : 'login'))}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK, minHeight: 44 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK }}
         >
           {tr('Se connecter', 'Sign in', 'تسجيل الدخول')}
           <span style={{ fontSize: 9, color: '#9AA8A2', transform: open === 'login' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
@@ -75,7 +75,7 @@ export default function AuthChoice() {
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setOpen((v) => (v === 'register' ? null : 'register'))}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: GRAD, border: 'none', borderRadius: 10, padding: '8px 17px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff', minHeight: 44, boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: GRAD, border: 'none', borderRadius: 10, padding: '7px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}
         >
           {tr('Créer un compte', 'Create an account', 'إنشاء حساب')}
           <span style={{ fontSize: 9, opacity: 0.85, transform: open === 'register' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>

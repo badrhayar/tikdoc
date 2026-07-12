@@ -104,7 +104,7 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
 
         {/* Desktop nav */}
         {!isMobile && (
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+          <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flex: 1, minWidth: 0 }}>
             {navItems.map((item) => {
               const active = item.key === activeKey;
               return (
@@ -138,8 +138,8 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
                 onClick={() => setState({ langOpen: !langOpen })}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  background: '#F4F8F5', border: `1px solid ${BORDER}`,
-                  borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
+                  background: '#fff', border: `1px solid ${BORDER}`,
+                  borderRadius: 10, padding: '7px 13px', cursor: 'pointer',
                   fontSize: 13, fontWeight: 600, color: DARK,
                 }}
               >

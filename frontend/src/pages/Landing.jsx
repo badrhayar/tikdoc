@@ -123,7 +123,7 @@ export default function Landing() {
 
           {/* Desktop nav */}
           {!isMobile && (
-            <nav style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+            <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flex: 1, minWidth: 0 }}>
               {navItems.map((item) => {
                 const active = state.screen === item.key;
                 return (
@@ -134,8 +134,8 @@ export default function Landing() {
                     onMouseLeave={() => setHoveredNav(null)}
                     style={{
                       background: hoveredNav === item.key && !active ? '#F1F6F3' : 'none',
-                      border: 'none', cursor: 'pointer', padding: '8px 14px', fontSize: 14,
-                      fontWeight: active ? 700 : 500, minHeight: 44,
+                      border: 'none', cursor: 'pointer', padding: '6px 12px', fontSize: 14,
+                      fontWeight: active ? 700 : 500,
                       color: active ? PRIMARY : (hoveredNav === item.key ? DARK : BODY),
                       borderRadius: 9, transition: 'all 0.15s', whiteSpace: 'nowrap',
                     }}
@@ -153,7 +153,7 @@ export default function Landing() {
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setState({ langOpen: !langOpen })}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK, minHeight: 44, boxShadow: '0 1px 2px rgba(13,43,30,0.04)' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK }}
                 >
                   <span>{t.langLabel}</span>
                   <span style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>▾</span>
