@@ -3,6 +3,7 @@ import BrandMark from './BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials } from '../shared.jsx';
+import AuthChoice from './AuthChoice';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -54,6 +55,10 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
       : tr('Créer un compte', 'Create an account', 'إنشاء حساب');
 
   const goMobile = (key) => { setMenuOpen(false); go(key); };
+
+  // "Pour les patients" / "Pour les médecins" already put audience-specific
+  // Se connecter / Créer un compte in the hero → no duplicate top-right buttons.
+  const heroHasAuth = activeKey === 'forpatients' || activeKey === 'fordoctors';
 
   // Shared auth-button renderer (used on desktop + inside mobile menu).
   const AuthButtons = ({ stacked }) => (
@@ -193,8 +198,9 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
                   </span>
                 </button>
               </div>
-            ) : (
-              <AuthButtons stacked={false} />
+            ) : heroHasAuth ? null : (
+              /* Neutral pages (à propos, contact…): choose patient vs doctor. */
+              <AuthChoice />
             )}
           </div>
         )}

@@ -22,6 +22,20 @@ try {
   if (mHash) authLinkType = mHash[1];
 } catch (_) { /* SSR-safe */ }
 
+// Snapshot deep-link params at module load. The URL-sync effect can replaceState
+// the path/query back to "/" before the async slug lookup runs, wiping the link;
+// capturing here (before React mounts) makes the deep link survive that.
+// Handles /dr-slug, ?dr=slug, ?doc=<uuid>, ?rx=<ref>.
+let deepLink = null;
+try {
+  const sp = new URLSearchParams(window.location.search);
+  const p = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
+  const slug = sp.get('dr') || (/^dr-[a-z0-9-]+$/i.test(p) ? p : null);
+  const doc = sp.get('doc');
+  const rx = sp.get('rx');
+  if (slug || doc || rx) deepLink = { slug, doc, rx };
+} catch (_) { /* SSR-safe */ }
+
 // ── Browser-grade navigation ─────────────────────────────────────────────────
 // Every screen gets a real URL (/search, /doctor, /dappts…) so the browser
 // back/forward buttons, refresh and link-sharing all behave like a real site.
@@ -287,26 +301,23 @@ export function AppProvider({ children }) {
   //   tabibo.ma/?dr=dr-aya-chakkour
   //   tabibo.ma/?doc=<uuid>       (legacy id link)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !deepLink) return;
+    const dl = deepLink; deepLink = null;   // one-shot (snapshotted at module load)
     (async () => {
       try {
-        const params = new URLSearchParams(window.location.search);
-        const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
-        const slug = params.get('dr') || (/^dr-[a-z0-9-]+$/i.test(path) ? path : null);
-        const doc = params.get('doc');
-        const rx = params.get('rx');
-        if (rx) {
-          // Scanned ordonnance QR → public verification screen.
-          dispatch({ rxRef: rx, screen: 'rxverify' });
-          window.history.replaceState({}, '', '/');
-        } else if (slug) {
-          const d = await fetchDoctorBySlug(slug);
-          if (d?.id) dispatch({ selDoc: d.id, screen: 'profile' });
-          window.history.replaceState({}, '', '/');
-        } else if (doc) {
-          dispatch({ selDoc: doc, screen: 'profile' });
-          window.history.replaceState({}, '', '/');
+        // navFromPop tells the URL-sync effect this screen change came from the
+        // URL, so it won't push a screen path over our clean "/" replaceState.
+        if (dl.rx) {
+          navFromPop.current = true;
+          dispatch({ rxRef: dl.rx, screen: 'rxverify' });   // scanned ordonnance QR
+        } else if (dl.slug) {
+          const d = await fetchDoctorBySlug(dl.slug);
+          if (d?.id) { navFromPop.current = true; dispatch({ selDoc: d.id, screen: 'profile' }); }
+        } else if (dl.doc) {
+          navFromPop.current = true;
+          dispatch({ selDoc: dl.doc, screen: 'profile' });
         }
+        window.history.replaceState({}, '', '/');
       } catch { /* ignore */ }
     })();
   }, []);

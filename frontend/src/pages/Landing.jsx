@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../shared.jsx';
 import Icon from '../components/Icon';
+import AuthChoice from '../components/AuthChoice';
 import SecurityTrust from '../components/SecurityTrust';
 import MarketingFooter from '../components/MarketingFooter';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
@@ -190,14 +191,8 @@ export default function Landing() {
                   </button>
                 </div>
               ) : (
-                <>
-                  <button onClick={() => go('plogin')} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK, minHeight: 44 }}>
-                    {t.btnLogin}
-                  </button>
-                  <button onClick={() => go('pregister')} style={{ background: GRAD, border: 'none', borderRadius: 10, padding: '8px 17px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff', minHeight: 44, boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}>
-                    {t.btnRegister}
-                  </button>
-                </>
+                /* Neutral home page: let the visitor pick patient vs doctor. */
+                <AuthChoice />
               )}
             </div>
           )}
