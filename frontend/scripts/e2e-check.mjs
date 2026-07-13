@@ -107,10 +107,10 @@ try {
   // congés conflict detection
   await page.getByText('Disponibilités', { exact: true }).first().click();
   await page.waitForTimeout(900);
-  const today = await page.evaluate(() => {
-    const d = new Date(); const p = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-  });
+  // The app reasons in Morocco time (demo appointments land on Morocco's today),
+  // so the congé date must be Morocco's today too — not the device-local date.
+  const today = await page.evaluate(() =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const dates = page.locator('input[type=date]');
   await dates.nth(0).fill(today);
   await dates.nth(1).fill(today);

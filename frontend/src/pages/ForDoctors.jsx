@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, CITY_OPTS, DEMO_PATIENTS } from '../shared.jsx';
+import { moroccoNow, moroccoToUTCISO } from '../lib/time.js';
 import { fetchCompanyContact } from '../lib/api';
 import Icon from '../components/Icon';
 import MarketingHeader from '../components/MarketingHeader';
@@ -44,25 +45,34 @@ export default function ForDoctors() {
   // No account needed — the perfect tool for face-to-face sales.
   const startDemo = () => {
     const now = new Date();
-    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const t0 = iso(now);
-    const daysAgo = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return iso(d); };
-    const mkAppt = (id, hh, name, phone, reason, status) => ({ id: `demo_${id}`, datetime: `${t0}T${hh}:00`, status, patientName: name, patientPhone: phone, reason, notes: '' });
+    // Anchor the demo to MOROCCO's today (matching how the dashboard counts),
+    // clamped into working hours so there's ALWAYS a current, testable day — no
+    // matter the hour of entry (even at 23:30, the appointments stay on today
+    // and one patient is already in the waiting room, ready to test the flow).
+    const m = moroccoNow();                          // { dateISO, minutes, ... }
+    const t0 = m.dateISO;
+    const WORK_START = 9 * 60, WORK_END = 18 * 60;
+    const anchor = Math.min(Math.max(m.minutes, WORK_START + 45), WORK_END - 45);
+    const fmt = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+    const at = (min) => moroccoToUTCISO(t0, fmt(min));    // today (Morocco) → correct UTC instant
+    const daysAgo = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const mkAppt = (id, min, name, phone, reason, status, extra = {}) => ({ id: `demo_${id}`, datetime: at(min), status, patientName: name, patientPhone: phone, reason, notes: '', ...extra });
     setState({
       demoDoctor: true,
       patients: DEMO_PATIENTS,
       manualAppts: [
-        mkAppt(1, '09:00', 'Fatima Zahra Benali', '+212 6 12 34 56 78', 'Consultation générale', 'confirmed'),
-        // One patient checked in 12 min ago → the demo shows the live waiting room.
-        { ...mkAppt(2, '10:00', 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed'), arrivedAt: new Date(now.getTime() - 12 * 60000).toISOString() },
-        mkAppt(3, '11:30', 'Amina Tazi', '+212 6 78 90 12 34', 'Bilan complet', 'pending'),
-        mkAppt(4, '15:00', 'Hassan Berrada', '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed'),
+        // One patient checked in 12 min ago → the live waiting room is always
+        // populated, so "faire entrer en consultation" is testable at any time.
+        mkAppt(2, anchor - 30, 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed', { arrivedAt: new Date(now.getTime() - 12 * 60000).toISOString() }),
+        mkAppt(1, anchor, 'Fatima Zahra Benali', '+212 6 12 34 56 78', 'Consultation générale', 'confirmed'),
+        mkAppt(3, anchor + 30, 'Amina Tazi', '+212 6 78 90 12 34', 'Bilan complet', 'pending'),
+        mkAppt(4, anchor + 75, 'Hassan Berrada', '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed'),
       ],
       manualConsults: [
         // Today's calendar entries reuse the appointment ids so the calendar can
         // show/confirm their booking status (demo of the confirm-from-calendar flow).
-        { id: 'demo_1', patient: 'Fatima Zahra Benali', age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: '09:00', amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
-        { id: 'demo_3', patient: 'Amina Tazi', age: 22, sex: 'F', service: 'Bilan complet', date: t0, time: '11:30', amount: 500, pay: '—', status: 'En attente', notes: '' },
+        { id: 'demo_1', patient: 'Fatima Zahra Benali', age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: fmt(anchor), amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
+        { id: 'demo_3', patient: 'Amina Tazi', age: 22, sex: 'F', service: 'Bilan complet', date: t0, time: fmt(anchor + 30), amount: 500, pay: '—', status: 'En attente', notes: '' },
         { id: 'dc2', patient: 'Mohamed Rachid Alami', age: 52, sex: 'M', service: 'Suivi', date: daysAgo(1), time: '10:00', amount: 200, pay: 'CMI', status: 'Payé', notes: '' },
         { id: 'dc3', patient: 'Khadija Oumghar', age: 28, sex: 'F', service: 'Bilan complet', date: daysAgo(2), time: '11:00', amount: 500, pay: 'Espèces', status: 'Payé', notes: '' },
         { id: 'dc4', patient: 'Youssef El Mansouri', age: 45, sex: 'M', service: 'Consultation générale', date: daysAgo(3), time: '14:30', amount: 300, pay: '—', status: 'En attente', notes: '' },

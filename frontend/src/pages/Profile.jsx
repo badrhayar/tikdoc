@@ -8,7 +8,7 @@ import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
 import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff, joinWaitlist } from '../lib/api';
-import { fetchPrayerTimes, PRAYER_FALLBACK, prayerSlotLabel } from '../lib/prayer.js';
+import { fetchPrayerTimes, PRAYER_FALLBACK, prayerBlockedSlots } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { setPageMeta } from '../lib/seo.js';
 
@@ -83,7 +83,7 @@ export default function Profile() {
         const iso = isoOf(d), dow = d.getDay();
         if (!dayOpen(dow) || dateOff(iso)) continue;
         const { work, breaks } = dayRules(dow);
-        const slots = weekAvail.length === 0 ? BOOK_SLOTS : genSlots(work, breaks);
+        const slots = weekAvail.length === 0 ? BOOK_SLOTS : genSlots(work, breaks, doc.slotMinutes || 30);
         if (!slots.length) continue;
         let booked = [], blocked = [];
         try {
@@ -179,12 +179,15 @@ export default function Profile() {
     fetchPrayerTimes(doc.city, selectedDate).then((times) => {
       if (!active) return;
       const t = times || PRAYER_FALLBACK;
-      // Nearest half-hour rule: XX:00–XX:15 blocks XX:00, XX:16–XX:45 blocks
-      // XX:30, XX:46–XX:59 blocks the next hour (same rule as the doctor's planner).
-      setPrayerSlots(doc.prayerIds.map((id) => prayerSlotLabel(t[id])).filter(Boolean));
+      // Block the slot whose window contains the prayer — consistent with the
+      // doctor's slot duration (same rule as the doctor's planner).
+      const dow = new Date(`${selectedDate}T12:00:00`).getDay();
+      const { work, breaks } = dayRules(dow);
+      const slots = (!weekAvail || weekAvail.length === 0) ? BOOK_SLOTS : genSlots(work, breaks, doc.slotMinutes || 30);
+      setPrayerSlots(prayerBlockedSlots(doc.prayerIds.map((id) => t[id]), slots, doc.slotMinutes || 30));
     }).catch(() => active && setPrayerSlots([]));
     return () => { active = false; };
-  }, [doc?.id, doc?.prayerBlock, doc?.prayerIds, doc?.city, selectedDate]);
+  }, [doc?.id, doc?.prayerBlock, doc?.prayerIds, doc?.city, doc?.slotMinutes, selectedDate, weekAvail]);
 
   // The slot grid for the selected date is GENERATED from the doctor's working
   // hours (minus the pause), so a cabinet open until 20:00 really offers 19:30.
@@ -194,7 +197,7 @@ export default function Profile() {
     if (!weekAvail || weekAvail.length === 0) return BOOK_SLOTS;
     const dow = new Date(`${selectedDate}T12:00:00`).getDay();
     const { work, breaks } = dayRules(dow);
-    return genSlots(work, breaks);
+    return genSlots(work, breaks, doc.slotMinutes || 30);
   })();
 
   // Reason a slot is unavailable, or null if it's bookable for the selected date.

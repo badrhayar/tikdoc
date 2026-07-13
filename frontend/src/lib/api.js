@@ -29,6 +29,7 @@ function mapDoctor(row) {
     maxPerDay: row.max_per_day || 0,
     prayerBlock: !!row.prayer_block,
     prayerIds: row.prayer_ids || [],
+    slotMinutes: row.slot_minutes || 30,
     services: Array.isArray(row.services) ? row.services : [],
     avatar: row.avatar_url || '',
     lat: row.lat ?? null,
@@ -648,15 +649,14 @@ export async function saveBlockedSlotsForDate(doctorId, dateISO, slots) {
 }
 
 /** Update a doctor's planning preferences. */
-export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, prayerIds }) {
-  const { error } = await supabase
-    .from('doctors')
-    .update({
-      max_per_day: Number(maxPerDay) || 0,
-      prayer_block: !!prayerBlock,
-      prayer_ids: prayerIds || [],
-    })
-    .eq('id', doctorId);
+export async function saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, prayerIds, slotMinutes }) {
+  const patch = {
+    max_per_day: Number(maxPerDay) || 0,
+    prayer_block: !!prayerBlock,
+    prayer_ids: prayerIds || [],
+  };
+  if ([15, 20, 30, 45, 60].includes(Number(slotMinutes))) patch.slot_minutes = Number(slotMinutes);
+  const { error } = await supabase.from('doctors').update(patch).eq('id', doctorId);
   if (error) throw error;
   return true;
 }

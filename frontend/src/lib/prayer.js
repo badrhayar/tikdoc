@@ -56,3 +56,19 @@ export function prayerSlotLabel(hhmm) {
   const p = (n) => String(n).padStart(2, '0');
   return `${p(Math.floor(rounded / 60))}:${p(rounded % 60)}`;
 }
+
+// Duration-aware prayer blocking (the perfect rule): given the day's actual
+// slot list (HH:MM[]) at a known slot duration, block every slot whose time
+// window [start, start+duration) contains a prayer moment. Works for any slot
+// length (15/20/30/45/60), so a 20-min cabinet blocks exactly the 20-min slot
+// the prayer falls in — never a fixed half-hour.
+export function prayerBlockedSlots(prayerTimes, slots, durationMin) {
+  const toMin = (t) => { const [h, m] = String(t || '').split(':').map(Number); return (isNaN(h) ? NaN : h * 60 + (m || 0)); };
+  const prayers = (prayerTimes || []).map(toMin).filter((n) => !isNaN(n));
+  if (!prayers.length) return [];
+  const dur = [15, 20, 30, 45, 60].includes(Number(durationMin)) ? Number(durationMin) : 30;
+  return (slots || []).filter((s) => {
+    const sm = toMin(s);
+    return !isNaN(sm) && prayers.some((p) => p >= sm && p < sm + dur);
+  });
+}

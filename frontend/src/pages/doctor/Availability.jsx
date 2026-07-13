@@ -8,7 +8,7 @@ import {
 } from '../../lib/api';
 import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
 import { moroccoNow, moDateKeyOf } from '../../lib/time.js';
-import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerSlotLabel } from '../../lib/prayer.js';
+import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerBlockedSlots } from '../../lib/prayer.js';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -54,6 +54,8 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const [dayEndTimes, setDayEndTimes] = useState(DAYS.map(() => '18:00'));
   const [pauseStartTimes, setPauseStartTimes] = useState(DAYS.map(() => '12:00'));
   const [pauseEndTimes, setPauseEndTimes] = useState(DAYS.map(() => '14:00'));
+  // Per-day lunch break on/off — a doctor can work straight through on chosen days.
+  const [pauseToggles, setPauseToggles] = useState(DAYS.map(() => true));
   // planning prefs
   const [prayerBlock, setPrayerBlock] = useState(true);
   const [prayerSet, setPrayerSet] = useState(new Set(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']));
@@ -104,19 +106,22 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         if (doc.max_per_day != null) setMaxPerDay(doc.max_per_day || 0);
         setPrayerBlock(!!doc.prayer_block);
         if (Array.isArray(doc.prayer_ids) && doc.prayer_ids.length) setPrayerSet(new Set(doc.prayer_ids));
+        if ([15, 20, 30, 45, 60].includes(doc.slot_minutes)) setSlotDuration(doc.slot_minutes);
         // working hours
         const rows = await fetchAvailability(doc.id);
         if (active && rows.length) {
           const on = [false, false, false, false, false, false, false];
           const starts = DAYS.map(() => '09:00'), ends = DAYS.map(() => '18:00');
           const pStarts = DAYS.map(() => '12:00'), pEnds = DAYS.map(() => '14:00');
+          // A day's lunch break is "on" only if a break row was saved for it.
+          const pOn = DAYS.map(() => false);
           rows.forEach((r) => {
             const ui = DOW_TO_UI(r.day_of_week);
-            if (r.is_break) { pStarts[ui] = (r.start_time || '12:00').slice(0, 5); pEnds[ui] = (r.end_time || '14:00').slice(0, 5); }
+            if (r.is_break) { pOn[ui] = true; pStarts[ui] = (r.start_time || '12:00').slice(0, 5); pEnds[ui] = (r.end_time || '14:00').slice(0, 5); }
             else { on[ui] = true; starts[ui] = (r.start_time || '09:00').slice(0, 5); ends[ui] = (r.end_time || '18:00').slice(0, 5); }
           });
           setDayToggles(on); setDayStartTimes(starts); setDayEndTimes(ends);
-          setPauseStartTimes(pStarts); setPauseEndTimes(pEnds);
+          setPauseStartTimes(pStarts); setPauseEndTimes(pEnds); setPauseToggles(pOn);
         }
         // congés & absences (upcoming + current)
         try {
@@ -155,21 +160,25 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
       .catch(() => {});
     return () => { active = false; };
   }, [doctorCity, selDate]);
-  // Slots blocked by enabled prayers on the selected date — nearest half-hour:
-  // XX:00–XX:15 blocks XX:00, XX:16–XX:45 blocks XX:30, XX:46–XX:59 the next hour.
-  const prayerSlotsForSel = prayerBlock ? [...prayerSet].map((id) => prayerSlotLabel(prayerForSel[id])).filter(Boolean) : [];
   // Congé covering the selected date, if any → the whole day is closed.
   const selOff = timeOff.find((r) => selDate >= r.start_date && selDate <= r.end_date) || null;
 
   // The day's slot grid mirrors the WEEKLY HOURS currently in the editor (live):
-  // open range(s) minus the déjeuner pause. Day toggled off → no slots at all.
+  // open range(s) minus the déjeuner pause (only if that day's break is on),
+  // generated at the doctor's chosen slot duration. Day off → no slots.
   const selUi = (new Date(`${selDate}T12:00:00`).getDay() + 6) % 7;   // 0=Lun … 6=Dim
   const daySlots = dayToggles[selUi]
     ? genSlots(
         [{ from: dayStartTimes[selUi], to: dayEndTimes[selUi] }],
-        (pauseStartTimes[selUi] && pauseEndTimes[selUi] > pauseStartTimes[selUi])
+        (pauseToggles[selUi] && pauseStartTimes[selUi] && pauseEndTimes[selUi] > pauseStartTimes[selUi])
           ? [{ from: pauseStartTimes[selUi], to: pauseEndTimes[selUi] }] : [],
+        slotDuration,
       )
+    : [];
+  // Slots blocked by enabled prayers on the selected date — the slot whose
+  // window contains the prayer, consistent with the doctor's slot duration.
+  const prayerSlotsForSel = prayerBlock
+    ? prayerBlockedSlots([...prayerSet].map((id) => prayerForSel[id]), daySlots, slotDuration)
     : [];
 
   const toggleSlot = (slot) => {
@@ -258,12 +267,12 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
       DAYS.forEach((_, i) => {
         if (!dayToggles[i]) return;
         rows.push({ day_of_week: UI_TO_DOW(i), start_time: dayStartTimes[i], end_time: dayEndTimes[i], is_break: false, break_label: null });
-        if (pauseStartTimes[i] && pauseEndTimes[i] && pauseEndTimes[i] > pauseStartTimes[i]) {
+        if (pauseToggles[i] && pauseStartTimes[i] && pauseEndTimes[i] && pauseEndTimes[i] > pauseStartTimes[i]) {
           rows.push({ day_of_week: UI_TO_DOW(i), start_time: pauseStartTimes[i], end_time: pauseEndTimes[i], is_break: true, break_label: 'Pause midi' });
         }
       });
       await saveAvailability(doctorId, rows);
-      await saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, prayerIds: [...prayerSet] });
+      await saveDoctorPlanning(doctorId, { maxPerDay, prayerBlock, prayerIds: [...prayerSet], slotMinutes: slotDuration });
       setSavedMsg('Enregistré ✓'); setTimeout(() => setSavedMsg(''), 2500);
     } catch (e) { setSavedMsg('Échec : ' + (e?.message || 'erreur')); }
     finally { setSaving(false); }
@@ -406,12 +415,22 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                         </div>
                       </div>
                       <div>
-                        <div style={labelMini}>Pause déjeuner</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <TimeInput value={pauseStartTimes[i]} onChange={(v) => setArr(setPauseStartTimes, i, v)} />
-                          <span style={{ color: MUTED, flexShrink: 0 }}>→</span>
-                          <TimeInput value={pauseEndTimes[i]} onChange={(v) => setArr(setPauseEndTimes, i, v)} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <span style={{ ...labelMini, marginBottom: 0 }}>Pause déjeuner</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span onClick={() => setArr(setPauseToggles, i, !pauseToggles[i])} style={{ fontSize: 11.5, fontWeight: 600, color: pauseToggles[i] ? PRIMARY : MUTED, cursor: 'pointer' }}>{pauseToggles[i] ? 'Avec pause' : 'Sans pause'}</span>
+                            <Toggle on={pauseToggles[i]} onChange={(v) => setArr(setPauseToggles, i, v)} />
+                          </div>
                         </div>
+                        {pauseToggles[i] ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <TimeInput value={pauseStartTimes[i]} onChange={(v) => setArr(setPauseStartTimes, i, v)} />
+                            <span style={{ color: MUTED, flexShrink: 0 }}>→</span>
+                            <TimeInput value={pauseEndTimes[i]} onChange={(v) => setArr(setPauseEndTimes, i, v)} />
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic', padding: '10px 2px' }}>Journée continue — aucune pause déjeuner.</div>
+                        )}
                       </div>
                     </div>
                   )}
