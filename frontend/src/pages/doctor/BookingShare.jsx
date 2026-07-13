@@ -22,6 +22,13 @@ export default function BookingShare() {
   const link = slug ? `${PUBLIC_BASE}/${slug}` : (doctorId ? `${PUBLIC_BASE}/?doc=${doctorId}` : '');
   const prettyLink = 'www.' + link.replace(/^https?:\/\//, '').replace(/^www\./, '');
 
+  // Visiting this page = the "Invitez vos patients" onboarding step is done —
+  // however the doctor got here (checklist card, sidebar, deep link). Marking it
+  // only on the checklist click made the step reappear on every login.
+  useEffect(() => {
+    if (doctorId) { try { localStorage.setItem(`tabibo_ob_shared_${doctorId}`, '1'); } catch (_) { /* ignore */ } }
+  }, [doctorId]);
+
   const [qr, setQr] = useState('');
   useEffect(() => {
     if (!link) return;
