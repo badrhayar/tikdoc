@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName } from '../shared.jsx';
+import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName, greenBtn, greenBtnBusy } from '../shared.jsx';
 import Icon from '../components/Icon';
 import LangPill from '../components/LangPill';
 import { pushSupported, pushState, enablePush, disablePush } from '../lib/push';
@@ -424,7 +424,7 @@ export default function PatientAccount() {
               {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
             </button>
           )}
-          <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding: isMobile?'10px 13px':'7px 15px', borderRadius:10, fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, minHeight: isMobile?44:undefined, display:'flex', alignItems:'center', gap:6 }}>
+          <button onClick={() => go('search')} style={{ ...greenBtn, flexShrink:0, minHeight: isMobile?44:undefined }}>
             <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
           </button>
           <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:10, fontSize:13, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -491,7 +491,7 @@ export default function PatientAccount() {
                 <div style={{ border:`1px dashed ${BORDER_STRONG}`, borderRadius:13, padding:'22px 14px', textAlign:'center', color:MUT, fontSize:13 }}>
                   {tr('Aucun rendez-vous à venir.', 'No upcoming appointments.', 'لا توجد مواعيد قادمة.')}
                   <div style={{ marginTop:10 }}>
-                    <button onClick={() => go('search')} style={{ background:G, color:'#fff', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700 }}>{tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}</button>
+                    <button onClick={() => go('search')} style={{ ...greenBtn }}>{tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}</button>
                   </div>
                 </div>
               )}

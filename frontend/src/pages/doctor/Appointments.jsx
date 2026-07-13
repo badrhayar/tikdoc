@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { initials } from '../../shared.jsx';
+import { initials, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import Icon from '../../components/Icon';
 import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, markInConsultation, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO, moPartsOf } from '../../lib/time.js';
@@ -266,17 +266,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Imprimer la journée
           </button>
-          <button
-            onClick={openNewAppt}
-            style={{
-              background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10,
-              padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 2px 8px rgba(22,160,106,0.25)',
-            }}
-          >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Nouveau RDV
-          </button>
+          {/* "Nouveau RDV" lives in the global top bar (DoctorApp) — no duplicate here. */}
         </div>
       </div>
 
@@ -552,7 +542,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={recordPayment} style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Encaisser</button>
+              <button onClick={recordPayment} style={{ ...greenBtn, flex: 1 }}>Encaisser</button>
             </div>
           </div>
         </div>
@@ -576,7 +566,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setResched(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={saveResched} style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Reporter</button>
+              <button onClick={saveResched} style={{ ...greenBtn, flex: 1 }}>Reporter</button>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@ import BrandMark from '../components/BrandMark';
 import LangPill from '../components/LangPill';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, nextLabel, bioFor, doctorCoords, docDisplayName } from '../shared.jsx';
+import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, nextLabel, bioFor, doctorCoords, docDisplayName, greenBtn, greenBtnBusy } from '../shared.jsx';
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
@@ -266,7 +266,7 @@ export default function Profile() {
         ) : (
           <button
             onClick={() => go('plogin')}
-            style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}
+            style={{ ...greenBtn }}
           >
             Se connecter
           </button>
@@ -381,7 +381,7 @@ export default function Profile() {
           {/* Bio */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 8 }}>{tr('À propos', 'About', 'نبذة')}</div>
-            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, margin: 0 }}>{bioFor(doc)}</p>
+            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, margin: 0 }}>{bioFor(doc, state.lang)}</p>
           </div>
 
           {/* Tags */}
@@ -556,7 +556,7 @@ export default function Profile() {
                     {tr('Journée complète — ce médecin a atteint son maximum de consultations ce jour.', 'Fully booked — this doctor has reached the daily consultation limit.', 'اليوم مكتمل — بلغ هذا الطبيب الحد الأقصى للاستشارات في هذا اليوم.')}
                     {nextFree && nextFree !== 'none' && (
                       <button onClick={() => { const nd = new Date(`${nextFree.iso}T12:00:00`); setViewY(nd.getFullYear()); setViewM(nd.getMonth()); setState({ bookDate: nextFree.iso, bookSlot: nextFree.slot }); }}
-                        style={{ display: 'block', margin: '10px auto 0', background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                        style={{ ...greenBtn, display: 'block', margin: '10px auto 0' }}>
                         {tr('Aller au prochain créneau libre →', 'Go to the next free slot →', 'الانتقال إلى أقرب موعد متاح ←')}
                       </button>
                     )}

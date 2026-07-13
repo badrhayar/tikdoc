@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { deleteAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
+import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 
 const PRIMARY = '#16A06A';
 const DARK    = '#15314A';
@@ -366,10 +367,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
           ))}
         </div>
 
-        {/* New RDV */}
-        <button onClick={openNewAppt} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nouveau RDV
-        </button>
+        {/* "Nouveau RDV" lives in the global top bar (DoctorApp) — no duplicate here. */}
       </div>
 
       {/* ── Week view ── */}
@@ -469,7 +467,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#9A6510' }}>Réservé par le patient</div>
                         <div style={{ fontSize: 11.5, color: '#9A6510' }}>En attente de confirmation.</div>
                       </div>
-                      <button onClick={confirmBooking} disabled={confirming} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
+                      <button onClick={confirmBooking} disabled={confirming} style={{ ...greenBtn, ...greenBtnBusy(confirming) }}>
                         {confirming ? 'Confirmation…' : 'Confirmer le rendez-vous'}
                       </button>
                     </div>
@@ -544,7 +542,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                 Supprimer
               </button>
               <button onClick={closeEdit} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={saveEdit} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: PRIMARY, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Enregistrer</button>
+              <button onClick={saveEdit} style={{ ...greenBtn, flex: 2 }}>Enregistrer</button>
             </div>
           </div>
         </div>

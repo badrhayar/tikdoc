@@ -3,7 +3,7 @@ import BrandMark from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import PhoneField from '../components/PhoneField';
 import { useViewport } from '../hooks/useViewport';
-import { DOCTORS, MOTIF_OPTS } from '../shared.jsx';
+import { DOCTORS, MOTIF_OPTS, greenBtn, greenBtnBusy } from '../shared.jsx';
 import { createAppointment, guestBookingEnabled, guestBookingStart, guestBookingVerify, fetchRelatives } from '../lib/api';
 import { moroccoToUTCISO } from '../lib/time.js';
 import LangPill from '../components/LangPill';
@@ -228,7 +228,7 @@ export default function BookingInfo() {
         ) : (
           <button
             onClick={() => go('plogin')}
-            style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ ...greenBtn }}
           >
             Se connecter
           </button>
@@ -461,7 +461,7 @@ export default function BookingInfo() {
             <button
               onClick={verifyGuest}
               disabled={otpBusy || otpCode.length !== 6}
-              style={{ width: '100%', marginTop: 16, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 11, padding: 13, fontSize: 15, fontWeight: 700, cursor: (otpBusy || otpCode.length !== 6) ? 'default' : 'pointer', opacity: (otpBusy || otpCode.length !== 6) ? 0.6 : 1 }}
+              style={{ ...greenBtn, width: '100%', marginTop: 16, ...greenBtnBusy(otpBusy || otpCode.length !== 6) }}
             >
               {otpBusy ? tr('Vérification…', 'Verifying…', 'جارٍ التحقق…') : tr('Confirmer mon rendez-vous', 'Confirm my appointment', 'تأكيد موعدي')}
             </button>

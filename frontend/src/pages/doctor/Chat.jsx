@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { fetchConversations, fetchMessages, sendMessage, getOrCreateConversation, deleteConversation, subscribeToConversation, subscribeToInbox, uploadChatImage, isImageMessage } from '../../lib/api';
+import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 import ChatImage from '../../components/ChatImage';
 
 const PRIMARY = '#16A06A';
@@ -215,7 +216,7 @@ export default function Chat({ state, setState }) {
       <div style={{ width: isMobile ? '100%' : 300, flexShrink: 0, borderRight: `1px solid ${BORDER_STRONG}`, background: '#fff', display: (isMobile && activeId) ? 'none' : 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER_STRONG}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: HEADER_BG }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Messages</span>
-          <button onClick={() => setShowNew(true)} title="Nouvelle conversation" style={{ display: 'flex', alignItems: 'center', gap: 6, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setShowNew(true)} title="Nouvelle conversation" style={{ ...greenBtn }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Nouveau
           </button>
@@ -343,7 +344,7 @@ export default function Chat({ state, setState }) {
             <div style={{ fontSize: 14, color: MUTED, maxWidth: 280, textAlign: 'center' }}>
               {isDoctor ? 'Démarrez une conversation avec un de vos patients.' : 'Démarrez une conversation avec un médecin déjà consulté.'}
             </div>
-            <button onClick={() => setShowNew(true)} style={{ marginTop: 4, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={() => setShowNew(true)} style={{ ...greenBtn, marginTop: 4 }}>
               + Nouvelle conversation
             </button>
           </div>

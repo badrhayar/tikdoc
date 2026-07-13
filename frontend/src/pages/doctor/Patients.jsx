@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useViewport } from '../../hooks/useViewport';
-import { DEMO_PATIENTS, CITY_OPTS } from '../../shared.jsx';
+import { DEMO_PATIENTS, CITY_OPTS, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { updatePatient, fetchPrescriptions } from '../../lib/api';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import Icon from '../../components/Icon';
@@ -497,7 +497,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
             </div>
             <div style={{ padding: '14px 22px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setEditForm(null)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={saveEditForm} disabled={editBusy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: editBusy ? 'default' : 'pointer', opacity: editBusy ? 0.7 : 1 }}>{editBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
+              <button onClick={saveEditForm} disabled={editBusy} style={{ ...greenBtn, ...greenBtnBusy(editBusy) }}>{editBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
             </div>
           </div>
         </div>,
@@ -528,7 +528,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
 
             {/* Quick actions — the daily loop, one tap away */}
             <div style={{ padding: '14px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => newApptFor(viewPatient)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>+ Rendez-vous</button>
+              <button onClick={() => newApptFor(viewPatient)} style={{ ...greenBtn }}>+ Rendez-vous</button>
               <button onClick={() => openEdit(viewPatient)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Modifier</button>
               <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Ordonnance</button>
               {viewPatient.userId && (

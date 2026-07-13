@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { STATUS_FR, fetchConversationPreviews, isImageMessage, markInConsultation, markArrived } from '../../lib/api';
 import { moTime, moDateKeyOf, moroccoNow } from '../../lib/time';
 import { useViewport } from '../../hooks/useViewport';
-import { initials as initialsOf, tint } from '../../shared.jsx';
+import { initials as initialsOf, tint, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
 
 const PRIMARY = '#16A06A';
@@ -169,9 +169,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: DARK, letterSpacing: '-0.7px' }}>Tableau de bord</h1>
           <p style={{ margin: '5px 0 0', color: MUTED, fontSize: 14 }}>{dateLabel} — Bonjour, {docLabel}</p>
         </div>
-        <button onClick={openNewAppt} style={{ background: GRAD, color: '#fff', border: 'none', borderRadius: 11, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 8px 18px -6px rgba(22,160,106,0.55)' }}>
-          <span style={{ fontSize: 17, lineHeight: 1 }}>+</span> Nouveau rendez-vous
-        </button>
+        {/* "Nouveau rendez-vous" lives in the global top bar (DoctorApp) — no duplicate here. */}
       </div>
 
       {/* Ma journée — waiting room + live end-of-day summary */}
@@ -217,7 +215,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                         </div>
                       </div>
                       <button onClick={() => moveConsult(a, false)} title="Renvoyer en salle d'attente" style={{ background: '#fff', color: '#6B7B76', border: '1px solid #DCE7E2', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>↩ Salle</button>
-                      <button onClick={() => go('dappts')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Gérer</button>
+                      <button onClick={() => go('dappts')} style={{ ...greenBtn, flexShrink: 0 }}>Gérer</button>
                     </div>
                   );
                 })}
@@ -252,7 +250,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                           <span style={{ fontWeight: 700, color: waitColor }}>attend depuis {min} min</span>
                         </div>
                       </div>
-                      <button onClick={() => moveConsult(a, true)} title="Faire entrer en consultation" style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <button onClick={() => moveConsult(a, true)} title="Faire entrer en consultation" style={{ ...greenBtn, flexShrink: 0 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                         Consultation
                       </button>
@@ -284,7 +282,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               </div>
             </div>
             <button onClick={() => { setState({ apptTab: 'En attente' }); go('dappts'); }}
-              style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44 }}>
+              style={{ ...greenBtn, flexShrink: 0, minHeight: 44 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               Confirmer les rendez-vous
             </button>

@@ -6,7 +6,7 @@ import {
   fetchTimeOff, addTimeOff, deleteTimeOff,
   updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail,
 } from '../../lib/api';
-import { BOOK_SLOTS, genSlots } from '../../shared.jsx';
+import { BOOK_SLOTS, genSlots, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { moroccoNow, moDateKeyOf } from '../../lib/time.js';
 import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerBlockedSlots } from '../../lib/prayer.js';
 
@@ -304,7 +304,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {slotsMsg && <span style={{ fontSize: 13, fontWeight: 600, color: slotsMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{slotsMsg}</span>}
-              <button onClick={saveSlots} disabled={slotsSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: slotsSaving ? 'default' : 'pointer', opacity: slotsSaving ? 0.7 : 1, minHeight: 44, whiteSpace: 'nowrap' }}>
+              <button onClick={saveSlots} disabled={slotsSaving} style={{ ...greenBtn, minHeight: 44, ...greenBtnBusy(slotsSaving) }}>
                 {slotsSaving ? '…' : 'Enregistrer ce jour'}
               </button>
             </div>
@@ -441,7 +441,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
           {/* Explicit save right under the hours — no more forgotten changes. */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
             {savedMsg && <span style={{ fontSize: 13, fontWeight: 600, color: savedMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{savedMsg}</span>}
-            <button onClick={handleSave} disabled={saving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1, minHeight: 44 }}>
+            <button onClick={handleSave} disabled={saving} style={{ ...greenBtn, minHeight: 44, ...greenBtnBusy(saving) }}>
               {saving ? 'Enregistrement…' : 'Enregistrer les horaires'}
             </button>
           </div>
@@ -477,7 +477,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 14 }}>
               {offMsg && <span style={{ fontSize: 13, fontWeight: 600, color: offMsg.startsWith('Échec') || offMsg.startsWith('Choisissez') || offMsg.startsWith('La date') || offMsg.startsWith('Cette') ? '#C2466A' : PRIMARY }}>{offMsg}</span>}
-              <button onClick={handleAddOff} disabled={offSaving} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '0 22px', height: 44, fontSize: 13.5, fontWeight: 700, cursor: offSaving ? 'default' : 'pointer', opacity: offSaving ? 0.7 : 1 }}>
+              <button onClick={handleAddOff} disabled={offSaving} style={{ ...greenBtn, height: 44, ...greenBtnBusy(offSaving) }}>
                 {offSaving ? 'Enregistrement…' : "Enregistrer l'absence"}
               </button>
             </div>

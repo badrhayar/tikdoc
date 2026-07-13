@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import PasswordInput from '../../components/PasswordInput';
-import { SPEC_INFO, SPEC_OPTS, CITY_OPTS } from '../../shared.jsx';
+import { SPEC_INFO, SPEC_OPTS, CITY_OPTS, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import LocationPicker from '../../components/LocationPicker';
 import { saveDoctorServices, updateDoctorFields, updateMyProfile, uploadAvatar, setMySlug } from '../../lib/api';
 import { signIn, updatePassword } from '../../lib/auth';
@@ -153,6 +153,8 @@ function formFromProfile(appUser, myDoctor) {
     telephone: appUser?.phone || '',
     email: appUser?.email || '',
     bio: myDoctor?.bio || '',
+    bioEn: myDoctor?.bio_en || '',
+    bioAr: myDoctor?.bio_ar || '',
     adresse: myDoctor?.clinic_address || '',
     slug: myDoctor?.slug || '',
     loc: (myDoctor?.lat != null && myDoctor?.lng != null) ? { lat: myDoctor.lat, lng: myDoctor.lng } : null,
@@ -169,6 +171,10 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   const [form, setForm] = useState(() => formFromProfile(appUser, myDoctor));
   // Re-sync once the real profile finishes loading.
   useEffect(() => { setForm(formFromProfile(appUser, myDoctor)); }, [appUser?.id, myDoctor?.id]);
+
+  // Which language of the biography is being edited (patients see the one that
+  // matches their chosen app language; French is the fallback).
+  const [bioLang, setBioLang] = useState('fr');
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -248,6 +254,8 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
         const saved = await saveDoctorServices(myDoctor.id, services);
         await updateDoctorFields(myDoctor.id, {
           bio: form.bio || null,
+          bio_en: form.bioEn || null,
+          bio_ar: form.bioAr || null,
           city: form.ville || null,
           clinic_address: form.adresse || null,
           lat: form.loc?.lat ?? null,
@@ -267,7 +275,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
         }
         setState({
           services: saved,
-          myDoctor: { ...myDoctor, services: saved, bio: form.bio, city: form.ville, clinic_address: form.adresse, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null, cnom: form.cnom, specialty: form.specialite || myDoctor.specialty, preferences: { insurances, notifications } },
+          myDoctor: { ...myDoctor, services: saved, bio: form.bio, bio_en: form.bioEn, bio_ar: form.bioAr, city: form.ville, clinic_address: form.adresse, lat: form.loc?.lat ?? null, lng: form.loc?.lng ?? null, cnom: form.cnom, specialty: form.specialite || myDoctor.specialty, preferences: { insurances, notifications } },
           ...(savedUser ? { appUser: { ...appUser, ...savedUser } } : {}),
           toast: 'Modifications enregistrées ✓', toastShow: true,
         });
@@ -369,7 +377,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
               placeholder="dr-aya-chakkour"
               style={{ flex: '1 1 200px', minWidth: 0, padding: '10px 12px', border: `1.5px solid ${slugError ? '#E0596F' : BORDER}`, borderRadius: 10, fontSize: 13.5, color: DARK, outline: 'none', direction: 'ltr', background: slugError ? '#FEF2F4' : '#fff' }}
             />
-            <button onClick={saveSlug} disabled={slugBusy} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 700, cursor: slugBusy ? 'default' : 'pointer', opacity: slugBusy ? 0.7 : 1 }}>
+            <button onClick={saveSlug} disabled={slugBusy} style={{ ...greenBtn, ...greenBtnBusy(slugBusy) }}>
               {slugBusy ? '…' : 'Enregistrer'}
             </button>
           </div>
@@ -460,28 +468,63 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
             />
           </Card>
 
-          {/* Biography Card — shown on the doctor's public profile */}
+          {/* Biography Card — shown on the doctor's public profile, in 3 languages.
+              Patients see the version matching their app language (fallback: French). */}
           <Card title="Présentation (biographie)">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Votre présentation
-              </label>
-              <textarea
-                value={form.bio}
-                maxLength={BIO_MAX}
-                onChange={e => updateForm('bio', e.target.value)}
-                placeholder="Parcours, spécialités, approche de soin… (visible par les patients sur votre profil)"
-                rows={7}
-                style={{
-                  border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px',
-                  fontSize: 14, color: DARK, outline: 'none', background: '#fff',
-                  width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6,
-                }}
-              />
-              <div style={{ fontSize: 12, color: MUTED, textAlign: 'right' }}>
-                {(form.bio || '').length} / {BIO_MAX} caractères
-              </div>
-            </div>
+            {(() => {
+              const LANGS = [
+                { code: 'fr', label: 'Français', key: 'bio',   ph: 'Parcours, spécialités, approche de soin… (visible par les patients sur votre profil)' },
+                { code: 'en', label: 'English',  key: 'bioEn', ph: 'Background, specialties, approach to care… (shown to patients on your profile)' },
+                { code: 'ar', label: 'العربية',  key: 'bioAr', ph: 'المسار المهني، التخصصات، مقاربة العلاج… (يظهر للمرضى في ملفك الشخصي)' },
+              ];
+              const active = LANGS.find(l => l.code === bioLang) || LANGS[0];
+              const val = form[active.key] || '';
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
+                    Écrivez votre présentation dans chaque langue. Le patient verra automatiquement
+                    celle qui correspond à la langue de l'application (à défaut, le français).
+                  </p>
+                  {/* Language tabs */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {LANGS.map(l => {
+                      const on = l.code === bioLang;
+                      const filled = (form[l.key] || '').trim().length > 0;
+                      return (
+                        <button key={l.code} type="button" onClick={() => setBioLang(l.code)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            border: `1px solid ${on ? PRIMARY : BORDER}`, borderRadius: 9,
+                            padding: '7px 13px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                            background: on ? '#E7F6EE' : '#fff', color: on ? '#0E7C52' : MUTED,
+                            fontFamily: l.code === 'ar' ? "'Noto Sans Arabic','Inter',sans-serif" : 'inherit',
+                          }}>
+                          {l.label}
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: filled ? PRIMARY : '#D6DEDA' }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <textarea
+                    value={val}
+                    maxLength={BIO_MAX}
+                    onChange={e => updateForm(active.key, e.target.value)}
+                    placeholder={active.ph}
+                    rows={7}
+                    dir={bioLang === 'ar' ? 'rtl' : 'ltr'}
+                    style={{
+                      border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 12px',
+                      fontSize: 14, color: DARK, outline: 'none', background: '#fff',
+                      width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                      fontFamily: bioLang === 'ar' ? "'Noto Sans Arabic','Inter',sans-serif" : 'inherit', lineHeight: 1.6,
+                    }}
+                  />
+                  <div style={{ fontSize: 12, color: MUTED, textAlign: 'right' }}>
+                    {val.length} / {BIO_MAX} caractères
+                  </div>
+                </div>
+              );
+            })()}
           </Card>
 
           {/* Security Card */}

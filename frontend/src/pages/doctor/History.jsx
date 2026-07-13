@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { updateAppointment, markAppointmentPaid, PAY_METHOD_FROM_FR } from '../../lib/api';
+import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { buildReceiptPDF, pdfOpen } from '../../lib/pdf';
 import { moroccoToUTCISO } from '../../lib/time.js';
 import Pager, { usePager } from '../../components/Pager';
@@ -265,7 +266,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
               </button>
               <button
                 onClick={saveEdit}
-                style={{ padding: '10px 22px', border: 'none', borderRadius: 10, background: PRIMARY, color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+                style={{ ...greenBtn }}
               >
                 Enregistrer
               </button>

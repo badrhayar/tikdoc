@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { SPEC_INFO, subscriptionState, renewalInfo, paymentRef } from '../../shared.jsx';
+import { SPEC_INFO, subscriptionState, renewalInfo, paymentRef, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { moroccoNow } from '../../lib/time.js';
 import { fetchDoctorPayments, declarePayment, doctorRequestActivation, notifyVerification } from '../../lib/api';
 
@@ -196,7 +196,7 @@ export default function Subscription({ state, setState, go }) {
                   <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{p.period} · {p.amount} MAD</div>
                   <span style={{ display: 'inline-block', marginTop: 3, background: pp.bg, color: pp.c, borderRadius: 99, padding: '2px 9px', fontSize: 11.5, fontWeight: 700 }}>{pp.t}</span>
                 </div>
-                {p.status === 'due' && <button onClick={() => declare(p)} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>J'ai payé</button>}
+                {p.status === 'due' && <button onClick={() => declare(p)} style={{ ...greenBtn }}>J'ai payé</button>}
               </div>
             );
           })}
@@ -278,7 +278,7 @@ export default function Subscription({ state, setState, go }) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setPayFor(null)} style={{ flex: 1, background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={submitPayment} disabled={payBusy} style={{ flex: 1.5, background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>{payBusy ? 'Envoi…' : "J'ai payé"}</button>
+              <button onClick={submitPayment} disabled={payBusy} style={{ ...greenBtn, flex: 1.5, ...greenBtnBusy(payBusy) }}>{payBusy ? 'Envoi…' : "J'ai payé"}</button>
             </div>
           </div>
         </div>
@@ -399,7 +399,7 @@ export default function Subscription({ state, setState, go }) {
             {/* Actions (hidden when printing) */}
             <div className="sa-invoice-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button onClick={closeInvoice} style={{ background: 'transparent', color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Fermer</button>
-              <button onClick={() => window.print()} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Télécharger / Imprimer le PDF</button>
+              <button onClick={() => window.print()} style={{ ...greenBtn }}>Télécharger / Imprimer le PDF</button>
             </div>
           </div>
         </div>

@@ -329,9 +329,33 @@ export const kmOf = (d) => {
   return (Math.sqrt(dx*dx + dy*dy) * 0.18).toFixed(1);
 };
 
-export const bioFor = (d) => {
-  // Prefer the doctor's own saved biography; fall back to a generated one.
-  if (d.bio && d.bio.trim()) return d.bio;
+// ─── Coherent primary button ────────────────────────────────────────────────
+// One green style for EVERY primary action inside the doctor & patient spaces,
+// matching the home page's "Créer un compte" button (same gradient, radius,
+// weight) so nothing looks oversized or off-colour. Spread it and add only
+// layout tweaks (width, flex, margins). Use greenBtnDisabled(busy) for the
+// pending state.
+export const GREEN_GRAD = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)';
+export const greenBtn = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+  background: GREEN_GRAD, color: '#fff', border: 'none', borderRadius: 10,
+  padding: '9px 16px', fontSize: 13, fontWeight: 700, lineHeight: 1.3,
+  cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box',
+  boxShadow: '0 6px 16px -6px rgba(22,160,106,0.55)',
+};
+export const greenBtnBusy = (busy) => (busy ? { opacity: 0.7, cursor: 'default' } : null);
+
+export const bioFor = (d, lang = 'fr') => {
+  // The doctor writes their biography in up to 3 languages. Show the one that
+  // matches the chosen UI language; fall back to French, then to any language
+  // they filled, then to a generated blurb — so the profile is never empty.
+  const fr = (d.bio || '').trim();
+  const ar = (d.bioAr || '').trim();
+  const en = (d.bioEn || '').trim();
+  const picked = lang === 'ar' ? (ar || fr || en)
+    : lang === 'en' ? (en || fr || ar)
+    : (fr || en || ar);
+  if (picked) return picked;
   const si = SPEC_INFO[d.spec];
   if (!si) return `${d.name} accompagne ses patients à ${d.city || ''}.`;
   return `${d.name} est ${si.label.toLowerCase()} à ${d.city}, avec ${d.exp} ans d'expérience. Praticien(ne) reconnu(e) pour son écoute, ${d.name.split(' ').slice(-1)[0]} accompagne ses patients dans la durée — au cabinet${d.tele ? ' comme en téléconsultation.' : '.'}`;

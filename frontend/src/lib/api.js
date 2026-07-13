@@ -23,6 +23,8 @@ function mapDoctor(row) {
     langs: row.languages || [],
     exp: row.experience_years || 0,
     bio: row.bio || '',
+    bioAr: row.bio_ar || '',
+    bioEn: row.bio_en || '',
     next: row.next_available || 'today',
     x: row.map_x ?? 45,
     y: row.map_y ?? 55,

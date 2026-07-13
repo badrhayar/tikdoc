@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { fetchDoctorReviews, replyToReview } from '../../lib/api';
+import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
@@ -613,7 +614,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
                         <button onClick={() => setReplyDraft((d) => { const n = { ...d }; delete n[r.id]; return n; })}
                           style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, color: MUTED, cursor: 'pointer' }}>Annuler</button>
                         <button onClick={() => saveReply(r.id)} disabled={replySaving === r.id}
-                          style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 16px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', opacity: replySaving === r.id ? 0.7 : 1 }}>
+                          style={{ ...greenBtn, ...greenBtnBusy(replySaving === r.id) }}>
                           {replySaving === r.id ? 'Publication…' : 'Publier la réponse'}
                         </button>
                       </div>

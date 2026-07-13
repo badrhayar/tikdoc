@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import QRCode from 'qrcode';
 import { useViewport } from '../../hooks/useViewport';
 import { useApp } from '../../context/AppContext';
-import { docDisplayName } from '../../shared.jsx';
+import { docDisplayName, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { buildPrescriptionPDF, pdfOpen, pdfDownload, loadBrandLogo } from '../../lib/pdf';
 import {
   createPrescription,
@@ -448,7 +448,7 @@ export default function Prescriptions() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button
                 onClick={generatePDF}
-                style={{ flex: isMobile ? '1 1 100%' : '1 1 auto', background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                style={{ ...greenBtn, flex: isMobile ? '1 1 100%' : '1 1 auto' }}
               >
                 Générer le PDF
               </button>
