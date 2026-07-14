@@ -346,18 +346,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>
           Paramètres
         </h1>
-        <button onClick={saveAll} style={{
-          background: PRIMARY,
-          color: '#fff',
-          border: 'none',
-          borderRadius: 10,
-          padding: '12px 20px',
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: 'pointer',
-          width: isMobile ? '100%' : 'auto',
-          boxShadow: '0 8px 18px -6px rgba(22,160,106,0.5)',
-        }}>
+        <button onClick={saveAll} style={{ ...greenBtn, width: isMobile ? '100%' : undefined }}>
           Sauvegarder les modifications
         </button>
       </div>
@@ -624,24 +613,6 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                     />
                     <span style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>MAD</span>
                   </div>
-                  <select
-                    value={svc.duration}
-                    onChange={e => updateService(idx, 'duration', e.target.value)}
-                    style={{
-                      border: `1px solid ${BORDER}`,
-                      borderRadius: 6,
-                      padding: '7px 8px',
-                      fontSize: 13,
-                      color: DARK,
-                      outline: 'none',
-                      background: '#fff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {['15', '20', '30', '45'].map(d => (
-                      <option key={d} value={d}>{d} min</option>
-                    ))}
-                  </select>
                   <button
                     onClick={() => deleteService(idx)}
                     style={{

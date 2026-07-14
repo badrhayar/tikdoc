@@ -261,13 +261,21 @@ async function doctorDefaultFee(doctorId) {
   return f != null ? Number(f) || null : null;
 }
 
-export async function createAppointment({ patientId, doctorId, datetime, reason, notes, fee = null, relativeId = null, patientName = null }) {
+// Appointment length is bounded to the DB check (15…240) and snapped to a
+// 15-minute grid, so a stray value never fails the insert.
+export function clampDuration(min) {
+  const n = Math.round((Number(min) || 30) / 15) * 15;
+  return Math.max(15, Math.min(240, n));
+}
+
+export async function createAppointment({ patientId, doctorId, datetime, reason, notes, fee = null, relativeId = null, patientName = null, durationMinutes = 30 }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
       patient_id: patientId,
       doctor_id: doctorId,
       datetime,
+      duration_minutes: clampDuration(durationMinutes),
       reason: reason || null,
       notes: notes || null,
       status: 'pending',
@@ -290,13 +298,14 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
  * (`patientId`) or a walk-in identified by name/phone (no account yet). These
  * persist in the DB so the booking calendar greys the slot out for patients.
  */
-export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null, fee = null }) {
+export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null, fee = null, durationMinutes = 30 }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
       doctor_id: doctorId,
       patient_id: patientId,
       datetime,
+      duration_minutes: clampDuration(durationMinutes),
       reason: reason || null,
       notes: notes || null,
       patient_name: patientName || null,
@@ -337,6 +346,7 @@ export function mapAppointment(row, nameById = {}) {
   return {
     id: row.id,
     datetime: row.datetime,
+    durationMin: row.duration_minutes || 30,
     status: row.status,
     reason: row.reason,
     notes: row.notes,
@@ -423,6 +433,7 @@ export function apptToConsultation(a) {
     service: a.reason || 'Consultation générale',
     date: mp.dateISO,
     time: mp.time,
+    durationMin: a.durationMin || 30,
     // What was actually collected when paid; otherwise the expected fee.
     amount: a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0),
     pay: a.paid && a.payMethod ? (PAY_METHOD_FR[a.payMethod] || a.payMethod) : '—',
@@ -616,10 +627,30 @@ export async function getCurrentAppUser() {
 
 // ── Bookable slots ────────────────────────────────────────────────────────────
 /** Times already booked for a doctor on a given Morocco-local date (HH:MM[]). */
+// Returns the taken intervals for a day: [{ start:'HH:MM', minutes }]. Callers
+// grey out every slot that OVERLAPS one of these (see slotsOverlappingBooked),
+// so a long visit blocks all the slots it spans, not just its start.
 export async function fetchBookedSlots(doctorId, dateISO) {
   const { data, error } = await supabase.rpc('doctor_booked_slots', { d: doctorId, day: dateISO });
   if (error) throw error;
-  return (data || []).map((r) => (typeof r === 'string' ? r : r.slot));
+  return (data || []).map((r) => (typeof r === 'string'
+    ? { start: r, minutes: 30 }
+    : { start: r.slot, minutes: r.minutes || 30 }));
+}
+
+// Given booked intervals and a list of candidate slots (HH:MM) at a known slot
+// length, return the slots that overlap any booked interval.
+export function slotsOverlappingBooked(booked = [], slots = [], slotMinutes = 30) {
+  const toMin = (t) => { const [h, m] = String(t || '').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  const ivals = (booked || []).map((b) => {
+    const s = toMin(b.start ?? b);
+    return [s, s + (Number(b.minutes) || 30)];
+  });
+  const step = Number(slotMinutes) || 30;
+  return (slots || []).filter((slot) => {
+    const s = toMin(slot), e = s + step;
+    return ivals.some(([bs, be]) => s < be && bs < e);
+  });
 }
 
 /** Slots a doctor disabled on a specific date (HH:MM[]). Public. */

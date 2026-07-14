@@ -7,7 +7,7 @@ import { DOCTORS, SPEC_INFO, BOOK_DAYS, BOOK_SLOTS, genSlots, tint, initials, ne
 import DoctorLocationMap from '../components/DoctorLocationMap';
 import Icon from '../components/Icon';
 import { moroccoNow, slotToMinutes } from '../lib/time.js';
-import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff, joinWaitlist } from '../lib/api';
+import { fetchBookedSlots, fetchBlockedSlots, fetchAvailability, fetchDoctorReviews, fetchTimeOff, isDateOff, joinWaitlist, slotsOverlappingBooked } from '../lib/api';
 import { fetchPrayerTimes, PRAYER_FALLBACK, prayerBlockedSlots } from '../lib/prayer.js';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { setPageMeta } from '../lib/seo.js';
@@ -58,7 +58,7 @@ export default function Profile() {
   const [viewM, setViewM] = useState(m.month);
 
   // Per selected-date availability so we can grey out the right slots.
-  const [bookedSlots, setBookedSlots]   = useState([]);   // ['09:00', ...] booked on the selected date
+  const [bookedIvals, setBookedIvals]   = useState([]);   // [{start:'09:00', minutes}] taken on the selected date
   const [blockedSlots, setBlockedSlots] = useState([]);   // ['09:00', ...] doctor-disabled on the selected date
   const [prayerSlots, setPrayerSlots]   = useState([]);   // ['13:00', ...] slots overlapping an enabled prayer
 
@@ -97,7 +97,8 @@ export default function Profile() {
         } catch (_) { /* treat as free — the grid re-checks on selection */ }
         if (!active) return;
         if ((doc?.maxPerDay || 0) > 0 && booked.length >= doc.maxPerDay) continue;
-        const free = slots.find((s) => !booked.includes(s) && !blocked.includes(s) && !(iso === todayISO && slotToMinutes(s) <= m.minutes));
+        const bookedSet = slotsOverlappingBooked(booked, slots, doc.slotMinutes || 30);
+        const free = slots.find((s) => !bookedSet.includes(s) && !blocked.includes(s) && !(iso === todayISO && slotToMinutes(s) <= m.minutes));
         if (free) { setNextFree({ iso, slot: free }); return; }
       }
       if (active) setNextFree('none');
@@ -165,16 +166,16 @@ export default function Profile() {
 
   const maxPerDay = doc?.maxPerDay || 0;
   // "Complet" once the doctor's daily cap is reached.
-  const dayFull = maxPerDay > 0 && bookedSlots.length >= maxPerDay;
+  const dayFull = maxPerDay > 0 && bookedIvals.length >= maxPerDay;
 
   // Load doctor-disabled + booked slots whenever the chosen date changes.
   useEffect(() => {
     if (!isSupabaseConfigured || typeof doc?.id !== 'string' || !selectedDate) {
-      setBlockedSlots([]); setBookedSlots([]); return;
+      setBlockedSlots([]); setBookedIvals([]); return;
     }
     let active = true;
     fetchBlockedSlots(doc.id, selectedDate).then((r) => active && setBlockedSlots(r)).catch(() => {});
-    fetchBookedSlots(doc.id, selectedDate).then((r) => active && setBookedSlots(r)).catch(() => {});
+    fetchBookedSlots(doc.id, selectedDate).then((r) => active && setBookedIvals(r)).catch(() => {});
     return () => { active = false; };
   }, [doc?.id, selectedDate]);
 
@@ -205,6 +206,10 @@ export default function Profile() {
     const { work, breaks } = dayRules(dow);
     return genSlots(work, breaks, doc.slotMinutes || 30);
   })();
+
+  // Every slot a taken visit spans (a 45-min booking greys out 3 × 15-min slots,
+  // not just its start) — derived from the day's booked intervals.
+  const bookedSlots = slotsOverlappingBooked(bookedIvals, daySlots, doc.slotMinutes || 30);
 
   // Reason a slot is unavailable, or null if it's bookable for the selected date.
   const slotState = (slot) => {

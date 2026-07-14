@@ -65,6 +65,13 @@ function timeToTop(time) {
   return ((h - START_HOUR) + m / 60) * HOUR_HEIGHT;
 }
 
+// 'HH:MM' + minutes → 'HH:MM' (end time of a visit).
+function addMinutes(time, minutes) {
+  const [h, m] = String(time || '0:0').split(':').map(Number);
+  const t = (h * 60 + (m || 0) + (Number(minutes) || 0)) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+
 // Given any Date, return { weekOffset, dayIdx } for navigation
 function dateToNav(d) {
   const dayOfWeek = (d.getDay() + 6) % 7; // Mon=0
@@ -253,7 +260,9 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             {appts.map(c => {
               const col    = svcColor(c.service);
               const top    = timeToTopDyn(c.time);
-              const height = Math.max(32, HOUR_HEIGHT * 0.5);
+              // Real height ∝ the visit's actual duration (min 15-min visual).
+              const dur    = Math.max(15, Number(c.durationMin) || 30);
+              const height = Math.max(22, (dur / 60) * HOUR_HEIGHT);
               return (
                 <div
                   key={c.id}
@@ -263,9 +272,9 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                   onMouseEnter={e => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.14)'; }}
                   onMouseLeave={e => { e.currentTarget.style.zIndex = 1;  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: col.color }}>{c.time}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: col.color }}>{c.time}–{addMinutes(c.time, dur)} · {dur} min</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.patient}</div>
-                  {height > 44 && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service}</div>}
+                  {height > 50 && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service}</div>}
                 </div>
               );
             })}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import {
   fetchMyDoctor, fetchAvailability, saveAvailability,
-  fetchBlockedSlots, saveBlockedSlotsForDate, fetchBookedSlots, saveDoctorPlanning,
+  fetchBlockedSlots, saveBlockedSlotsForDate, fetchBookedSlots, slotsOverlappingBooked, saveDoctorPlanning,
   fetchTimeOff, addTimeOff, deleteTimeOff,
   updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail,
 } from '../../lib/api';
@@ -83,7 +83,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const weekDates = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); return d; });
   const [selDate, setSelDate] = useState(todayISO);
   const [blockedForDate, setBlockedForDate] = useState(new Set());
-  const [bookedForDate, setBookedForDate] = useState([]);
+  const [bookedIvals, setBookedIvals] = useState([]);   // [{start,minutes}] taken on selDate
   const [slotsSaving, setSlotsSaving] = useState(false);
   const [slotsMsg, setSlotsMsg] = useState('');
 
@@ -145,7 +145,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         const [blk, bkd] = await Promise.all([fetchBlockedSlots(doctorId, selDate), fetchBookedSlots(doctorId, selDate)]);
         if (!active) return;
         setBlockedForDate(new Set(blk));
-        setBookedForDate(bkd);
+        setBookedIvals(bkd);
       } catch { /* ignore */ }
     })();
     return () => { active = false; };
@@ -175,6 +175,9 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         slotDuration,
       )
     : [];
+  // Every slot a taken visit spans on this date (a long visit marks all the
+  // slots it covers as réservé, not just its start).
+  const bookedForDate = slotsOverlappingBooked(bookedIvals, daySlots, slotDuration);
   // Slots blocked by enabled prayers on the selected date — the slot whose
   // window contains the prayer, consistent with the doctor's slot duration.
   const prayerSlotsForSel = prayerBlock

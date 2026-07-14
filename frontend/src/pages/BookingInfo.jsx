@@ -149,6 +149,7 @@ export default function BookingInfo() {
           notes:     info.notes || '',
           relativeId:  bookForRel?.id || null,
           patientName: bookForRel?.full_name || null,
+          durationMinutes: doc.slotMinutes || 30,   // the visit lasts one of the doctor's slots
         });
         setState({ lastAppointmentId: appt.id });
         await reloadAppointments();

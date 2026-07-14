@@ -63,6 +63,27 @@ const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
 const MUT = '#6B7B76';
 
+// Appointment durations the doctor can choose: 15 min → 2 h, in 15-min steps.
+const DURATION_OPTS = [15, 30, 45, 60, 75, 90, 105, 120];
+const durLabel = (d) => {
+  const h = Math.floor(d / 60), m = d % 60;
+  if (d < 60) return `${d} min`;
+  return m ? `${h} h ${m}` : `${h} h`;
+};
+// 'HH:MM' + minutes → 'HH:MM'.
+const addMinutes = (time, minutes) => {
+  const [h, m] = String(time || '0:0').split(':').map(Number);
+  const t = ((h * 60 + (m || 0) + (Number(minutes) || 0)) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+};
+// Normalise a stored sex ('F'/'M'/'femme'…) to the select's labels.
+const sexLabel = (s) => {
+  const v = String(s || '').toLowerCase();
+  if (v.startsWith('m') || v.startsWith('h')) return 'Homme';
+  if (v.startsWith('f')) return 'Femme';
+  return '';
+};
+
 // Payment-due bar copy, in the three site languages.
 const PAY_T = {
   fr: {
@@ -223,7 +244,7 @@ export default function DoctorApp() {
     // Always open on a clean form anchored to today's real (Morocco) date.
     setState({
       newApptOpen:true, apptCreated:false, naMatch:null, naSuggestOpen:false,
-      newAppt:{ name:'', phone:'', cin:'', sex:'Femme', dob:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', notes:'' },
+      newAppt:{ name:'', phone:'', cin:'', sex:'Femme', dob:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', durationMinutes: 30, notes:'' },
     });
   };
   const closeNewAppt = () => setState({ newApptOpen:false });
@@ -253,6 +274,7 @@ export default function DoctorApp() {
         await createWalkinAppointment({
           doctorId,
           datetime: moroccoToUTCISO(na.date, na.time),
+          durationMinutes: na.durationMinutes || 30,
           reason: na.motif,
           notes: na.notes || null,
           patientId: state.naMatch?.userId || null,
@@ -276,9 +298,9 @@ export default function DoctorApp() {
 
     // ── Local-only fallback (demo mode / not signed in) ──
     const id = 'local_' + Date.now();
-    const appt = { id, datetime: new Date(`${na.date}T${na.time}:00`).toISOString(), status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
+    const appt = { id, datetime: new Date(`${na.date}T${na.time}:00`).toISOString(), durationMin: na.durationMinutes || 30, status:'pending', patientName: na.name, patientPhone: na.phone || '', reason: na.motif, notes: na.notes || '' };
     const svc  = (state.services || []).find(s => s.name === na.motif);
-    const consult = { id, patient: na.name, age: age ?? '—', sex: sexLetter, service: na.motif, date: na.date, time: na.time, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
+    const consult = { id, patient: na.name, age: age ?? '—', sex: sexLetter, service: na.motif, date: na.date, time: na.time, durationMin: na.durationMinutes || 30, amount: svc?.price || 0, pay:'—', status:'En attente', notes: na.notes || '' };
     setState({
       newApptOpen:false, apptCreated:true,
       manualAppts:    [appt, ...(state.manualAppts || [])],
@@ -515,7 +537,7 @@ export default function DoctorApp() {
                       {naSuggests.map((sg, i) => {
                         const [bg, fg] = tint(i);
                         return (
-                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: sg.phone && sg.phone !== '—' ? sg.phone : '', cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sg.sex || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
+                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: sg.phone && sg.phone !== '—' ? sg.phone : '', cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sexLabel(sg.sex) || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
                             <span style={{ width:30, height:30, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0 }}>{initials(sg.name)}</span>
                             <span style={{ flex:1, minWidth:0 }}>
                               <span style={{ display:'block', fontSize:13, fontWeight:700, color:DARK }}>{sg.name}</span>
@@ -565,16 +587,23 @@ export default function DoctorApp() {
                 <select value={newAppt.motif || motifOpts[0]} onChange={e => setNA('motif', e.target.value)} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', marginBottom:14, boxSizing:'border-box' }}>
                   {motifOpts.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+                <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap:14, marginBottom:8 }}>
                   <div style={{ minWidth:0 }}>
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Date</label>
                     <input type="date" min={todayISO} value={newAppt.date || todayISO} onChange={e => setNA('date', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                   </div>
                   <div style={{ minWidth:0 }}>
-                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Heure</label>
+                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Heure de début</label>
                     <input type="time" value={newAppt.time || '09:00'} onChange={e => setNA('time', e.target.value)} style={{ width:'100%', padding:'10px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box' }} />
                   </div>
+                  <div style={{ minWidth:0 }}>
+                    <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Durée</label>
+                    <select value={newAppt.durationMinutes || 30} onChange={e => setNA('durationMinutes', Number(e.target.value))} style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', cursor:'pointer', boxSizing:'border-box' }}>
+                      {DURATION_OPTS.map(d => <option key={d} value={d}>{durLabel(d)}</option>)}
+                    </select>
+                  </div>
                 </div>
+                <div style={{ fontSize:12.5, color:MUT, marginBottom:14 }}>Fin du rendez-vous : <strong style={{ color:DARK }}>{addMinutes(newAppt.time || '09:00', newAppt.durationMinutes || 30)}</strong></div>
                 <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Notes <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
                 <textarea value={newAppt.notes || ''} onChange={e => setNA('notes', e.target.value)} placeholder="Symptômes, remarques…" style={{ width:'100%', minHeight:62, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', resize:'vertical', boxSizing:'border-box' }} />
               </div>
