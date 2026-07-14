@@ -77,6 +77,9 @@ const initialState = {
   apptTab: 'tous',
   lang: 'fr',
   langOpen: false,
+  // Doctor-space "Confort visuel": 0 (bright, default) … 100 (deepest). Darkens
+  // the page background & hairlines so white cards stand out (more contrast).
+  surfaceTint: (() => { try { return Math.max(0, Math.min(100, Number(localStorage.getItem('tabibo_surface_tint')) || 0)); } catch { return 0; } })(),
   pop: null,
   payMethod: 'cash',
   reviewOpen: false, reviewStars: 5, reviewDoctor: '', reviewText: '', reviewDone: false,
@@ -150,6 +153,23 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', state.lang || 'fr');
   }, [state.lang]);
+
+  // "Confort visuel" (doctor space): drive --tab-bg / --tab-line from the slider.
+  // We interpolate the brand-tinted greys toward a deeper greenish grey — the hue
+  // stays on-brand, only the lightness drops, so nothing washes out. The doctor
+  // files read these via `var(--tab-bg, …)` / `var(--tab-line, …)`, so the whole
+  // space re-tints live (and fixed modals are untouched — no ancestor filter).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const L = Math.max(0, Math.min(100, Number(state.surfaceTint) || 0)) / 100;
+    const lerp = (a, b) => Math.round(a + (b - a) * L);
+    const bg   = `rgb(${lerp(244, 203)}, ${lerp(248, 215)}, ${lerp(245, 207)})`;   // #F4F8F5 → deeper sage
+    const line = `rgb(${lerp(234, 181)}, ${lerp(239, 197)}, ${lerp(236, 188)})`;   // #EAEFEC → firmer hairline
+    const el = document.documentElement;
+    el.style.setProperty('--tab-bg', bg);
+    el.style.setProperty('--tab-line', line);
+    try { localStorage.setItem('tabibo_surface_tint', String(Math.round(Number(state.surfaceTint) || 0))); } catch { /* ignore */ }
+  }, [state.surfaceTint]);
 
   // Countdown timer: update now every second
   useEffect(() => {

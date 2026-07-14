@@ -12,8 +12,8 @@ import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerBlockedSlots } 
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = '#F4F8F5';
-const BORDER = '#EAEFEC';
+const BG = 'var(--tab-bg, #F4F8F5)';
+const BORDER = 'var(--tab-line, #EAEFEC)';
 const MUTED = '#6B7B76';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];

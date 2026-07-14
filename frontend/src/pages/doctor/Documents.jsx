@@ -7,8 +7,8 @@ import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = '#F4F8F5';
-const BORDER = '#EAEFEC';
+const BG = 'var(--tab-bg, #F4F8F5)';
+const BORDER = 'var(--tab-line, #EAEFEC)';
 const MUTED = '#6B7B76';
 
 const DI = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };

@@ -59,8 +59,8 @@ import Staff from './Staff';
 
 const G = '#16A06A';
 const DARK = '#15314A';
-const BG = '#F4F8F5';
-const BORDER = '#EAEFEC';
+const BG = 'var(--tab-bg, #F4F8F5)';
+const BORDER = 'var(--tab-line, #EAEFEC)';
 const MUT = '#6B7B76';
 
 // Payment-due bar copy, in the three site languages.

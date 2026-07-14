@@ -4,8 +4,8 @@ import { fetchStaff, inviteStaff, setStaffActive, removeStaff } from '../../lib/
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = '#F4F8F5';
-const BORDER = '#EAEFEC';
+const BG = 'var(--tab-bg, #F4F8F5)';
+const BORDER = 'var(--tab-line, #EAEFEC)';
 const MUTED = '#6B7B76';
 
 function Toggle({ checked, onChange }) {

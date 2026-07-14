@@ -6,8 +6,8 @@ import { initials as initialsOf, tint, greenBtn, greenBtnBusy } from '../../shar
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = '#F4F8F5';
-const BORDER = '#EAEFEC';
+const BG = 'var(--tab-bg, #F4F8F5)';
+const BORDER = 'var(--tab-line, #EAEFEC)';
 const MUTED = '#6B7B76';
 const ROW_ALT = '#F7FBF9';
 const pad = (n) => String(n).padStart(2, '0');
