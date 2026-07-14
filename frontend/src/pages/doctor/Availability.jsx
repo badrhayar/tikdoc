@@ -12,8 +12,8 @@ import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerBlockedSlots } 
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -284,7 +284,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const navBtn = { width: 40, height: 40, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', fontSize: 18, color: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 
   return (
-    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 22, padding: isMobile ? '0 4px' : 0 }}>
         <div>
@@ -395,44 +395,41 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {DAYS.map((day, i) => {
               const on = dayToggles[i];
+              const tw = 104;  // fixed time-field width so every row lines up
+              const lbl = { fontSize: 11, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.4, whiteSpace: 'nowrap' };
               return (
-                <div key={day} style={{ borderRadius: 12, border: `1px solid ${BORDER}`, background: on ? '#fff' : '#FAFBFB', padding: '12px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: on ? DARK : MUTED, minWidth: 84 }}>{day}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: on ? PRIMARY : MUTED }}>{on ? 'Ouvert' : 'Fermé'}</span>
-                      <Toggle on={on} onChange={(v) => setArr(setDayToggles, i, v)} />
-                    </div>
+                <div key={day} style={{ borderRadius: 12, border: `1px solid ${BORDER}`, background: on ? '#fff' : '#FAFBFB', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 18, flexWrap: 'wrap' }}>
+                  {/* Day + open/closed toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 132 }}>
+                    <Toggle on={on} onChange={(v) => setArr(setDayToggles, i, v)} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: on ? DARK : MUTED }}>{day}</span>
                   </div>
-                  {on && (
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 12 }}>
-                      <div>
-                        <div style={labelMini}>Heures de travail</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <TimeInput value={dayStartTimes[i]} onChange={(v) => setArr(setDayStartTimes, i, v)} />
-                          <span style={{ color: MUTED, flexShrink: 0 }}>→</span>
-                          <TimeInput value={dayEndTimes[i]} onChange={(v) => setArr(setDayEndTimes, i, v)} />
-                        </div>
+                  {on ? (
+                    <>
+                      {/* Working hours — same line, fixed-width fields */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={lbl}>Travail</span>
+                        <div style={{ width: tw }}><TimeInput value={dayStartTimes[i]} onChange={(v) => setArr(setDayStartTimes, i, v)} /></div>
+                        <span style={{ color: MUTED, flexShrink: 0 }}>→</span>
+                        <div style={{ width: tw }}><TimeInput value={dayEndTimes[i]} onChange={(v) => setArr(setDayEndTimes, i, v)} /></div>
                       </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                          <span style={{ ...labelMini, marginBottom: 0 }}>Pause déjeuner</span>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <span onClick={() => setArr(setPauseToggles, i, !pauseToggles[i])} style={{ fontSize: 11.5, fontWeight: 600, color: pauseToggles[i] ? PRIMARY : MUTED, cursor: 'pointer' }}>{pauseToggles[i] ? 'Avec pause' : 'Sans pause'}</span>
-                            <Toggle on={pauseToggles[i]} onChange={(v) => setArr(setPauseToggles, i, v)} />
-                          </div>
-                        </div>
+                      {/* Lunch break — toggle + fields on the SAME line */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span onClick={() => setArr(setPauseToggles, i, !pauseToggles[i])} style={{ ...lbl, color: pauseToggles[i] ? PRIMARY : MUTED, cursor: 'pointer' }}>{pauseToggles[i] ? 'Pause' : 'Sans pause'}</span>
+                        <Toggle on={pauseToggles[i]} onChange={(v) => setArr(setPauseToggles, i, v)} />
                         {pauseToggles[i] ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <TimeInput value={pauseStartTimes[i]} onChange={(v) => setArr(setPauseStartTimes, i, v)} />
+                          <>
+                            <div style={{ width: tw }}><TimeInput value={pauseStartTimes[i]} onChange={(v) => setArr(setPauseStartTimes, i, v)} /></div>
                             <span style={{ color: MUTED, flexShrink: 0 }}>→</span>
-                            <TimeInput value={pauseEndTimes[i]} onChange={(v) => setArr(setPauseEndTimes, i, v)} />
-                          </div>
+                            <div style={{ width: tw }}><TimeInput value={pauseEndTimes[i]} onChange={(v) => setArr(setPauseEndTimes, i, v)} /></div>
+                          </>
                         ) : (
-                          <div style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic', padding: '10px 2px' }}>Journée continue — aucune pause déjeuner.</div>
+                          <span style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>Journée continue</span>
                         )}
                       </div>
-                    </div>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>Fermé</span>
                   )}
                 </div>
               );

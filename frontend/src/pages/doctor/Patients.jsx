@@ -20,8 +20,8 @@ function ageFromDob(dob) {
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const ROW_ALT = '#F5F9F7';
 const BORDER_STRONG = '#D5E5DD';
@@ -186,7 +186,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const pager = usePager(filtered, 10);
 
   return (
-    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>

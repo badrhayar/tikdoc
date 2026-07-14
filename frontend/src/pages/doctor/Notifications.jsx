@@ -3,8 +3,8 @@ import { fetchReminderLog, fetchReminderSettings, saveReminderSettings } from '.
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 // Toggle definitions — `key` maps to a column in public.reminder_settings and
@@ -124,7 +124,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
   const tabs = ['Messages envoyés', 'Rappels automatiques', 'Contenu des messages'];
 
   return (
-    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: 'transparent', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Rappels & Notifications</h1>

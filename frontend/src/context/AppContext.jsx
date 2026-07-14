@@ -154,20 +154,17 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('lang', state.lang || 'fr');
   }, [state.lang]);
 
-  // "Confort visuel" (doctor space): drive --tab-bg / --tab-line from the slider.
-  // We interpolate the brand-tinted greys toward a deeper greenish grey — the hue
-  // stays on-brand, only the lightness drops, so nothing washes out. The doctor
-  // files read these via `var(--tab-bg, …)` / `var(--tab-line, …)`, so the whole
-  // space re-tints live (and fixed modals are untouched — no ancestor filter).
+  // "Confort visuel" (doctor space): drive ONE variable — --tab-canvas, the
+  // background that sits BEHIND the cards. Only the canvas darkens; cards, inputs,
+  // buttons, the sidebar and every hairline stay exactly as designed (white/light).
+  // We drop the lightness of the brand-tinted sage toward a deeper sage — the hue
+  // stays on-brand, so nothing washes out. Re-tints live; fixed modals untouched.
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const L = Math.max(0, Math.min(100, Number(state.surfaceTint) || 0)) / 100;
     const lerp = (a, b) => Math.round(a + (b - a) * L);
-    const bg   = `rgb(${lerp(244, 203)}, ${lerp(248, 215)}, ${lerp(245, 207)})`;   // #F4F8F5 → deeper sage
-    const line = `rgb(${lerp(234, 181)}, ${lerp(239, 197)}, ${lerp(236, 188)})`;   // #EAEFEC → firmer hairline
-    const el = document.documentElement;
-    el.style.setProperty('--tab-bg', bg);
-    el.style.setProperty('--tab-line', line);
+    const canvas = `rgb(${lerp(244, 200)}, ${lerp(248, 213)}, ${lerp(245, 205)})`;   // #F4F8F5 → deeper sage
+    document.documentElement.style.setProperty('--tab-canvas', canvas);
     try { localStorage.setItem('tabibo_surface_tint', String(Math.round(Number(state.surfaceTint) || 0))); } catch { /* ignore */ }
   }, [state.surfaceTint]);
 

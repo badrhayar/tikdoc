@@ -8,8 +8,8 @@ import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const ROW_ALT = '#F5F9F7';
 const BORDER_STRONG = '#D5E5DD';
@@ -246,7 +246,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   const pager = usePager(filtered, 10);
 
   return (
-    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header — stacks on mobile so the title never wraps mid-word */}
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: isMobile ? 12 : 0, marginBottom: 24 }}>
         <div>

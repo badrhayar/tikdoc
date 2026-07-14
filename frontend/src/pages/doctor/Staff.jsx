@@ -4,8 +4,8 @@ import { fetchStaff, inviteStaff, setStaffActive, removeStaff } from '../../lib/
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 function Toggle({ checked, onChange }) {
@@ -94,7 +94,7 @@ export default function Staff() {
   // A secretary opened this page → no team management allowed.
   if (state?.isStaff) {
     return (
-      <div style={{ padding: 32, background: BG, minHeight: '100vh' }}>
+      <div style={{ padding: 32, background: 'transparent', minHeight: '100vh' }}>
         <div style={{
           maxWidth: 520,
           margin: '40px auto 0',
@@ -116,7 +116,7 @@ export default function Staff() {
   // Doctor account not yet activated.
   if (!doctorId) {
     return (
-      <div style={{ padding: 32, background: BG, minHeight: '100vh' }}>
+      <div style={{ padding: 32, background: 'transparent', minHeight: '100vh' }}>
         <div style={{
           maxWidth: 520,
           margin: '40px auto 0',
@@ -173,7 +173,7 @@ export default function Staff() {
   }
 
   return (
-    <div style={{ padding: 32, background: BG, minHeight: '100vh' }}>
+    <div style={{ padding: 32, background: 'transparent', minHeight: '100vh' }}>
 
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>

@@ -6,8 +6,8 @@ import { initials as initialsOf, tint, greenBtn, greenBtnBusy } from '../../shar
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const ROW_ALT = '#F7FBF9';
 const pad = (n) => String(n).padStart(2, '0');
@@ -157,7 +157,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   ];
 
   return (
-    <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? 4 : 32, background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
 
       {/* Header */}
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

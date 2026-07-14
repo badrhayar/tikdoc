@@ -10,8 +10,8 @@ const villes = CITY_OPTS.map((c) => (typeof c === 'string' ? c : c.label));
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 
@@ -339,7 +339,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   return (
-    <div style={{ padding: isMobile ? '10px' : '32px', background: BG, minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '10px' : '32px', background: 'transparent', minHeight: '100vh' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
@@ -542,8 +542,8 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                     sans changer les couleurs de la marque. Le réglage s'applique tout de suite et est mémorisé.
                   </p>
                   {/* Live preview: a mini card on the tinted background */}
-                  <div style={{ borderRadius: 12, padding: 16, background: 'var(--tab-bg, #F4F8F5)', border: `1px solid var(--tab-line, ${BORDER})`, display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ flex: 1, background: '#fff', border: `1px solid var(--tab-line, ${BORDER})`, borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ borderRadius: 12, padding: 16, background: 'var(--tab-canvas, #F4F8F5)', border: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div style={{ flex: 1, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 14px' }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>Aperçu</div>
                       <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Fiche blanche sur fond {tint === 0 ? 'clair' : 'assombri'}</div>
                     </div>

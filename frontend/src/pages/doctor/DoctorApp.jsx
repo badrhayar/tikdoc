@@ -59,8 +59,8 @@ import Staff from './Staff';
 
 const G = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUT = '#6B7B76';
 
 // Payment-due bar copy, in the three site languages.
@@ -488,7 +488,7 @@ export default function DoctorApp() {
           </div>
         )}
 
-        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
+        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto', background: screen==='dchat' ? '#fff' : 'var(--tab-canvas, #F4F8F5)' }}>
           <SubScreen state={state} setState={setState} go={go} openNewAppt={openNewAppt} openAddPatient={openAddPatient} />
         </main>
 

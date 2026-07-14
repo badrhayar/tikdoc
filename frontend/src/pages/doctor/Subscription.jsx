@@ -6,8 +6,8 @@ import { fetchDoctorPayments, declarePayment, doctorRequestActivation, notifyVer
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 // Fallback collection account if the admin hasn't set one yet.
@@ -176,7 +176,7 @@ export default function Subscription({ state, setState, go }) {
   };
 
   return (
-    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: 'transparent', minHeight: '100vh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 22px' }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Abonnement</h1>
         <span style={{ background: subPill.bg, color: subPill.c, borderRadius: 20, padding: '5px 13px', fontSize: 13, fontWeight: 700 }}>{subPill.t}</span>

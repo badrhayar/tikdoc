@@ -20,8 +20,8 @@ const PUBLIC_BASE = (import.meta.env.VITE_APP_URL || 'https://tabibo.ma').replac
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 
 const emptyRow = () => ({ drug: '', dosage: '', duration: '', instructions: '' });
@@ -120,7 +120,7 @@ export default function Prescriptions() {
 
   if (!doctorId && !isDemo) {
     return (
-      <div style={{ padding: isMobile ? 16 : 32, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Segoe UI', sans-serif" }}>
+      <div style={{ padding: isMobile ? 16 : 32, background: 'transparent', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Segoe UI', sans-serif" }}>
         <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${BORDER}`, padding: '40px 32px', textAlign: 'center', maxWidth: 420, color: MUTED, fontSize: 15 }}>
           Disponible une fois votre compte médecin activé.
         </div>
@@ -305,7 +305,7 @@ export default function Prescriptions() {
   const dropRef = useRef(null);
 
   return (
-    <div style={{ padding: isMobile ? 8 : 32, background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ padding: isMobile ? 8 : 32, background: 'transparent', minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: DARK }}>Ordonnances</h1>

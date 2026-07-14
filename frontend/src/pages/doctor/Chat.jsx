@@ -6,8 +6,8 @@ import ChatImage from '../../components/ChatImage';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
-const BG = 'var(--tab-bg, #F4F8F5)';
-const BORDER = 'var(--tab-line, #EAEFEC)';
+const BG = '#F4F8F5';
+const BORDER = '#EAEFEC';
 const MUTED = '#6B7B76';
 const BORDER_STRONG = '#D5E5DD';
 const HEADER_BG = '#EDF5F0';
