@@ -186,7 +186,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
   const pager = usePager(filtered, 10);
 
   return (
-    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>

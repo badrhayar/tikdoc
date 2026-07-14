@@ -342,7 +342,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const lbl = { fontSize: 12, fontWeight: 600, color: DARK, marginBottom: 4, display: 'block' };
 
   return (
-    <div style={{ padding: isMobile ? 4 : 26, background: 'transparent', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 4 : 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
 
       {/* ── Top bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>

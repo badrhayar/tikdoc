@@ -488,7 +488,7 @@ export default function DoctorApp() {
           </div>
         )}
 
-        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto', background: screen==='dchat' ? '#fff' : 'var(--tab-canvas, #F4F8F5)' }}>
+        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
           <SubScreen state={state} setState={setState} go={go} openNewAppt={openNewAppt} openAddPatient={openAddPatient} />
         </main>
 

@@ -339,7 +339,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
   }
 
   return (
-    <div style={{ padding: isMobile ? '10px' : '32px', background: 'transparent', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '10px' : '32px', background: BG, minHeight: '100vh' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
@@ -521,52 +521,6 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                   />
                   <div style={{ fontSize: 12, color: MUTED, textAlign: 'right' }}>
                     {val.length} / {BIO_MAX} caractères
-                  </div>
-                </div>
-              );
-            })()}
-          </Card>
-
-          {/* Confort visuel — surface-tint slider. Darkens the page background &
-              hairlines across the whole cabinet space so the white cards stand
-              out more (fixes the "too bright / low contrast" look). Live + saved. */}
-          <Card title="Confort visuel">
-            {(() => {
-              const tint = Math.max(0, Math.min(100, Number(state?.surfaceTint) || 0));
-              const setTint = (v) => setState({ surfaceTint: Math.max(0, Math.min(100, Math.round(Number(v) || 0))) });
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <p style={{ margin: 0, fontSize: 12.5, color: MUTED, lineHeight: 1.6 }}>
-                    Trouvez l'écran trop clair ? Assombrissez progressivement le <strong>fond</strong> et
-                    les <strong>traits</strong> de votre espace : les fiches blanches ressortent davantage,
-                    sans changer les couleurs de la marque. Le réglage s'applique tout de suite et est mémorisé.
-                  </p>
-                  {/* Live preview: a mini card on the tinted background */}
-                  <div style={{ borderRadius: 12, padding: 16, background: 'var(--tab-canvas, #F4F8F5)', border: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ flex: 1, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 14px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>Aperçu</div>
-                      <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Fiche blanche sur fond {tint === 0 ? 'clair' : 'assombri'}</div>
-                    </div>
-                    <div style={{ background: 'linear-gradient(135deg,#1AAE74,#12875A)', color: '#fff', borderRadius: 9, padding: '8px 12px', fontSize: 12, fontWeight: 700 }}>Marque</div>
-                  </div>
-                  {/* The bar + moving dot */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, whiteSpace: 'nowrap' }}>Clair</span>
-                    <input
-                      type="range" min={0} max={100} step={1} value={tint}
-                      onChange={(e) => setTint(e.target.value)}
-                      className="tab-tint-range"
-                      aria-label="Intensité de l'assombrissement des surfaces"
-                    />
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, whiteSpace: 'nowrap' }}>Sombre</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12.5, color: MUTED }}>Intensité : <strong style={{ color: DARK }}>{tint}%</strong></span>
-                    {tint > 0 && (
-                      <button onClick={() => setTint(0)} style={{ background: '#fff', color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '6px 13px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
-                        Réinitialiser
-                      </button>
-                    )}
                   </div>
                 </div>
               );

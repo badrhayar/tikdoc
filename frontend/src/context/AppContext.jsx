@@ -77,9 +77,6 @@ const initialState = {
   apptTab: 'tous',
   lang: 'fr',
   langOpen: false,
-  // Doctor-space "Confort visuel": 0 (bright, default) … 100 (deepest). Darkens
-  // the page background & hairlines so white cards stand out (more contrast).
-  surfaceTint: (() => { try { return Math.max(0, Math.min(100, Number(localStorage.getItem('tabibo_surface_tint')) || 0)); } catch { return 0; } })(),
   pop: null,
   payMethod: 'cash',
   reviewOpen: false, reviewStars: 5, reviewDoctor: '', reviewText: '', reviewDone: false,
@@ -153,20 +150,6 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', state.lang || 'fr');
   }, [state.lang]);
-
-  // "Confort visuel" (doctor space): drive ONE variable — --tab-canvas, the
-  // background that sits BEHIND the cards. Only the canvas darkens; cards, inputs,
-  // buttons, the sidebar and every hairline stay exactly as designed (white/light).
-  // We drop the lightness of the brand-tinted sage toward a deeper sage — the hue
-  // stays on-brand, so nothing washes out. Re-tints live; fixed modals untouched.
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const L = Math.max(0, Math.min(100, Number(state.surfaceTint) || 0)) / 100;
-    const lerp = (a, b) => Math.round(a + (b - a) * L);
-    const canvas = `rgb(${lerp(244, 200)}, ${lerp(248, 213)}, ${lerp(245, 205)})`;   // #F4F8F5 → deeper sage
-    document.documentElement.style.setProperty('--tab-canvas', canvas);
-    try { localStorage.setItem('tabibo_surface_tint', String(Math.round(Number(state.surfaceTint) || 0))); } catch { /* ignore */ }
-  }, [state.surfaceTint]);
 
   // Countdown timer: update now every second
   useEffect(() => {

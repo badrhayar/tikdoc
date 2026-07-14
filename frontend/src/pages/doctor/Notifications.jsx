@@ -124,7 +124,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
   const tabs = ['Messages envoyés', 'Rappels automatiques', 'Contenu des messages'];
 
   return (
-    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: 'transparent', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? 8 : 32, backgroundColor: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: 0 }}>Rappels & Notifications</h1>

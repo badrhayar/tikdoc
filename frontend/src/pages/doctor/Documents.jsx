@@ -86,7 +86,7 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
   const docsPager = usePager(filteredDocs, 8);
 
   return (
-    <div style={{ padding: isMobile ? '8px' : '32px', background: 'transparent', minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ padding: isMobile ? '8px' : '32px', background: BG, minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: DARK }}>Documents médicaux</h1>
