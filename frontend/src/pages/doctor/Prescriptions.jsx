@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import QRCode from 'qrcode';
 import { useViewport } from '../../hooks/useViewport';
 import { useApp } from '../../context/AppContext';
-import { docDisplayName, greenBtn, greenBtnBusy } from '../../shared.jsx';
+import { docDisplayName, greenBtn, greenBtnBusy, GREEN_GRAD } from '../../shared.jsx';
+import Pager, { usePager } from '../../components/Pager';
 import { buildPrescriptionPDF, pdfOpen, pdfDownload, loadBrandLogo } from '../../lib/pdf';
 import {
   createPrescription,
@@ -72,6 +73,7 @@ export default function Prescriptions() {
 
   // ── Recent prescriptions ───────────────────────────────────────────────────
   const [recent, setRecent] = useState([]);
+  const recentPager = usePager(recent, 6);
 
   const [busy, setBusy] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -490,9 +492,9 @@ export default function Prescriptions() {
                   Aucune ordonnance pour le moment.
                 </div>
               )}
-              {recent.map((p, idx) => (
+              {recentPager.items.map((p, idx) => (
                 <div key={p.id}
-                  style={{ padding: '14px 16px', borderBottom: idx < recent.length - 1 ? `1px solid ${BORDER}` : 'none', background: '#fff' }}
+                  style={{ padding: '14px 16px', borderBottom: idx < recentPager.items.length - 1 ? `1px solid ${BORDER}` : 'none', background: '#fff' }}
                   onMouseEnter={e => e.currentTarget.style.background = BG}
                   onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                 >
@@ -519,7 +521,7 @@ export default function Prescriptions() {
                       onClick={() => sendToPatient(p)}
                       disabled={sendBusyId === p.id || !!p.sent_at}
                       title={p.patient_id ? 'Envoyer au patient' : 'Patient non lié à un compte'}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, borderRadius: 8, border: 'none', background: p.sent_at ? '#EDF3F0' : PRIMARY, color: p.sent_at ? MUTED : '#fff', fontSize: 12.5, fontWeight: 700, cursor: (sendBusyId === p.id || p.sent_at) ? 'default' : 'pointer', opacity: sendBusyId === p.id ? 0.7 : 1 }}
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, borderRadius: 8, border: 'none', background: p.sent_at ? '#EDF3F0' : GREEN_GRAD, color: p.sent_at ? MUTED : '#fff', fontSize: 12.5, fontWeight: 700, cursor: (sendBusyId === p.id || p.sent_at) ? 'default' : 'pointer', opacity: sendBusyId === p.id ? 0.7 : 1 }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                       {p.sent_at ? 'Envoyée' : (sendBusyId === p.id ? 'Envoi…' : 'Envoyer au patient')}
@@ -535,6 +537,7 @@ export default function Prescriptions() {
                 </div>
               ))}
             </div>
+            <Pager pager={recentPager} compact={isMobile} />
           </div>
         </div>
       </div>

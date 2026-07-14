@@ -69,6 +69,7 @@ const initialState = {
   screen: initialScreen(),
   patient: null,
   selDoc: 1,
+  selDocData: null,   // full doctor object when reached via a deep link (slug/QR)
   selPin: null,
   bookDay: 2,
   bookSlot: '',
@@ -286,6 +287,10 @@ export function AppProvider({ children }) {
   }, []);
   useEffect(() => {
     if (navFromPop.current) { navFromPop.current = false; return; }   // came FROM the URL
+    // The doctor profile is always reached WITH a selected doctor in memory; a
+    // bare "/profile" URL carries no doctor, so we never write it (and thus never
+    // clobber a /dr-slug deep-link URL). The screen still renders normally.
+    if (state.screen === 'profile') { firstUrlSync.current = false; return; }
     const path = state.screen === 'home' ? '/' : `/${state.screen}`;
     if (typeof window === 'undefined' || window.location.pathname === path) { firstUrlSync.current = false; return; }
     try {
@@ -311,26 +316,38 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Resolve a { slug, doc, rx } deep link → route to the right screen, then
-    // clean the URL back to "/". Guarded so the same link isn't resolved twice.
+    // Resolve a { slug, doc, rx } deep link → route to the right screen.
+    // Guarded so the same link isn't resolved twice.
     let resolving = false;
     const resolveDeepLink = async (dl) => {
       if (!dl || resolving) return;
       resolving = true;
       try {
         // navFromPop tells the URL-sync effect this screen change came from the
-        // URL, so it won't push a screen path over our clean "/" replaceState.
+        // URL, so it won't push a screen path over the canonical link URL.
         if (dl.rx) {
           navFromPop.current = true;
           dispatch({ rxRef: dl.rx, screen: 'rxverify' });   // scanned ordonnance QR
+          window.history.replaceState({}, '', '/');
         } else if (dl.slug) {
           const d = await fetchDoctorBySlug(dl.slug);
-          if (d?.id) { navFromPop.current = true; dispatch({ selDoc: d.id, screen: 'profile' }); }
+          if (d?.id) {
+            navFromPop.current = true;
+            // Carry the FULL doctor object (selDocData) so the profile shows the
+            // right doctor immediately — even before the public directory list
+            // has loaded (otherwise Profile falls back to doctors[0], i.e. the
+            // first doctor in the list). Keep the /dr-slug URL so refresh/reshare
+            // resolve the same doctor (never a bare, contextless /profile).
+            dispatch({ selDoc: d.id, selDocData: d, screen: 'profile' });
+            window.history.replaceState({}, '', `/${dl.slug}`);
+          } else {
+            window.history.replaceState({}, '', '/');   // unknown slug → home
+          }
         } else if (dl.doc) {
           navFromPop.current = true;
           dispatch({ selDoc: dl.doc, screen: 'profile' });
+          window.history.replaceState({}, '', '/');
         }
-        window.history.replaceState({}, '', '/');
       } catch { /* ignore */ } finally { resolving = false; }
     };
 

@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
-import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName, greenBtn, greenBtnBusy } from '../shared.jsx';
+import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName, greenBtn, greenBtnBusy, GREEN_GRAD } from '../shared.jsx';
 import Icon from '../components/Icon';
 import LangPill from '../components/LangPill';
 import { pushSupported, pushState, enablePush, disablePush } from '../lib/push';
@@ -674,7 +674,7 @@ export default function PatientAccount() {
                       <span style={{ flex:1, minWidth:0, fontSize:12.5, color: docFile ? DARK : '#9AA8A2', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left', direction:'ltr' }}>{docFile ? docFile.name : 'Choisir un fichier…'}</span>
                     </button>
                   </div>
-                  <button onClick={sendDoc} disabled={docBusy || !docFile} style={{ background:G, color:'#fff', border:'none', cursor: (docBusy || !docFile) ? 'default' : 'pointer', opacity: (docBusy || !docFile) ? 0.6 : 1, padding:11, borderRadius:10, fontSize:13.5, fontWeight:700 }}>
+                  <button onClick={sendDoc} disabled={docBusy || !docFile} style={{ background:GREEN_GRAD, color:'#fff', border:'none', cursor: (docBusy || !docFile) ? 'default' : 'pointer', opacity: (docBusy || !docFile) ? 0.6 : 1, padding:11, borderRadius:10, fontSize:13.5, fontWeight:700 }}>
                     {docBusy ? tr('Envoi…', 'Sending…', 'جارٍ الإرسال…') : tr('Envoyer le document', 'Send the document', 'إرسال المستند')}
                   </button>
                 </div>
@@ -729,7 +729,7 @@ export default function PatientAccount() {
                 </div>
               ))}
             </div>
-            <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:G, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
+            <button onClick={saveProfile} disabled={pfSaving} style={{ marginTop:20, background:GREEN_GRAD, color:'#fff', border:'none', cursor:pfSaving?'default':'pointer', opacity:pfSaving?0.6:1, padding:'11px 20px', borderRadius:10, fontSize:14, fontWeight:700 }}>
               {pfSaving ? tr('Enregistrement…', 'Saving…', 'جارٍ الحفظ…') : tr('Enregistrer les modifications', 'Save changes', 'حفظ التعديلات')}
             </button>
           </div>
@@ -766,7 +766,7 @@ export default function PatientAccount() {
               <input type="date" value={relForm.dob} onChange={(e) => setRelForm((f) => ({ ...f, dob: e.target.value }))}
                 style={{ height:42, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'0 10px', fontSize:13, color:DARK, background:'#fff', fontFamily:'inherit' }} />
               <button onClick={handleAddRelative} disabled={relBusy}
-                style={{ background:G, color:'#fff', border:'none', borderRadius:10, padding:'0 18px', height:42, fontSize:13, fontWeight:700, cursor:'pointer', opacity:relBusy?0.6:1 }}>
+                style={{ background:GREEN_GRAD, color:'#fff', border:'none', borderRadius:10, padding:'0 18px', height:42, fontSize:13, fontWeight:700, cursor:'pointer', opacity:relBusy?0.6:1 }}>
                 {relBusy ? '…' : '+ ' + tr('Ajouter', 'Add', 'إضافة')}
               </button>
             </div>
@@ -958,7 +958,7 @@ export default function PatientAccount() {
             <textarea value={reviewText} onChange={e => setState({ reviewText: e.target.value })} placeholder="Partagez votre expérience (optionnel)…" style={{ width:'100%', minHeight:84, padding:'12px 13px', border:'1px solid #DCE5E0', borderRadius:11, fontSize:13.5, background:'#F8FBF9', outline:'none', resize:'vertical', marginBottom:18, boxSizing:'border-box' }} />
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setState({ reviewOpen:false })} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Annuler</button>
-              <button onClick={publishReview} style={{ flex:1.4, background:G, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Publier mon avis</button>
+              <button onClick={publishReview} style={{ flex:1.4, background:GREEN_GRAD, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Publier mon avis</button>
             </div>
           </div>
         </div>

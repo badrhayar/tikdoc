@@ -477,7 +477,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 14 }}>
               {offMsg && <span style={{ fontSize: 13, fontWeight: 600, color: offMsg.startsWith('Échec') || offMsg.startsWith('Choisissez') || offMsg.startsWith('La date') || offMsg.startsWith('Cette') ? '#C2466A' : PRIMARY }}>{offMsg}</span>}
-              <button onClick={handleAddOff} disabled={offSaving} style={{ ...greenBtn, height: 44, ...greenBtnBusy(offSaving) }}>
+              <button onClick={handleAddOff} disabled={offSaving} style={{ ...greenBtn, ...greenBtnBusy(offSaving) }}>
                 {offSaving ? 'Enregistrement…' : "Enregistrer l'absence"}
               </button>
             </div>

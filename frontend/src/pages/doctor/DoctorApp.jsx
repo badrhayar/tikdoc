@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import BrandMark from '../../components/BrandMark';
 import { useApp } from '../../context/AppContext';
 import { useViewport } from '../../hooks/useViewport';
-import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, billingDue, docDisplayName } from '../../shared.jsx';
+import { tint, initials, MOTIF_OPTS, CITY_OPTS, DOC_TYPE_OPTS, subscriptionState, billingDue, docDisplayName, greenBtn, GREEN_GRAD } from '../../shared.jsx';
 import { moroccoNow, moroccoToUTCISO } from '../../lib/time.js';
 import { inviteNewPatient, createWalkinAppointment, createPatient, subscribeToInbox, fetchDoctorPayments, declareCurrentPayment, notifyVerification } from '../../lib/api';
 import PhoneField from '../../components/PhoneField';
@@ -390,7 +390,7 @@ export default function DoctorApp() {
           {/* Universal search (patients · rendez-vous · pages) — Ctrl/Cmd+K */}
           <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} />
           <div style={{ flex:1 }} />
-          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ background:'linear-gradient(135deg,#1AAE74,#12875A)', color:'#fff', border:'none', cursor:'pointer', padding:isMobile?0:'10px 17px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':11, fontSize:13.5, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:7, flexShrink:0, boxShadow:'0 8px 18px -6px rgba(22,160,106,.55)' }}>
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ ...greenBtn, padding:isMobile?0:'7px 15px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':10 }}>
             <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
@@ -480,7 +480,7 @@ export default function DoctorApp() {
                 {PAY_T[lang].review}
               </span>
             ) : (
-              <button onClick={declarePay} disabled={payBusy} style={{ background: G, color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>
+              <button onClick={declarePay} disabled={payBusy} style={{ background: GREEN_GRAD, color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>
                 {PAY_T[lang].pay}
               </button>
             )}
@@ -580,7 +580,7 @@ export default function DoctorApp() {
               </div>
               <div style={{ padding: isMobile ? '0 16px 18px' : '0 26px 22px', display:'flex', gap:10 }}>
                 <button onClick={closeNewAppt} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700, whiteSpace:'nowrap' }}>Annuler</button>
-                <button onClick={submitNewAppt} style={{ flex: isMobile ? 1.4 : 1.5, background:G, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize: isMobile ? 13.5 : 14, fontWeight:700, whiteSpace:'nowrap' }}>{isMobile ? 'Enregistrer' : 'Enregistrer le rendez-vous'}</button>
+                <button onClick={submitNewAppt} style={{ flex: isMobile ? 1.4 : 1.5, background:GREEN_GRAD, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize: isMobile ? 13.5 : 14, fontWeight:700, whiteSpace:'nowrap' }}>{isMobile ? 'Enregistrer' : 'Enregistrer le rendez-vous'}</button>
               </div>
             </div>
           </div>
@@ -683,7 +683,7 @@ export default function DoctorApp() {
               </div>
               <div style={{ padding:'18px 26px 22px', display:'flex', gap:10, borderTop:'1px solid #F0F3F2' }}>
                 <button onClick={closeAddPatient} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Annuler</button>
-                <button onClick={submitAddPatient} style={{ flex:1.5, background:G, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Enregistrer le patient</button>
+                <button onClick={submitAddPatient} style={{ flex:1.5, background:GREEN_GRAD, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Enregistrer le patient</button>
               </div>
             </div>
           </div>

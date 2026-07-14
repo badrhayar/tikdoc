@@ -37,7 +37,13 @@ export default function Profile() {
   const DOW = state.lang === 'ar' ? AR_DOW : state.lang === 'en' ? EN_DOW : FR_DOW;
 
   const doctors = state.doctors?.length ? state.doctors : (isSupabaseConfigured ? [] : DOCTORS);
-  const doc = doctors.find((d) => d.id === selDoc) || doctors[0];
+  // A deep link (QR / shared /dr-slug link) carries the resolved doctor in
+  // selDocData — prefer it so we show the RIGHT doctor even before the public
+  // directory list has loaded (otherwise we'd fall back to doctors[0], the first
+  // doctor in the list). Otherwise resolve the selected id from the directory.
+  const doc = (state.selDocData && state.selDocData.id === selDoc)
+    ? state.selDocData
+    : (doctors.find((d) => d.id === selDoc) || doctors[0]);
   // Empty directory (fresh launch) → nothing to show; back to search.
   if (!doc) { go('search'); return null; }
   const si  = SPEC_INFO[doc.spec] || {};
