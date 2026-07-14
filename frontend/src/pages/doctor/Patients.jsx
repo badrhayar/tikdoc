@@ -193,15 +193,8 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: DARK }}>Mes Patients</h1>
           <p style={{ margin: '4px 0 0', fontSize: 14, color: MUTED }}>Annuaire complet de vos patients</p>
         </div>
-        <button
-          onClick={openAddPatient}
-          style={{
-            background: '#fff', color: PRIMARY, border: `2px solid ${PRIMARY}`,
-            borderRadius: 10, padding: '9px 20px', fontSize: 14, fontWeight: 600,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Ajouter un patient
+        <button onClick={openAddPatient} style={{ ...greenBtn }}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Ajouter un patient
         </button>
       </div>
 

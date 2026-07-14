@@ -339,7 +339,7 @@ export const GREEN_GRAD = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6
 export const greenBtn = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   background: GREEN_GRAD, color: '#fff', border: 'none', borderRadius: 10,
-  padding: '9px 16px', fontSize: 13, fontWeight: 700, lineHeight: 1.3,
+  padding: '7px 15px', fontSize: 13, fontWeight: 700, lineHeight: 1.3,
   cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box',
   boxShadow: '0 6px 16px -6px rgba(22,160,106,0.55)',
 };

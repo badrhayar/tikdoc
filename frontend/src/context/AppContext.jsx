@@ -22,19 +22,24 @@ try {
   if (mHash) authLinkType = mHash[1];
 } catch (_) { /* SSR-safe */ }
 
+// Parse deep-link params from a URL. Handles /dr-slug, ?dr=slug, ?doc=<uuid>,
+// ?rx=<ref>. Returns { slug, doc, rx } or null.
+function parseDeepLink(loc = (typeof window !== 'undefined' ? window.location : null)) {
+  if (!loc) return null;
+  try {
+    const sp = new URLSearchParams(loc.search || '');
+    const p = (loc.pathname || '').replace(/^\/+|\/+$/g, '');
+    const slug = sp.get('dr') || (/^dr-[a-z0-9-]+$/i.test(p) ? p : null);
+    const doc = sp.get('doc');
+    const rx = sp.get('rx');
+    return (slug || doc || rx) ? { slug, doc, rx } : null;
+  } catch (_) { return null; }
+}
+
 // Snapshot deep-link params at module load. The URL-sync effect can replaceState
 // the path/query back to "/" before the async slug lookup runs, wiping the link;
 // capturing here (before React mounts) makes the deep link survive that.
-// Handles /dr-slug, ?dr=slug, ?doc=<uuid>, ?rx=<ref>.
-let deepLink = null;
-try {
-  const sp = new URLSearchParams(window.location.search);
-  const p = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
-  const slug = sp.get('dr') || (/^dr-[a-z0-9-]+$/i.test(p) ? p : null);
-  const doc = sp.get('doc');
-  const rx = sp.get('rx');
-  if (slug || doc || rx) deepLink = { slug, doc, rx };
-} catch (_) { /* SSR-safe */ }
+let deepLink = parseDeepLink();
 
 // ── Browser-grade navigation ─────────────────────────────────────────────────
 // Every screen gets a real URL (/search, /doctor, /dappts…) so the browser
@@ -304,9 +309,14 @@ export function AppProvider({ children }) {
   //   tabibo.ma/?dr=dr-aya-chakkour
   //   tabibo.ma/?doc=<uuid>       (legacy id link)
   useEffect(() => {
-    if (typeof window === 'undefined' || !deepLink) return;
-    const dl = deepLink; deepLink = null;   // one-shot (snapshotted at module load)
-    (async () => {
+    if (typeof window === 'undefined') return;
+
+    // Resolve a { slug, doc, rx } deep link → route to the right screen, then
+    // clean the URL back to "/". Guarded so the same link isn't resolved twice.
+    let resolving = false;
+    const resolveDeepLink = async (dl) => {
+      if (!dl || resolving) return;
+      resolving = true;
       try {
         // navFromPop tells the URL-sync effect this screen change came from the
         // URL, so it won't push a screen path over our clean "/" replaceState.
@@ -321,8 +331,34 @@ export function AppProvider({ children }) {
           dispatch({ selDoc: dl.doc, screen: 'profile' });
         }
         window.history.replaceState({}, '', '/');
-      } catch { /* ignore */ }
-    })();
+      } catch { /* ignore */ } finally { resolving = false; }
+    };
+
+    // 1) The link that launched / reloaded the app (snapshotted at module load).
+    if (deepLink) { const dl = deepLink; deepLink = null; resolveDeepLink(dl); }
+
+    // 2) An ALREADY-RUNNING PWA (installed app, launch_handler: navigate-existing)
+    //    is navigated to /dr-slug without a full reload — the module snapshot is
+    //    stale/consumed, so re-parse the LIVE URL whenever navigation happens or
+    //    the app regains focus, and resolve if it now carries a deep link.
+    const reparse = () => { const dl = parseDeepLink(); if (dl) resolveDeepLink(dl); };
+    const onVisible = () => { if (document.visibilityState === 'visible') reparse(); };
+    window.addEventListener('popstate', reparse);
+    document.addEventListener('visibilitychange', onVisible);
+    // Chromium PWAs also expose the target URL via the Launch Handler API.
+    try {
+      if (window.launchQueue?.setConsumer) {
+        window.launchQueue.setConsumer((params) => {
+          const url = params?.targetURL;
+          if (url) { const dl = parseDeepLink(new URL(url)); if (dl) resolveDeepLink(dl); }
+        });
+      }
+    } catch { /* not supported — the listeners above cover it */ }
+
+    return () => {
+      window.removeEventListener('popstate', reparse);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Bootstrap session on mount + subscribe to auth changes.

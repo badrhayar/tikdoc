@@ -3,7 +3,6 @@ import { STATUS_FR, fetchConversationPreviews, isImageMessage, markInConsultatio
 import { moTime, moDateKeyOf, moroccoNow } from '../../lib/time';
 import { useViewport } from '../../hooks/useViewport';
 import { initials as initialsOf, tint, greenBtn, greenBtnBusy } from '../../shared.jsx';
-import OnboardingChecklist from '../../components/OnboardingChecklist';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -160,9 +159,6 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   return (
     <div style={{ padding: isMobile ? 4 : 32, background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
 
-      {/* First-run activation checklist (auto-hides once every step is done) */}
-      <OnboardingChecklist state={state} go={go} />
-
       {/* Header */}
       <div style={{ marginBottom: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
@@ -282,7 +278,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               </div>
             </div>
             <button onClick={() => { setState({ apptTab: 'En attente' }); go('dappts'); }}
-              style={{ ...greenBtn, flexShrink: 0, minHeight: 44 }}>
+              style={{ ...greenBtn, flexShrink: 0 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               Confirmer les rendez-vous
             </button>

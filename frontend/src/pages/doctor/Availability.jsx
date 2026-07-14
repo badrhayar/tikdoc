@@ -304,7 +304,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               {slotsMsg && <span style={{ fontSize: 13, fontWeight: 600, color: slotsMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{slotsMsg}</span>}
-              <button onClick={saveSlots} disabled={slotsSaving} style={{ ...greenBtn, minHeight: 44, ...greenBtnBusy(slotsSaving) }}>
+              <button onClick={saveSlots} disabled={slotsSaving} style={{ ...greenBtn, ...greenBtnBusy(slotsSaving) }}>
                 {slotsSaving ? '…' : 'Enregistrer ce jour'}
               </button>
             </div>
@@ -441,7 +441,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
           {/* Explicit save right under the hours — no more forgotten changes. */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
             {savedMsg && <span style={{ fontSize: 13, fontWeight: 600, color: savedMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{savedMsg}</span>}
-            <button onClick={handleSave} disabled={saving} style={{ ...greenBtn, minHeight: 44, ...greenBtnBusy(saving) }}>
+            <button onClick={handleSave} disabled={saving} style={{ ...greenBtn, ...greenBtnBusy(saving) }}>
               {saving ? 'Enregistrement…' : 'Enregistrer les horaires'}
             </button>
           </div>
@@ -575,6 +575,15 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             <div style={{ minWidth: 70, height: 44, border: `1.5px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: DARK, background: '#fff', fontVariantNumeric: 'tabular-nums' }}>{maxPerDay === 0 ? '∞' : maxPerDay}</div>
             <button onClick={() => setMaxPerDay((v) => Math.min(50, v + 1))} style={{ width: 44, height: 44, borderRadius: '0 10px 10px 0', border: `1.5px solid ${BORDER}`, borderLeft: 'none', background: '#fff', color: DARK, fontSize: 20, cursor: 'pointer' }}>+</button>
             <span style={{ marginLeft: 14, fontSize: 13, color: MUTED }}>{maxPerDay === 0 ? 'illimité' : 'rendez-vous / jour'}</span>
+          </div>
+
+          {/* Save right here — the duration/limit changes are persisted (and the
+              patient booking grid re-generates at this interval). */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 22, borderTop: `1px solid ${BORDER}`, paddingTop: 18 }}>
+            {savedMsg && <span style={{ fontSize: 13, fontWeight: 600, color: savedMsg.startsWith('Échec') ? '#C2466A' : PRIMARY }}>{savedMsg}</span>}
+            <button onClick={handleSave} disabled={saving} style={{ ...greenBtn, ...greenBtnBusy(saving) }}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
           </div>
         </div>
 
