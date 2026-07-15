@@ -76,6 +76,30 @@ Exemples de variables (Meta les exige) : `Fatima Benali` · `jeudi 17 juillet`
 
 ---
 
+## 6 · `patient_invite` — catégorie **Utility** (invitation d'un patient ajouté)
+
+Envoyé quand un médecin ajoute un patient **avec un numéro de téléphone**.
+Ce template a **3 variables** : `{{1}}` = nom du patient · `{{2}}` = nom du
+médecin · `{{3}}` = lien d'inscription (déjà pré-rempli avec l'email du
+patient). Trilingue dans un seul message (FR · AR · EN), même ordre que l'email.
+
+**FR (langue française du template) :**
+> Bonjour {{1}}, le Dr {{2}} vous invite sur Tabibo.
+> Créez votre compte avec l'email indiqué par votre médecin pour retrouver vos rendez-vous, rappels et documents : {{3}}
+>
+> مرحباً {{1}}، يدعوكم الطبيب {{2}} إلى Tabibo. أنشئوا حسابكم بنفس البريد الإلكتروني الذي أدخله طبيبكم لتجدوا مواعيدكم وتذكيراتكم ووثائقكم: {{3}}
+>
+> Hello {{1}}, Dr {{2}} invites you to Tabibo. Create your account with the email your doctor entered to find your appointments, reminders and documents: {{3}}
+
+> **Astuce** : dans Meta, ajoutez un **bouton d'URL** (type « Visiter le site »)
+> pointant vers `{{3}}` pour un rendu plus soigné — le code passe déjà le lien
+> comme 3ᵉ variable du corps, donc les deux fonctionnent.
+
+Une seule langue de template suffit (le corps contient déjà les trois langues).
+Aucun secret supplémentaire : le code utilise le nom fixe `patient_invite`.
+
+---
+
 ## Après approbation — les secrets à poser (une seule fois)
 
 ```

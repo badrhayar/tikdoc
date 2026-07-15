@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
@@ -19,6 +19,16 @@ export default function PatientRegister() {
   const { isMobile } = useViewport();
 
   const reg = state.reg || { name: '', cin: '', phone: '', email: '', pass: '' };
+
+  // Invite link (…/pregister?email=…): pre-fill the email so the patient signs up
+  // with the SAME address their doctor entered — then their visits link up.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('email');
+      if (q && !state.reg?.email) setState({ reg: { ...(state.reg || {}), email: q } });
+    } catch (_) { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
