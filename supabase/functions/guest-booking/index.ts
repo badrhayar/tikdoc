@@ -149,7 +149,8 @@ Deno.serve(async (req) => {
         .in("status", ["pending", "confirmed", "completed"]);
       if ((taken ?? 0) > 0) return json({ ok: false, error: "slot_taken" }, 409);
 
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      // Cryptographically secure 6-digit code (Math.random is predictable).
+      const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000);
       const payload = { doctorId, datetime: new Date(datetime).toISOString(), name, reason: String(p.reason || "") || null };
       await admin.from("booking_otps").insert({
         phone, ip, code_hash: await sha256(code + phone), payload,
@@ -194,7 +195,8 @@ Deno.serve(async (req) => {
       }).select().single();
       if (error) {
         if ((error as any).code === "23505") return json({ ok: false, error: "slot_taken" }, 409);
-        return json({ ok: false, error: error.message }, 500);
+        console.error("guest-booking insert error:", (error as any).code);
+        return json({ ok: false, error: "server_error" }, 500);
       }
       await admin.from("booking_otps").update({ used: true }).eq("id", otp.id);
       // Fire-and-forget: the "réservé" WhatsApp goes out through the same
@@ -209,6 +211,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: false, error: "unknown action" }, 400);
   } catch (e) {
-    return json({ ok: false, error: (e as Error)?.message || "server error" }, 500);
+    console.error("guest-booking error:", (e as Error)?.message ?? e);
+    return json({ ok: false, error: "server_error" }, 500);
   }
 });

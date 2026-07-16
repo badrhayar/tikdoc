@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Backups contain patient data — files must never be world-readable.
+umask 077
 # ════════════════════════════════════════════════════════════════════════════
 # Tabibo · Manual backup (database + Storage files)
 #

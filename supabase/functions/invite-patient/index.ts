@@ -185,6 +185,12 @@ function inviteEmailHtml(o: { name: string; doctorName: string; email: string; p
   });
 
   const divider = `<div style="height:1px;background:${LINE};margin:22px 0"></div>`;
+  // A CTA button placed after EACH language block, so a patient converts as soon
+  // as they've read the instructions in a language they understand.
+  const cta = (label: string, rtl = false) =>
+    `<div dir="${rtl ? "rtl" : "ltr"}" style="text-align:center;margin:16px 0 2px">
+      <a href="${url}" style="background:${GRAD};color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:11px;font-weight:800;font-size:14.5px;display:inline-block;box-shadow:0 8px 18px -8px rgba(22,160,106,.55)">${label}</a>
+    </div>`;
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
   <body style="margin:0;background:${BG};font-family:Inter,Arial,sans-serif;color:${INK}">
@@ -207,13 +213,8 @@ function inviteEmailHtml(o: { name: string; doctorName: string; email: string; p
           <h1 style="font-size:21px;line-height:1.3;margin:0 0 6px;color:${INK}">${patient ? "Bonjour " + patient + "," : "Bonjour,"}</h1>
           <p style="font-size:14px;line-height:1.6;color:${MUT};margin:0 0 22px">${drFr} vous a ajouté(e) comme patient(e) et vous invite à créer votre compte. Suivez les étapes ci-dessous — <strong style="color:${INK}">FR · العربية · EN</strong>.</p>
 
-          ${fr}${divider}${ar}${divider}${en}
-
-          <!-- Shared CTA -->
-          <div style="text-align:center;margin:26px 0 6px">
-            <a href="${url}" style="background:${GRAD};color:#ffffff;text-decoration:none;padding:15px 30px;border-radius:12px;font-weight:800;font-size:15px;display:inline-block;box-shadow:0 10px 22px -8px rgba(22,160,106,.6)">Créer mon compte · إنشاء حسابي · Create my account</a>
-          </div>
-          <div style="text-align:center;font-size:12px;color:${MUT};margin-top:8px;word-break:break-all">${url}</div>
+          ${fr}${cta("Créer mon compte")}${divider}${ar}${cta("إنشاء حسابي", true)}${divider}${en}${cta("Create my account")}
+          <div style="text-align:center;font-size:12px;color:${MUT};margin-top:14px;word-break:break-all">${url}</div>
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:20px 8px;text-align:center">
@@ -273,7 +274,7 @@ Deno.serve(async (req) => {
     const p = await req.json().catch(() => ({}));
     const email = typeof p.email === "string" ? p.email.trim() : "";
     const phone = typeof p.phone === "string" ? p.phone.trim() : "";
-    const name = p.name;
+    const name = String(p.name ?? "").slice(0, 120);
     if (!email && !phone) return json({ ok: false, error: "Un email ou un téléphone est requis." }, 400);
 
     // Don't invite someone who already has a Tabibo account under this email/phone.
@@ -284,8 +285,19 @@ Deno.serve(async (req) => {
     // The doctor's name personalises the invite (caller may override; otherwise
     // use the authenticated doctor's own name).
     const doctorName = String(p.doctorName || authz.me?.full_name || "").replace(/^Dr\.?\s*/i, "").trim();
-    // Registration link — carries the email so the sign-up form can pre-fill it.
-    const base = typeof p.link === "string" && /^https?:\/\//.test(p.link) ? p.link.replace(/\/+$/, "") : "https://tabibo.ma";
+    // Registration link — the HOST is never caller-controlled (a branded Tabibo
+    // email must never link to an arbitrary domain = phishing relay). Only
+    // origins on the allowlist are honoured; anything else falls back to the
+    // canonical app URL. The email is appended so sign-up pre-fills it.
+    const APP_URL = (Deno.env.get("APP_URL") ?? "https://tabibo.ma").replace(/\/+$/, "");
+    const ALLOWED_HOSTS = new Set(["tabibo.ma", "www.tabibo.ma", (() => { try { return new URL(APP_URL).hostname; } catch { return "tabibo.ma"; } })()]);
+    let base = APP_URL;
+    try {
+      if (typeof p.link === "string") {
+        const u = new URL(p.link);
+        if (u.protocol === "https:" && ALLOWED_HOSTS.has(u.hostname)) base = u.origin;
+      }
+    } catch { /* keep canonical base */ }
     const url = email ? `${base}/pregister?email=${encodeURIComponent(email)}` : `${base}/pregister`;
 
     let emailed = false, wa = false, waError: string | null = null;
@@ -307,6 +319,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, emailed, wa, waError });
   } catch (e) {
-    return json({ ok: false, error: String(e) }, 500);
+    console.error("invite-patient error:", (e as Error)?.message ?? e);
+    return json({ ok: false, error: "server_error" }, 500);
   }
 });

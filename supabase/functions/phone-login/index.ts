@@ -30,14 +30,36 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   // Uniform failure — never reveal whether it was the number or the password.
   const invalid = () => json({ error: "invalid_credentials" }, 401);
+  // Flatten the unknown-number vs wrong-password timing difference so response
+  // latency can't be used to enumerate which phone numbers have accounts.
+  const jitter = () => new Promise((r) => setTimeout(r, 180 + crypto.getRandomValues(new Uint32Array(1))[0] % 220));
   try {
     const { phone, password, captchaToken } = await req.json().catch(() => ({}));
     if (!phone || !password) return invalid();
 
-    // 1) Resolve the email server-side (service role; RPC is no longer public).
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Brute-force guard: at most 20 attempts per phone or per IP per 10 minutes
+    // (uniform "invalid" response — a limiter must not become its own oracle).
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    const ident = String(phone).replace(/\D/g, "").slice(-12) || "unknown";
+    try {
+      const since = new Date(Date.now() - 10 * 60e3).toISOString();
+      const { count } = await admin.from("login_throttle")
+        .select("id", { count: "exact", head: true })
+        .or(`identifier.eq.${ident},ip.eq.${ip}`)
+        .gte("created_at", since);
+      if ((count ?? 0) >= 20) { await jitter(); return invalid(); }
+      await admin.from("login_throttle").insert({ identifier: ident, ip });
+      // Opportunistic cleanup so the table never grows unbounded.
+      if (crypto.getRandomValues(new Uint8Array(1))[0] < 8) {
+        await admin.from("login_throttle").delete().lt("created_at", new Date(Date.now() - 24 * 3600e3).toISOString());
+      }
+    } catch (_) { /* limiter must never take logins down */ }
+
+    // 1) Resolve the email server-side (service role; RPC is no longer public).
     const { data: email } = await admin.rpc("email_for_phone", { p: String(phone) });
-    if (!email) return invalid();
+    if (!email) { await jitter(); return invalid(); }
 
     // 2) Authenticate with the public anon client so CAPTCHA is enforced.
     const anon = createClient(SUPABASE_URL, ANON_KEY);

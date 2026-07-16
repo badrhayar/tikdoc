@@ -70,6 +70,22 @@ const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:support@tabibo.ma";
 const pushReady = !!(VAPID_PUBLIC && VAPID_PRIVATE);
 
+// A push endpoint we are willing to call from the server: https, default port,
+// a real public hostname (not an IP literal / localhost / internal suffix).
+function isSafePushEndpoint(raw: unknown): boolean {
+  try {
+    const u = new URL(String(raw ?? ""));
+    if (u.protocol !== "https:") return false;
+    if (u.port && u.port !== "443") return false;
+    const h = u.hostname.toLowerCase();
+    if (!h.includes(".")) return false;                                  // "localhost", bare names
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return false;                 // IPv4 literal
+    if (h.startsWith("[") || h.includes(":")) return false;              // IPv6 literal
+    if (h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".localhost")) return false;
+    return true;
+  } catch { return false; }
+}
+
 async function sendPushToUser(
   admin: ReturnType<typeof createClient>,
   userId: string | null,
@@ -80,6 +96,13 @@ async function sendPushToUser(
     const { data: subs } = await admin.from("push_subscriptions")
       .select("id, endpoint, p256dh, auth").eq("user_id", userId);
     for (const s of (subs ?? []) as any[]) {
+      // SSRF guard: the endpoint is client-supplied at subscribe time. Only ever
+      // POST to a public https host on the default port — never IP literals,
+      // localhost, or internal names (blocks cloud-metadata / intranet probes).
+      if (!isSafePushEndpoint(s.endpoint)) {
+        await admin.from("push_subscriptions").delete().eq("id", s.id);
+        continue;
+      }
       try {
         const payload = await buildPushPayload(
           { data: JSON.stringify(message), options: { ttl: 3600 * 12 } },

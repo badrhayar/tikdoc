@@ -217,7 +217,11 @@ export default function Prescriptions() {
   const currentRef = (its) => {
     const sig = JSON.stringify({ p: patientName.trim(), i: its, n: notes.trim() });
     if (refMap.current.sig !== sig) {
-      const code = 'ORD-' + (Date.now().toString(36) + Math.random().toString(36).slice(2)).toUpperCase().slice(-8);
+      // Crypto-random reference: verify_prescription(ref) is a public RPC, so the
+      // ref must be unguessable (a time-derived code would be an existence oracle).
+      const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no 0/O/1/I — printed on the ordonnance
+      const bytes = crypto.getRandomValues(new Uint8Array(10));
+      const code = 'ORD-' + [...bytes].map((b) => A[b % A.length]).join('');
       refMap.current = { sig, ref: code };
     }
     return refMap.current.ref;

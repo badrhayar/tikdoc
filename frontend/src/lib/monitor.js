@@ -15,7 +15,9 @@ export function reportClientError(message, stack) {
     supabase.from('client_errors').insert({
       message: msg,
       stack: stack ? String(stack).slice(0, 2000) : null,
-      url: String(location.href).slice(0, 300),
+      // Origin + path only — the query string can carry PII (e.g. the invite
+      // flow's /pregister?email=…) and must never land in the ops table.
+      url: String(location.origin + location.pathname).slice(0, 300),
       ua: String(navigator.userAgent).slice(0, 300),
       app_screen: (() => { try { return sessionStorage.getItem('tabibo_screen') || null; } catch { return null; } })(),
     }).then(() => {});

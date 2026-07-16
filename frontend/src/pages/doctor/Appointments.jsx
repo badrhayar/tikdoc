@@ -188,7 +188,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
     const day = rows.filter((r) => r.date === iso && r.rawStatus !== 'cancelled').sort((a, b) => a.time.localeCompare(b.time));
     const docName = state?.appUser?.full_name ? (/^dr/i.test(state.appUser.full_name) ? state.appUser.full_name : `Dr. ${state.appUser.full_name}`) : 'Cabinet';
     const dateLbl = t.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' });
-    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    // Full HTML escaping (incl. quotes) — patient-supplied values must stay
+    // inert even if a future edit moves them into an attribute position.
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const trs = day.length
       ? day.map((r) => `<tr><td>${esc(r.time)}</td><td><strong>${esc(r.patient)}</strong></td><td>${esc(r.phone)}</td><td>${esc(r.motif)}</td><td>${esc(r.statut)}</td><td></td></tr>`).join('')
       : '<tr><td colspan="6" style="text-align:center;color:#888;padding:24px">Aucun rendez-vous aujourd\'hui</td></tr>';

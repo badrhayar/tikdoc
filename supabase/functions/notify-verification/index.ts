@@ -92,7 +92,7 @@ async function sendEmail(to: string, subject: string, html: string, replyTo?: st
     body: JSON.stringify({ from: FROM, to, subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   const body = await res.text();
-  if (!res.ok) console.error("Resend error", body);
+  if (!res.ok) console.error("Resend error, status:", res.status);
   return { ok: res.ok, status: res.status, body };
 }
 
@@ -124,7 +124,7 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const p = await req.json();
+    const p = await req.json().catch(() => ({}));
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
     const authz = await authorize(req, admin);
@@ -143,6 +143,8 @@ Deno.serve(async (req) => {
     }
 
     if (p.type === "new_registration") {
+      // Only a doctor (or admin/service) may trigger the admin review notice.
+      if (!authz.isAdmin && authz.me?.role !== "doctor") return json({ ok: false, error: "forbidden" }, 403);
       // 1) Notify every admin that a doctor is awaiting review.
       const { data: admins } = await admin.from("users").select("email").eq("role", "admin");
       const recipients = (admins ?? []).map((a: any) => a.email).filter(Boolean);
@@ -210,6 +212,8 @@ Deno.serve(async (req) => {
     }
 
     if (p.type === "payment_declared") {
+      // Only a doctor (or admin/service) may declare a payment.
+      if (!authz.isAdmin && authz.me?.role !== "doctor") return json({ ok: false, error: "forbidden" }, 403);
       // A doctor signalled a transfer → notify admins to validate.
       const { data: admins } = await admin.from("users").select("email").eq("role", "admin");
       const recipients = (admins ?? []).map((a: any) => a.email).filter(Boolean);
@@ -235,7 +239,7 @@ Deno.serve(async (req) => {
           <p>Bonjour Dr. ${esc(p.doctorName)},</p>
           <p>Excellente nouvelle — votre compte médecin sur <strong>Tabibo</strong> a été <span style="color:${G};font-weight:700">approuvé</span>.</p>
           <p>Votre profil est désormais visible par les patients et vous pouvez gérer votre agenda, vos rendez-vous et votre cabinet depuis votre espace.</p>
-          <p style="margin-top:18px"><a href="${p.appUrl ?? "https://tabibo.ma"}" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Accéder à mon espace</a></p>
+          <p style="margin-top:18px"><a href="${Deno.env.get("APP_URL") ?? "https://tabibo.ma"}" style="background:${G};color:#fff;text-decoration:none;padding:11px 22px;border-radius:10px;font-weight:700;display:inline-block">Accéder à mon espace</a></p>
           <p style="margin-top:18px">Bienvenue parmi nous,<br/>L'équipe Tabibo</p>`;
         await sendEmail(p.doctorEmail, "Votre compte Tabibo a été approuvé ✓", shell("Votre compte est approuvé", body), replyTo);
       } else {
@@ -244,7 +248,7 @@ Deno.serve(async (req) => {
         const body = `
           <p>Bonjour Dr. ${esc(p.doctorName)},</p>
           <p>Après examen de votre dossier, votre inscription sur <strong>Tabibo</strong> n'a pas pu être validée pour le motif suivant :</p>
-          <p style="background:#FCE7EE;color:#C2466A;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600">${reason}</p>
+          <p style="background:#FCE7EE;color:#C2466A;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600">${esc(reason)}</p>
           ${note}
           <p>Vous pouvez corriger votre dossier et soumettre à nouveau vos documents. Pour toute question, répondez simplement à cet email.</p>
           <p style="margin-top:18px">Cordialement,<br/>L'équipe Tabibo</p>`;
@@ -308,7 +312,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ ok: false, error: "unknown type" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
-    console.error(e);
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+    console.error("notify-verification error:", (e as Error)?.message ?? e);
+    return new Response(JSON.stringify({ ok: false, error: "server_error" }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });

@@ -991,8 +991,22 @@ export async function sendTestEmail(to) {
 
 // ── Avatars (profile photos) ──────────────────────────────────────────────────
 /** Upload a profile photo and store its public URL on the user row. */
+// ── Upload guards (defense-in-depth; storage RLS/bucket rules stay the real gate) ──
+const IMG_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic']);
+const DOC_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'jfif']);
+const MB = 1024 * 1024;
+function checkUpload(file, { exts, maxBytes, label }) {
+  if (!file) throw new Error('Aucun fichier sélectionné.');
+  const ext = String(file.name || '').split('.').pop().toLowerCase();
+  if (!exts.has(ext)) throw new Error(`Type de fichier non autorisé (${label}).`);
+  if (file.size > maxBytes) throw new Error(`Fichier trop volumineux (max ${Math.round(maxBytes / MB)} Mo).`);
+  return ext;
+}
+// Storage keys must never inherit raw filenames (slashes, control chars…).
+const safeFileName = (name) => String(name || 'fichier').replace(/[^\w.À-ɏ-]+/g, '_').slice(0, 120);
+
 export async function uploadAvatar(file, userId) {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const ext = checkUpload(file, { exts: IMG_EXTS, maxBytes: 5 * MB, label: 'images uniquement' });
   // Storage RLS scopes the folder to auth.uid() (NOT the public.users id).
   const { data: auth } = await supabase.auth.getUser();
   const folder = auth?.user?.id || userId;
@@ -1173,9 +1187,10 @@ const BUCKET = 'documents';
  * @param direction 'to_patient' (doctor → patient) | 'to_doctor' (patient → doctor)
  */
 export async function uploadDocument({ file, ownerId = null, patientId = null, doctorId = null, direction = null, appointmentId = null, fileType = null, notes = null }) {
+  checkUpload(file, { exts: DOC_EXTS, maxBytes: 15 * MB, label: 'images, PDF ou documents' });
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error('Non authentifié');
-  const path = `${auth.user.id}/${Date.now()}_${file.name}`;
+  const path = `${auth.user.id}/${Date.now()}_${safeFileName(file.name)}`;
   const up = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
   if (up.error) throw up.error;
   // owner_id MUST equal the caller's app-user id so RLS accepts the insert
@@ -1337,7 +1352,7 @@ export async function fetchConversationPreviews(limit = 4) {
 export async function uploadChatImage(file) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error('Non authentifié');
-  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+  const ext = checkUpload(file, { exts: IMG_EXTS, maxBytes: 8 * MB, label: 'images uniquement' });
   const path = `${auth.user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const up = await supabase.storage.from('chat-media').upload(path, file, { upsert: false, contentType: file.type || undefined });
   if (up.error) throw up.error;

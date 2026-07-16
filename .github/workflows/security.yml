@@ -1,0 +1,25 @@
+# Tabibo — security gate: dependency-vulnerability + committed-secret scanning.
+# Runs on every push and pull request once this project lives on GitHub.
+name: security
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: npm audit (production deps must have zero known vulns)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks (no committed secrets)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
