@@ -298,7 +298,7 @@ export async function createAppointment({ patientId, doctorId, datetime, reason,
  * (`patientId`) or a walk-in identified by name/phone (no account yet). These
  * persist in the DB so the booking calendar greys the slot out for patients.
  */
-export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null, fee = null, durationMinutes = 30 }) {
+export async function createWalkinAppointment({ doctorId, datetime, reason, notes, patientId = null, patientName = null, patientPhone = null, patientEmail = null, fee = null, durationMinutes = 30 }) {
   const { data, error } = await supabase
     .from('appointments')
     .insert({
@@ -310,14 +310,18 @@ export async function createWalkinAppointment({ doctorId, datetime, reason, note
       notes: notes || null,
       patient_name: patientName || null,
       patient_phone: patientPhone || null,
+      // Stored so an account-less patient still gets email reminders.
+      patient_email: patientEmail || null,
       status: 'pending',
       fee: fee != null ? Number(fee) || null : await doctorDefaultFee(doctorId),
     })
     .select()
     .single();
   if (error) throw error;
-  sendBookingConfirmation(data.id);
-  notifyApptEmail(data.id, 'booked'); // emails the patient if a linked account exists
+  // NOTE: a doctor-created appointment does NOT send a "réservé/booked" message
+  // (that's reserved for a patient who books themselves). The patient instead
+  // receives an invitation (see DoctorApp) and, later, the confirmation / J-1 /
+  // J-2 reminders. Status-change reminders fire when the doctor confirms/cancels.
   return data;
 }
 export async function fetchMyAppointments() {
@@ -1434,7 +1438,7 @@ export async function saveReminderSettings(doctorId, settings) {
 }
 
 /** Delivery log rows for the reminders dashboard (most recent first). */
-export async function fetchReminderLog(doctorId, limit = 100) {
+export async function fetchReminderLog(doctorId, limit = 400) {
   if (!doctorId) return [];
   const { data, error } = await supabase
     .from('reminder_log')

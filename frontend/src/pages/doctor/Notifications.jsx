@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchReminderLog, fetchReminderSettings, saveReminderSettings } from '../../lib/api';
+import Pager, { usePager } from '../../components/Pager';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -42,7 +43,14 @@ const CHANNEL_STYLE = {
 
 // Map the reminder_log status enum to a French badge label.
 const STATUS_LABEL = { delivered: 'Livré', sent: 'Envoyé', queued: 'En attente', failed: 'Échoué' };
-const TEMPLATE_LABEL = { j1: 'Rappel J-1', j2: 'Rappel J-2', confirmation: 'Confirmation', followup: 'Suivi', test: 'Test' };
+// Friendly label for EVERY message type that lands in reminder_log — so nothing
+// shows up as a raw enum ('confirmed', 'cancelled'…).
+const TEMPLATE_LABEL = {
+  j1: 'Rappel J-1', j2: 'Rappel J-2', reminder: 'Rappel',
+  confirmation: 'Confirmation', booked: 'Réservé', confirmed: 'Confirmé',
+  cancelled: 'Annulé', rescheduled: 'Reporté', completed: 'Visite terminée',
+  followup: 'Suivi de visite', invite: 'Invitation', test: 'Test',
+};
 
 const statusStyle = (status) => {
   if (status === 'delivered' || status === 'sent') return { color: '#16A06A', backgroundColor: '#E8F8F1', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 };
@@ -82,6 +90,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
   const [activeTab, setActiveTab] = useState(0);
   const [toggles, setToggles] = useState({ j1: true, j2: false, confirmation: true, followup: false });
   const [log, setLog] = useState([]);
+  const logPager = usePager(log, 12);
   const [loading, setLoading] = useState(true);
 
   const doctorId = state?.myDoctor?.id;
@@ -172,7 +181,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
             <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: BG }}>
-                  {['Patient', 'Téléphone', 'Type', 'Envoyé le', 'Statut'].map((col) => (
+                  {['Patient', 'Email / Téléphone', 'Type', 'Envoyé le', 'Statut'].map((col) => (
                     <th key={col} style={{
                       padding: '12px 16px', textAlign: 'left', fontSize: 12,
                       fontWeight: 600, color: MUTED, textTransform: 'uppercase',
@@ -191,10 +200,10 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
                     </td>
                   </tr>
                 )}
-                {log.map((row, i) => (
-                  <tr key={row.id} style={{ borderBottom: i < log.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
+                {logPager.items.map((row, i) => (
+                  <tr key={row.id} style={{ borderBottom: i < logPager.items.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
                     <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 500, color: DARK }}>{row.patient_name || '—'}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>{row.phone || '—'}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap', direction: 'ltr' }}>{row.phone || '—'}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, color: DARK }}>{TEMPLATE_LABEL[row.template] || row.template || '—'}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, color: MUTED, whiteSpace: 'nowrap' }}>{fmtDateTime(row.sent_at || row.created_at)}</td>
                     <td style={{ padding: '14px 16px' }}>
@@ -205,6 +214,7 @@ export default function Notifications({ state, setState, go, openNewAppt, openAd
               </tbody>
             </table>
           </div>
+          <Pager pager={logPager} compact={isMobile} />
         </div>
       )}
 

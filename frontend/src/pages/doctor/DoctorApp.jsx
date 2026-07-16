@@ -24,7 +24,7 @@ function ageFromDob(dob) {
 const PT_COLORS = ['#16A06A', '#2563EB', '#9333EA', '#EA580C', '#DB2777', '#0891B2', '#854D0E'];
 
 // Build a directory-shaped patient record from raw form fields.
-function buildPatient({ name, cin, phone, sex, dob, nextAppt = '—' }) {
+function buildPatient({ name, cin, phone, email, sex, dob, nextAppt = '—' }) {
   const age = ageFromDob(dob);
   return {
     id: Date.now() + Math.floor(Math.random() * 1000),
@@ -36,6 +36,7 @@ function buildPatient({ name, cin, phone, sex, dob, nextAppt = '—' }) {
     dob: dob || '',
     cin: cin || '—',
     phone: phone ? (String(phone).startsWith('+') ? phone : `+212 ${phone}`) : '—',
+    email: email || '',
     lastVisit: '—',
     nextAppt: nextAppt || '—',
     statut: 'Actif',
@@ -244,7 +245,7 @@ export default function DoctorApp() {
     // Always open on a clean form anchored to today's real (Morocco) date.
     setState({
       newApptOpen:true, apptCreated:false, naMatch:null, naSuggestOpen:false,
-      newAppt:{ name:'', phone:'', cin:'', sex:'Femme', dob:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', durationMinutes: 30, notes:'' },
+      newAppt:{ name:'', phone:'', email:'', cin:'', sex:'Femme', dob:'', motif: motifOpts[0] || 'Consultation générale', date: todayISO, time:'09:00', durationMinutes: 30, notes:'' },
     });
   };
   const closeNewAppt = () => setState({ newApptOpen:false });
@@ -257,13 +258,19 @@ export default function DoctorApp() {
     const sexLetter = na.sex === 'Homme' ? 'M' : 'F';
     const age = ageFromDob(na.dob);
 
-    // Auto-register the patient in the directory if they're new, and invite them.
+    // Auto-register the patient in the directory if they're new.
     const list = state.patients || [];
     const exists = list.some(p => (p.name || '').trim().toLowerCase() === na.name.trim().toLowerCase());
     let patientsPatch = {};
     if (!exists) {
-      patientsPatch = { patients: [buildPatient({ name: na.name, cin: na.cin, phone: na.phone, sex: na.sex, dob: na.dob, nextAppt: na.date }), ...list] };
-      inviteNewPatient({ name: na.name, phone: na.phone, email: na.email, appt: { date: na.date, time: na.time, motif: na.motif } }).catch(() => {});
+      patientsPatch = { patients: [buildPatient({ name: na.name, cin: na.cin, phone: na.phone, email: na.email, sex: na.sex, dob: na.dob, nextAppt: na.date }), ...list] };
+    }
+    // Invite the patient EVERY time an appointment is added, UNLESS they already
+    // have a Tabibo account (naMatch.userId). The invite-patient function does a
+    // final server-side check by email/phone, so no duplicate invites are sent to
+    // someone who registered meanwhile. Needs an email or a phone to reach them.
+    if (!state.naMatch?.userId && (na.email || na.phone)) {
+      inviteNewPatient({ name: na.name, phone: na.phone, email: na.email }).catch(() => {});
     }
 
     // ── Persist to the database when signed in as a real doctor, so the slot is
@@ -280,6 +287,7 @@ export default function DoctorApp() {
           patientId: state.naMatch?.userId || null,
           patientName: na.name,
           patientPhone: na.phone || null,
+          patientEmail: na.email || null,
         });
         setState({ newApptOpen:false, apptCreated:true, ...patientsPatch });
         reloadAppointments();                       // refresh from DB (real id, real data)
@@ -537,7 +545,7 @@ export default function DoctorApp() {
                       {naSuggests.map((sg, i) => {
                         const [bg, fg] = tint(i);
                         return (
-                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: sg.phone && sg.phone !== '—' ? sg.phone : '', cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sexLabel(sg.sex) || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
+                          <button key={i} onClick={() => setState({ newAppt: { ...state.newAppt, name: sg.name, phone: sg.phone && sg.phone !== '—' ? sg.phone : '', email: sg.email && sg.email !== '—' ? sg.email : '', cin: sg.cin && sg.cin !== '—' ? sg.cin : '', sex: sexLabel(sg.sex) || state.newAppt.sex, dob: sg.dob || state.newAppt.dob }, naMatch:sg, naSuggestOpen:false })} style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 13px', background:'none', border:'none', borderBottom:'1px solid #F5F7F6', cursor:'pointer', textAlign:'start' }}>
                             <span style={{ width:30, height:30, borderRadius:'50%', background:bg, color:fg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0 }}>{initials(sg.name)}</span>
                             <span style={{ flex:1, minWidth:0 }}>
                               <span style={{ display:'block', fontSize:13, fontWeight:700, color:DARK }}>{sg.name}</span>
@@ -569,6 +577,11 @@ export default function DoctorApp() {
                     <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>CIN <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
                     <input value={newAppt.cin || ''} onChange={e => setNA('cin', e.target.value)} placeholder="AB123456" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
                   </div>
+                </div>
+                <div style={{ marginBottom:18 }}>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:600, color:DARK, marginBottom:6 }}>Email <span style={{ color:'#9AA8A2', fontWeight:400 }}>(optionnel)</span></label>
+                  <input type="email" value={newAppt.email || ''} onChange={e => setNA('email', e.target.value)} placeholder="patient@email.com" style={{ width:'100%', padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', boxSizing:'border-box', direction:'ltr' }} />
+                  <div style={{ fontSize:11.5, color:MUT, marginTop:5 }}>Téléphone et/ou email : le patient reçoit ses rappels et une invitation à créer son compte.</div>
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:14, marginBottom:18 }}>
                   <div style={{ minWidth:0 }}>

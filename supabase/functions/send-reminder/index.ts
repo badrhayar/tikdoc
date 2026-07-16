@@ -281,13 +281,13 @@ async function sendOne(
 async function dueAppointments(admin: ReturnType<typeof createClient>, fromISO: string, toISO: string) {
   const { data } = await admin
     .from("appointments")
-    .select("id, doctor_id, datetime, status, patient_id, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
+    .select("id, doctor_id, datetime, status, patient_id, patient_name, patient_phone, patient_email, patient:users(full_name, phone, email), doctor:doctors(id, specialty, user:users!doctors_user_id_fkey(full_name))")
     .gte("datetime", fromISO).lte("datetime", toISO)
     .in("status", ["pending", "confirmed"]);
   return (data ?? []).map((a: any) => ({
     id: a.id, doctor_id: a.doctor_id, datetime: a.datetime,
     patient_name: a.patient_name ?? a.patient?.full_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
-    email: a.patient?.email ?? "",
+    email: a.patient?.email ?? a.patient_email ?? "",
     doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
     patient_user_id: a.patient_id ?? null,
   }));
@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
     if (p.type === "send" && p.appointment_id) {
       const { data, error: qErr } = await admin
         .from("appointments")
-        .select("id, doctor_id, patient_id, datetime, patient_name, patient_phone, patient:users(full_name, phone, email), doctor:doctors(id, user_id, specialty, user:users!doctors_user_id_fkey(full_name))")
+        .select("id, doctor_id, patient_id, datetime, patient_name, patient_phone, patient_email, patient:users(full_name, phone, email), doctor:doctors(id, user_id, specialty, user:users!doctors_user_id_fkey(full_name))")
         .eq("id", p.appointment_id).maybeSingle();
       if (!data) return json({ ok: false, error: "Rendez-vous introuvable.", detail: qErr?.message ?? null }, 404);
       const a: any = data;
@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
       const r = await sendOne(admin, {
         id: a.id, doctor_id: a.doctor_id, datetime: a.datetime,
         patient_name: a.patient?.full_name ?? a.patient_name ?? "", phone: a.patient?.phone ?? a.patient_phone ?? "",
-        email: a.patient?.email ?? "",
+        email: a.patient?.email ?? a.patient_email ?? "",
         doctor_name: docTitle(a.doctor?.user?.full_name ?? "", a.doctor?.specialty),
         patient_user_id: a.patient_id ?? null,
       }, template);

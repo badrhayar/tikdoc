@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
       const APP_URL = Deno.env.get("APP_URL") ?? "https://tabibo.ma";
       const { data: a } = await admin
         .from("appointments")
-        .select("datetime, patient_id, patient_name, patient:users(full_name, email), doctor:doctors(user_id, specialty, user:users!doctors_user_id_fkey(full_name, email))")
+        .select("datetime, patient_id, patient_name, patient_email, patient:users(full_name, email), doctor:doctors(user_id, specialty, user:users!doctors_user_id_fkey(full_name, email))")
         .eq("id", p.appointment_id).maybeSingle();
       const av: any = a;
       if (!av) return new Response(JSON.stringify({ ok: true, skipped: "appt not found" }), { headers: { ...cors, "Content-Type": "application/json" } });
@@ -268,7 +268,9 @@ Deno.serve(async (req) => {
       if (!isParty) return json({ ok: false, error: "forbidden" }, 403);
       const doctorEmail = av.doctor?.user?.email;
       const doctor = docTitle(av.doctor?.user?.full_name ?? "", av.doctor?.specialty);
-      const patientEmail = av.patient?.email;
+      // Prefer the linked account's email; fall back to the address the doctor
+      // stored on the appointment so account-less patients still get reminders.
+      const patientEmail = av.patient?.email ?? av.patient_email;
       const patientName = av.patient_name ?? av.patient?.full_name ?? "Patient";
       const dObj = new Date(av.datetime);
       const dateStr = dObj.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Casablanca" });
