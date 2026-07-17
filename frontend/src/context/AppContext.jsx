@@ -74,7 +74,7 @@ const initialState = {
   bookDay: 2,
   bookSlot: '',
   bookDate: null,
-  apptTab: 'tous',
+  apptTab: null,   // deep-link filter for the Rendez-vous tabs; null = default "Tous"
   lang: 'fr',
   langOpen: false,
   pop: null,

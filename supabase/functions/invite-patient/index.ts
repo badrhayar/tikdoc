@@ -94,29 +94,31 @@ async function accountExists(admin: ReturnType<typeof createClient>, email?: str
   return false;
 }
 
-// ── The brand logo tile (green gradient rounded square + white stethoscope).
-function logoTile() {
-  return `<span style="display:inline-block;width:46px;height:46px;border-radius:13px;background:${GRAD};vertical-align:middle;text-align:center;line-height:46px;box-shadow:0 6px 16px -6px rgba(22,160,106,.55)">
-    <svg width="30" height="30" viewBox="0 0 48 48" style="vertical-align:middle" aria-hidden="true">
-      <g transform="translate(3.84 8.81) scale(1.44)" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 3v-.5a1.4 1.4 0 0 1 1.4-1.4h.4"/><path d="M14 3v-.5a1.4 1.4 0 0 0-1.4-1.4h-.4"/>
-        <path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 12v3a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/>
-      </g>
-    </svg></span>`;
+// ── The brand logo tile — the REAL Tabibo app icon (green tile + white
+// stethoscope) as a hosted PNG. Inline <svg> is stripped by Gmail and most
+// mobile mail clients (that's why the icon showed as an empty green square), so
+// we use the actual /icons/icon-192.png served by the app. The green gradient
+// background stays as a graceful fallback if images are blocked.
+function logoTile(src: string) {
+  return `<img src="${src}" width="46" height="46" alt="Tabibo"
+    style="display:inline-block;width:46px;height:46px;border-radius:13px;background:${GRAD};vertical-align:middle;box-shadow:0 6px 16px -6px rgba(22,160,106,.55)">`;
 }
 // The Tabibo wordmark, with the final "o" in brand green (exactly like the app).
 function wordmark(size = 23) {
   return `<span style="font-size:${size}px;font-weight:800;letter-spacing:-.5px;color:${INK}">Tabib<span style="color:${G}">o</span></span>`;
 }
 
-// One numbered step (green badge + text).
+// One numbered step. The number badge and the text live in SEPARATE table cells
+// so the text always sits BESIDE the number and wraps within its own column —
+// never dropping onto the next line under the badge, even on a narrow phone.
 function step(n: number, text: string, rtl = false) {
-  const dir = rtl ? "rtl" : "ltr";
-  const mSide = rtl ? "margin-left:11px" : "margin-right:11px";
-  return `<tr><td dir="${dir}" style="padding:5px 0;vertical-align:top">
-    <span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#E7F6EE;color:${G_DARK};font-weight:800;font-size:12.5px;text-align:center;line-height:24px;${mSide};vertical-align:top">${n}</span>
-    <span style="display:inline-block;max-width:430px;font-size:14px;line-height:1.55;color:${INK};vertical-align:top">${text}</span>
-  </td></tr>`;
+  const gap = rtl ? "padding-left:11px" : "padding-right:11px";
+  return `<tr dir="${rtl ? "rtl" : "ltr"}">
+    <td valign="top" width="24" style="width:24px;${gap};padding-top:5px;padding-bottom:5px">
+      <span style="display:block;width:24px;height:24px;border-radius:50%;background:#E7F6EE;color:${G_DARK};font-weight:800;font-size:12.5px;text-align:center;line-height:24px">${n}</span>
+    </td>
+    <td valign="top" style="padding-top:5px;padding-bottom:5px;font-size:14px;line-height:1.55;color:${INK}">${text}</td>
+  </tr>`;
 }
 
 // A green identifier chip (email or phone). Value stays LTR even inside an RTL block.
@@ -141,11 +143,11 @@ function section(opts: { rtl?: boolean; heading: string; intro: string; steps: s
   return `<div dir="${dir}" style="text-align:${align};font-family:${font};margin:0 0 6px">
     <div style="font-size:16px;font-weight:800;color:${INK};margin:0 0 8px">${heading}</div>
     <div style="font-size:14px;line-height:1.6;color:${MUT};margin:0 0 12px">${intro}</div>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">${st.join("")}</table>
+    <table role="presentation" dir="${dir}" cellpadding="0" cellspacing="0" style="width:100%">${st.join("")}</table>
   </div>`;
 }
 
-function inviteEmailHtml(o: { name: string; doctorName: string; email: string; phone: string; url: string }) {
+function inviteEmailHtml(o: { name: string; doctorName: string; email: string; phone: string; url: string; logo: string }) {
   const patient = esc(o.name) || "";
   const dr = esc(o.doctorName) || "";
   const email = o.email || "";
@@ -200,7 +202,7 @@ function inviteEmailHtml(o: { name: string; doctorName: string; email: string; p
         <!-- Header -->
         <tr><td style="padding:6px 6px 20px">
           <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            <td style="vertical-align:middle">${logoTile()}</td>
+            <td style="vertical-align:middle">${logoTile(esc(o.logo))}</td>
             <td style="vertical-align:middle;padding-left:12px">
               <div>${wordmark(23)}</div>
               <div style="font-size:12.5px;color:${MUT}">Votre santé, notre priorité</div>
@@ -306,7 +308,7 @@ Deno.serve(async (req) => {
       const r = await sendEmail(
         email,
         `${doctorName ? "Dr " + doctorName + " vous invite" : "Votre médecin vous invite"} sur Tabibo — créez votre compte`,
-        inviteEmailHtml({ name, doctorName, email, phone, url }),
+        inviteEmailHtml({ name, doctorName, email, phone, url, logo: `${base}/icons/icon-192.png` }),
       );
       emailed = !!r.ok;
     }

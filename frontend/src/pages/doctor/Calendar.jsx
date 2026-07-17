@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { deleteAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
 import { greenBtn, greenBtnBusy } from '../../shared.jsx';
+import { moroccoNow } from '../../lib/time';
 
 const PRIMARY = '#16A06A';
+const PRIMARY_DK = '#0E7C52';
 const DARK    = '#15314A';
 const BG      = '#F4F8F5';
 const BORDER  = '#EAEFEC';
 const MUTED   = '#6B7B76';
+// One hairline colour everywhere so the day separators and the hour rules read
+// as a single, consistent grid. The "today" accent is derived from the brand
+// green (same hue as the primary button) — a solid pale green in the header and
+// a translucent green wash down the column.
+const GRID       = '#ECF1EE';
+const TODAY_HEAD = '#E7F6EE';
+const TODAY_WASH = 'rgba(22,160,106,0.06)';
+const GUTTER     = 56;   // time-axis width — identical in the header and the body
 
 const HOUR_HEIGHT = 64;
 const START_HOUR  = 8;
@@ -36,15 +46,16 @@ const SERVICE_OPTS = Object.keys(SVC_COLORS);
 const PAY_OPTS    = ['Espèces', 'CMI', 'M-Wallet'];
 const STATUS_OPTS = ['Payé', 'En attente', 'Annulé'];
 
-// weekOffset 0 = the week containing the real "today".
-const _now = new Date();
-const _dow = (_now.getDay() + 6) % 7; // Monday = 0
-const BASE_MONDAY = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - _dow);
-const TODAY_STR = isoDate(_now);
-
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+
+// weekOffset 0 = the week containing Morocco's "today" — reckoned on the Morocco
+// calendar so the highlighted day is correct regardless of the device timezone.
+const _mo = moroccoNow();
+const _moToday = new Date(_mo.year, _mo.month, _mo.day);
+const BASE_MONDAY = new Date(_mo.year, _mo.month, _mo.day - ((_moToday.getDay() + 6) % 7));
+const TODAY_STR = _mo.dateISO;
 
 function getMondayOfWeek(offset) {
   const d = new Date(BASE_MONDAY);
@@ -118,6 +129,12 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const [weekOffset, setWeekOffset]   = useState(0);
   const [selDayIdx, setSelDayIdx]     = useState(4); // Fri
   const [editData, setEditData]       = useState(null);
+
+  // Re-render every minute so the live "now" indicator tracks the real time.
+  const [, setNowTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setNowTick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
+  const nowMo  = moroccoNow();
+  const nowMin = nowMo.hour * 60 + nowMo.minute;
 
   // ── Derived week days ──────────────────────────────────────────────────────
   const monday   = getMondayOfWeek(weekOffset);
@@ -233,48 +250,60 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
   // ── Shared grid body ───────────────────────────────────────────────────────
   const renderGridBody = (days) => (
-    <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 310px)', paddingTop: 10 }}>
-      {/* Time axis */}
-      <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }}>
+    <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 300px)', paddingTop: 10 }}>
+      {/* Time axis — same width + hairline as the header gutter, so the vertical
+          rules line up perfectly with the day-header separators. */}
+      <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}`, background: '#fff' }}>
         {HOURS_DYN.map((h, i) => (
           <div key={h} style={{ height: i < HOURS_DYN.length - 1 ? HOUR_HEIGHT : 0, position: 'relative' }}>
-            <span style={{ position: 'absolute', top: -9, right: 8, fontSize: 11, color: MUTED, fontWeight: 500, whiteSpace: 'nowrap', userSelect: 'none' }}>{h}</span>
+            <span style={{ position: 'absolute', top: -8, right: 8, fontSize: 10.5, color: MUTED, fontWeight: 600, whiteSpace: 'nowrap', userSelect: 'none', fontVariantNumeric: 'tabular-nums' }}>{h}</span>
           </div>
         ))}
       </div>
 
       {/* Day columns */}
       {days.map((d, colIdx) => {
-        const key    = isoDate(d);
-        const isToday = key === TODAY_STR;
-        const appts  = consultations.filter(c => c.date === key);
+        const key     = isoDate(d);
+        const isToday  = key === TODAY_STR;
+        const isWeekend = ((d.getDay() + 6) % 7) >= 5;   // Sat/Sun
+        const appts   = consultations
+          .filter(c => c.date === key)
+          .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+        const nowTop   = ((nowMin / 60) - startH) * HOUR_HEIGHT;
+        const showNow  = isToday && nowMin >= startH * 60 && nowMin <= endH * 60;
         return (
-          <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${BORDER}` : 'none', position: 'relative', background: isToday ? '#F0FDF8' : 'transparent', minWidth: 0 }}>
-            {/* Hour grid lines */}
+          <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? TODAY_WASH : (isWeekend ? '#FBFCFB' : '#fff'), minWidth: 0 }}>
+            {/* Hour grid lines + a lighter half-hour rule */}
             {HOURS_DYN.slice(0, -1).map(h => (
-              <div key={h} style={{ height: HOUR_HEIGHT, borderBottom: `1px solid ${BORDER}`, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0, borderBottom: `1px dashed ${BORDER}`, opacity: 0.45 }} />
+              <div key={h} style={{ height: HOUR_HEIGHT, borderBottom: `1px solid ${GRID}`, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0, borderBottom: `1px dashed ${GRID}`, opacity: 0.7 }} />
               </div>
             ))}
-            {/* Appointment blocks */}
+            {/* Live "now" indicator — a thin brand-green line with a dot, today only */}
+            {showNow && (
+              <div style={{ position: 'absolute', top: nowTop, left: 0, right: 0, height: 0, borderTop: `2px solid ${PRIMARY}`, zIndex: 4, pointerEvents: 'none' }}>
+                <span style={{ position: 'absolute', left: -3, top: -4, width: 8, height: 8, borderRadius: '50%', background: PRIMARY, boxShadow: '0 0 0 3px rgba(22,160,106,0.18)' }} />
+              </div>
+            )}
+            {/* Appointment blocks — soft colour fill, colored spine, real height */}
             {appts.map(c => {
               const col    = svcColor(c.service);
               const top    = timeToTopDyn(c.time);
-              // Real height ∝ the visit's actual duration (min 15-min visual).
               const dur    = Math.max(15, Number(c.durationMin) || 30);
-              const height = Math.max(22, (dur / 60) * HOUR_HEIGHT);
+              const height = Math.max(24, (dur / 60) * HOUR_HEIGHT);
+              const tight  = height < 42;
               return (
                 <div
                   key={c.id}
                   onClick={() => openEdit(c)}
-                  title={`${c.patient} · ${c.service}`}
-                  style={{ position: 'absolute', top, left: 4, right: 4, height, background: col.bg, border: `1px solid ${col.border}`, borderLeft: `3px solid ${col.color}`, borderRadius: 7, padding: '3px 7px', cursor: 'pointer', overflow: 'hidden', zIndex: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', transition: 'box-shadow 0.12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.14)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.zIndex = 1;  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; }}
+                  title={`${c.time} · ${c.patient} · ${c.service}`}
+                  style={{ position: 'absolute', top: top + 1, left: 4, right: 4, height: height - 2, background: col.bg, boxShadow: `inset 3px 0 0 ${col.color}, 0 1px 2px rgba(13,43,30,0.08)`, border: `1px solid ${col.border}`, borderRadius: 8, padding: tight ? '2px 8px 2px 11px' : '4px 9px 4px 12px', cursor: 'pointer', overflow: 'hidden', zIndex: 1, transition: 'box-shadow .12s, transform .12s' }}
+                  onMouseEnter={e => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${col.color}, 0 6px 16px -4px rgba(13,43,30,0.24)`; }}
+                  onMouseLeave={e => { e.currentTarget.style.zIndex = 1;  e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${col.color}, 0 1px 2px rgba(13,43,30,0.08)`; }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: col.color }}>{c.time}–{addMinutes(c.time, dur)} · {dur} min</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.patient}</div>
-                  {height > 50 && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service}</div>}
+                  <div style={{ fontSize: 10, fontWeight: 800, color: col.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{tight ? c.time : `${c.time}–${addMinutes(c.time, dur)}`} · {dur} min</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.1px' }}>{c.patient}</div>
+                  {height > 58 && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service}</div>}
                 </div>
               );
             })}
@@ -383,26 +412,31 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
       {view === 'Semaine' && (
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflowX: isMobile ? 'auto' : 'hidden', overflowY: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
          <div style={{ minWidth: isMobile ? 640 : 'auto' }}>
-          {/* Day headers */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}` }}>
-            <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }} />
+          {/* Day headers — gutter width + hairline match the body exactly, so
+              every vertical separator is one continuous line down the grid. */}
+          <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}` }}>
+            <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
             {weekDays.map((d, i) => {
               const key     = isoDate(d);
               const isToday = key === TODAY_STR;
-              const hasAppt = consultations.some(c => c.date === key);
+              const isWeekend = i >= 5;
+              const count   = consultations.filter(c => c.date === key).length;
               return (
                 <div
                   key={i}
                   onClick={() => { setSelDayIdx(i); setView('Jour'); }}
                   title="Voir ce jour"
-                  style={{ flex: 1, padding: '10px 0', textAlign: 'center', borderRight: i < 6 ? `1px solid ${BORDER}` : 'none', background: isToday ? '#F0FDF8' : 'transparent', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background = isToday ? '#E7F6EE' : '#FAFCFB'}
-                  onMouseLeave={e => e.currentTarget.style.background = isToday ? '#F0FDF8' : 'transparent'}
+                  style={{ flex: 1, padding: '9px 0 8px', textAlign: 'center', borderRight: i < 6 ? `1px solid ${GRID}` : 'none', borderTop: `3px solid ${isToday ? PRIMARY : 'transparent'}`, background: isToday ? TODAY_HEAD : 'transparent', cursor: 'pointer', transition: 'background .12s', minWidth: 0 }}
+                  onMouseEnter={e => e.currentTarget.style.background = isToday ? '#DCF0E6' : '#F6FAF8'}
+                  onMouseLeave={e => e.currentTarget.style.background = isToday ? TODAY_HEAD : 'transparent'}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 600, color: isToday ? PRIMARY : MUTED, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{FR_DAY_SHORT[i]}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: isToday ? PRIMARY : DARK, marginTop: 2, lineHeight: 1 }}>{d.getDate()}</div>
-                  {isToday  && <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, margin: '3px auto 0' }} />}
-                  {!isToday && hasAppt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: MUTED, margin: '3px auto 0', opacity: 0.45 }} />}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? PRIMARY_DK : (isWeekend ? '#9AA8A2' : MUTED), textTransform: 'uppercase', letterSpacing: '0.07em' }}>{FR_DAY_SHORT[i]}</div>
+                  {/* Doctolib-style date pill: today is a filled brand-green circle */}
+                  <div style={{ width: 30, height: 30, margin: '3px auto 0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, lineHeight: 1, background: isToday ? PRIMARY : 'transparent', color: isToday ? '#fff' : DARK, boxShadow: isToday ? '0 4px 10px -3px rgba(22,160,106,0.55)' : 'none' }}>{d.getDate()}</div>
+                  {/* Appointment count for the day (kept subtle) */}
+                  <div style={{ height: 13, marginTop: 2 }}>
+                    {count > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? PRIMARY_DK : '#9AA8A2' }}>{count} RDV</span>}
+                  </div>
                 </div>
               );
             })}
@@ -417,13 +451,13 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
         const d = weekDays[selDayIdx];
         const isToday = isoDate(d) === TODAY_STR;
         return (
-          <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
-            <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ width: 60, flexShrink: 0, borderRight: `1px solid ${BORDER}` }} />
-              <div style={{ flex: 1, padding: '14px 0', textAlign: 'center', background: isToday ? '#F0FDF8' : 'transparent' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? PRIMARY : MUTED, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{FR_DAY_SHORT[selDayIdx]}</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: isToday ? PRIMARY : DARK }}>{d.getDate()} {FR_MONTHS_SHORT[d.getMonth()]}</div>
-                {isToday && <div style={{ fontSize: 11, color: PRIMARY, fontWeight: 600, marginTop: 2 }}>Aujourd'hui</div>}
+          <div style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
+            <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}` }}>
+              <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
+              <div style={{ flex: 1, padding: '12px 0', textAlign: 'center', borderTop: `3px solid ${isToday ? PRIMARY : 'transparent'}`, background: isToday ? TODAY_HEAD : 'transparent' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? PRIMARY_DK : MUTED, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{FR_DAY_SHORT[selDayIdx]}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? PRIMARY_DK : DARK, marginTop: 2 }}>{d.getDate()} {FR_MONTHS_SHORT[d.getMonth()]}</div>
+                {isToday && <div style={{ fontSize: 11, color: PRIMARY, fontWeight: 700, marginTop: 2 }}>Aujourd'hui</div>}
               </div>
             </div>
             {renderGridBody([d])}

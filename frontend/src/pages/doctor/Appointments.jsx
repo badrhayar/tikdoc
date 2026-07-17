@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { initials, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import Icon from '../../components/Icon';
@@ -33,20 +33,94 @@ const PAYMENT_CONFIG = {
 };
 
 const pad = (n) => String(n).padStart(2, '0');
+const AI = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+
+// A compact, always-accessible row-actions menu. On EVERY screen size the row
+// shows a single "⋯" button that opens a labelled popover, so the action buttons
+// can never be clipped off a narrow table (the old 9-icon strip overflowed on
+// small laptops). The popover is position:fixed, so it escapes the table's
+// horizontal-scroll container, and flips up / clamps to stay on screen.
+function RowActionsMenu({ actions }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (!menuRef.current?.contains(e.target) && !btnRef.current?.contains(e.target)) setOpen(false); };
+    const onScroll = () => setOpen(false);
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const W = 250, H = Math.min(actions.length * 42 + 12, 440);
+      const left = Math.max(8, Math.min(r.right - W, window.innerWidth - W - 8));
+      const top = (r.bottom + 6 + H > window.innerHeight - 8) ? Math.max(8, r.top - H - 6) : r.bottom + 6;
+      setPos({ top, left });
+    }
+    setOpen((o) => !o);
+  };
+  return (
+    <>
+      <button ref={btnRef} onClick={toggle} title="Actions" aria-label="Actions du rendez-vous"
+        style={{ background: open ? '#EAF9F1' : '#F4F8F5', border: `1px solid ${open ? PRIMARY : BORDER_STRONG}`, borderRadius: 8, width: 34, height: 34, cursor: 'pointer', color: open ? PRIMARY : DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></svg>
+      </button>
+      {open && (
+        <div ref={menuRef} role="menu" style={{ position: 'fixed', top: pos.top, left: pos.left, width: 250, background: '#fff', borderRadius: 12, border: `1px solid ${BORDER_STRONG}`, boxShadow: '0 14px 34px -10px rgba(13,43,30,0.30)', padding: 5, zIndex: 3000 }}>
+          {actions.map((a, i) => a.divider
+            ? <div key={`d${i}`} style={{ height: 1, background: '#EEF2F0', margin: '5px 8px' }} />
+            : (
+              <button key={a.key} role="menuitem" disabled={a.disabled} onClick={() => { setOpen(false); a.onClick(); }}
+                onMouseEnter={(e) => { if (!a.disabled) e.currentTarget.style.background = a.danger ? '#FCEBEE' : '#F2F8F5'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', boxSizing: 'border-box', padding: '9px 11px', border: 'none', background: 'transparent', borderRadius: 8, cursor: a.disabled ? 'default' : 'pointer', color: a.disabled ? '#B7C2BD' : (a.danger ? '#C2415C' : DARK), fontSize: 13, fontWeight: 600, textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ width: 18, height: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: a.disabled ? '#C6D0CC' : (a.danger ? '#C2415C' : (a.tone || '#0E7C52')) }}>{a.icon}</span>
+                <span style={{ flex: 1 }}>{a.label}</span>
+                {a.active && <span style={{ width: 7, height: 7, borderRadius: '50%', background: PRIMARY }} />}
+              </button>
+            ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function Appointments({ state, setState, go, openNewAppt }) {
-  // The dashboard's "à confirmer" card can deep-link here pre-filtered.
-  const [activeTab, setActiveTab] = useState(state?.apptTab || 'Tous');
+  // All filtering now lives in a single labelled row (same concept as the
+  // Historique page). The dashboard's "à confirmer" card can still deep-link
+  // here by pre-selecting the Statut filter — validated so a stray value can
+  // never silently filter the list to empty.
+  const STATUS_OPTS = ['Confirmé', 'En attente', 'Annulé', 'Terminé', 'Absent'];
   const [searchQ, setSearchQ] = useState('');
+  const [filterService, setFilterService] = useState('');
+  const [filterStatus, setFilterStatus] = useState(STATUS_OPTS.includes(state?.apptTab) ? state.apptTab : '');
+  const [filterPay, setFilterPay] = useState('');
+  const [filterFrom, setFilterFrom] = useState('');   // YYYY-MM-DD
+  const [filterTo, setFilterTo] = useState('');
   const { isMobile } = useViewport();
+
+  // Service filter options come from the services the doctor defined in
+  // Paramètres (falls back to the common set if none are configured yet).
+  const serviceOpts = (() => {
+    const fromDoctor = [...new Set((state?.services || []).map((s) => s?.name).filter(Boolean))];
+    return fromDoctor.length ? fromDoctor : ['Consultation générale', 'Bilan complet', 'Téléconsultation', 'Suivi', 'Échographie'];
+  })();
+  // Accent- & case-insensitive compare so "Échographie" matches a "echographie"
+  // motif typed by hand.
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
   // Consume the requested filter once, then clear it so a later visit starts on "Tous".
   useEffect(() => {
     if (state?.apptTab) setState({ apptTab: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const tabs = ['Tous', 'Confirmé', 'En attente', 'Annulé', 'Terminé'];
 
   // Build display rows from the doctor's real + manually-added appointments.
   const rows = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].map((a, i) => {
@@ -209,7 +283,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
       </style></head><body>
       <h1>${esc(docName)} — Feuille de journée</h1>
       <p class="sub">${esc(dateLbl.charAt(0).toUpperCase() + dateLbl.slice(1))} · ${day.length} rendez-vous</p>
-      <table><thead><tr><th>Heure</th><th>Patient</th><th>Téléphone</th><th>Motif</th><th>Statut</th><th>Notes</th></tr></thead>
+      <table><thead><tr><th>Heure</th><th>Patient</th><th>Téléphone</th><th>Service</th><th>Statut</th><th>Notes</th></tr></thead>
       <tbody>${trs}</tbody></table>
       <footer>Généré par Tabibo — tabibo.ma</footer>
       <script>window.onload = () => setTimeout(() => window.print(), 150);</` + `script></body></html>`);
@@ -240,12 +314,49 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   rows.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
 
   const filtered = rows.filter(appt => {
-    const matchTab = activeTab === 'Tous' || appt.statut === activeTab;
-    const matchSearch = appt.patient.toLowerCase().includes(searchQ.toLowerCase()) ||
-      appt.motif.toLowerCase().includes(searchQ.toLowerCase());
-    return matchTab && matchSearch;
+    const q = searchQ.toLowerCase();
+    const matchSearch = appt.patient.toLowerCase().includes(q) || appt.motif.toLowerCase().includes(q);
+    const matchService = !filterService || norm(appt.motif) === norm(filterService);
+    const matchStatus = !filterStatus || appt.statut === filterStatus;
+    const matchPay = !filterPay || appt.paiement === filterPay;
+    const matchFrom = !filterFrom || (appt.date && appt.date >= filterFrom);
+    const matchTo = !filterTo || (appt.date && appt.date <= filterTo);
+    return matchSearch && matchService && matchStatus && matchPay && matchFrom && matchTo;
   });
+  const filtersActive = !!(filterService || filterStatus || filterPay || filterFrom || filterTo || searchQ);
+  const resetFilters = () => { setFilterService(''); setFilterStatus(''); setFilterPay(''); setFilterFrom(''); setFilterTo(''); setSearchQ(''); };
   const pager = usePager(filtered, 10);
+
+  // The full action set for a row, fed to the "⋯" menu. Ordered by the day's
+  // workflow (arrival → consultation → confirm → encaisser → reporter → absent),
+  // then the documents/tele actions, then the destructive cancel at the bottom.
+  const buildActions = (appt) => {
+    const done = appt.rawStatus === 'completed';
+    const cancelled = appt.rawStatus === 'cancelled';
+    const wf = cancelled || done;   // workflow actions disabled once closed
+    return [
+      { key: 'arrive', label: appt.arrivedAt ? "Annuler l'arrivée" : 'Marquer arrivé', active: !!appt.arrivedAt, disabled: wf, onClick: () => toggleArrived(appt),
+        icon: <svg {...AI}><circle cx="9" cy="7" r="4" /><path d="M2 21c0-4 3-6 7-6" /><path d="M16 11l2 2 4-4" /></svg> },
+      { key: 'consult', label: appt.inConsultAt ? 'Renvoyer en salle' : 'Entrer en consultation', active: !!appt.inConsultAt, disabled: wf, onClick: () => toggleConsult(appt),
+        icon: <svg {...AI}><path d="M6 3v5a4 4 0 0 0 8 0V3" /><path d="M10 15a5 5 0 0 0 10 0v-2" /><circle cx="20" cy="10" r="2" /></svg> },
+      { key: 'confirm', label: 'Confirmer', disabled: appt.rawStatus === 'confirmed' || cancelled, onClick: () => confirmAppt(appt.id),
+        icon: <svg {...AI}><path d="M20 6L9 17l-5-5" /></svg> },
+      { key: 'pay', label: 'Terminer & encaisser', tone: '#2563EB', disabled: wf, onClick: () => openPay(appt),
+        icon: <svg {...AI}><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+      { key: 'resched', label: 'Reporter', tone: '#2C5BA6', disabled: wf, onClick: () => openResched(appt),
+        icon: <svg {...AI}><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg> },
+      { key: 'noshow', label: 'Marquer absent', tone: '#6B7280', disabled: wf, onClick: () => noShowAppt(appt.id),
+        icon: <svg {...AI}><circle cx="12" cy="12" r="10" /><path d="M4.9 4.9l14.2 14.2" /></svg> },
+      { divider: true },
+      { key: 'rx', label: 'Rédiger une ordonnance', tone: '#6B57A6', onClick: () => { setState({ rxPrefill: { name: appt.patient, patientId: appt.patientId || null } }); go('dprescribe'); },
+        icon: <svg {...AI}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13l2 2 4-4" /></svg> },
+      { key: 'tele', label: 'Téléconsultation', disabled: wf, onClick: () => { const room = `tabibo-appt-${appt.id}`; if (appt.patientId) ringPatient(appt.patientId, { room, doctorName: state?.appUser?.full_name || 'Votre médecin', spec: state?.myDoctor?.specialty }); setState({ teleRoom: room }); },
+        icon: <svg {...AI}><path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg> },
+      { divider: true },
+      { key: 'cancel', label: 'Annuler le rendez-vous', danger: true, disabled: cancelled, onClick: () => cancelAppt(appt.id),
+        icon: <svg {...AI}><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg> },
+    ];
+  };
 
   return (
     <div style={{ padding: isMobile ? '8px 6px' : '28px 32px', background: BG, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -282,7 +393,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           }}><Icon name="search" size={16} /></span>
           <input
             type="text"
-            placeholder="Rechercher un patient, un motif..."
+            placeholder="Rechercher un patient, un service..."
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
             style={{
@@ -292,24 +403,37 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
             }}
           />
         </div>
-        {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 500,
-                cursor: 'pointer', transition: 'all 0.15s',
-                background: activeTab === tab ? PRIMARY : '#fff',
-                color: activeTab === tab ? '#fff' : MUTED,
-                border: activeTab === tab ? `1.5px solid ${PRIMARY}` : `1.5px solid ${BORDER}`,
-                borderBottom: activeTab === tab ? `3px solid ${PRIMARY}` : `1.5px solid ${BORDER}`,
-              }}
-            >
-              {tab}
-            </button>
+        {/* One-line, labelled filter row — Service · Statut · Paiement · Du · Au
+            (same presentation as the Historique page). The old status pills are
+            now the "Statut" dropdown. */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            { key: 'service', label: 'Service', value: filterService, set: setFilterService, opts: [['', 'Tous les services'], ...serviceOpts.map(s => [s, s])], minWidth: 170 },
+            { key: 'statut', label: 'Statut', value: filterStatus, set: setFilterStatus, opts: [['', 'Tous'], ...STATUS_OPTS.map(s => [s, s])], minWidth: 130 },
+            { key: 'paiement', label: 'Paiement', value: filterPay, set: setFilterPay, opts: [['', 'Tous'], ['Payé', 'Payé'], ['Non payé', 'Non payé']], minWidth: 120 },
+          ].map(f => (
+            <div key={f.key}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>{f.label}</div>
+              <select value={f.value} onChange={e => f.set(e.target.value)}
+                style={{ padding: '9px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: f.value ? DARK : MUTED, outline: 'none', cursor: 'pointer', minWidth: f.minWidth }}>
+                {f.opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
           ))}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Du</div>
+            <input type="date" value={filterFrom} max={filterTo || undefined} onChange={e => setFilterFrom(e.target.value)}
+              style={{ padding: '8px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: DARK, outline: 'none', cursor: 'pointer' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Au</div>
+            <input type="date" value={filterTo} min={filterFrom || undefined} onChange={e => setFilterTo(e.target.value)}
+              style={{ padding: '8px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: DARK, outline: 'none', cursor: 'pointer' }} />
+          </div>
+          <button onClick={resetFilters} disabled={!filtersActive} title="Réinitialiser les filtres"
+            style={{ padding: '9px 16px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, fontWeight: 600, background: '#fff', color: filtersActive ? DARK : '#B7C2BD', cursor: filtersActive ? 'pointer' : 'default', whiteSpace: 'nowrap' }}>
+            Réinitialiser
+          </button>
         </div>
       </div>
 
@@ -319,7 +443,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: HEADER_BG, borderBottom: `2px solid ${BORDER_STRONG}` }}>
-                {['Patient', 'Date & Heure', 'Motif', 'Statut', 'Paiement', 'Actions'].map(col => (
+                {['Patient', 'Date & Heure', 'Service', 'Statut', 'Paiement', 'Actions'].map(col => (
                   <th key={col} style={{
                     padding: '12px 16px', textAlign: 'left', fontWeight: 600,
                     color: MUTED, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -397,77 +521,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                         color: PAYMENT_CONFIG[appt.paiement]?.color,
                       }}>{appt.paiement}</span>
                     </td>
-                    {/* Actions */}
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          title={appt.inConsultAt ? 'Renvoyer en salle d\'attente' : 'Faire entrer en consultation'}
-                          onClick={() => toggleConsult(appt)}
-                          disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'}
-                          style={{
-                            background: appt.inConsultAt ? '#0E7C52' : '#EAF9F1', border: 'none', borderRadius: 8,
-                            width: 32, height: 32, cursor: 'pointer', color: appt.inConsultAt ? '#fff' : '#0E7C52',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                          }}
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
-                        </button>
-                        <button
-                          title={appt.arrivedAt ? 'Annuler l\'arrivée' : 'Patient arrivé (salle d\'attente)'}
-                          onClick={() => toggleArrived(appt)}
-                          disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'}
-                          style={{
-                            background: appt.arrivedAt ? '#16A06A' : '#E7F6EE', border: 'none', borderRadius: 8,
-                            width: 32, height: 32, cursor: 'pointer', color: appt.arrivedAt ? '#fff' : '#0E7C52',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                          }}
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21c0-4 3-6 7-6"/><path d="M16 11l2 2 4-4"/></svg>
-                        </button>
-                        <button title="Confirmer" onClick={() => confirmAppt(appt.id)} disabled={appt.rawStatus === 'confirmed' || appt.rawStatus === 'cancelled'} style={{
-                          background: '#F0FDF4', border: 'none', borderRadius: 8,
-                          width: 32, height: 32, cursor: 'pointer', fontSize: 15,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          opacity: (appt.rawStatus === 'confirmed' || appt.rawStatus === 'cancelled') ? 0.4 : 1,
-                        }}>✓</button>
-                        <button title="Annuler" onClick={() => cancelAppt(appt.id)} disabled={appt.rawStatus === 'cancelled'} style={{
-                          background: '#FEE2E2', border: 'none', borderRadius: 8,
-                          width: 32, height: 32, cursor: 'pointer', fontSize: 14,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#991B1B', fontWeight: 700,
-                          opacity: appt.rawStatus === 'cancelled' ? 0.4 : 1,
-                        }}>✕</button>
-                        <button title="Reporter" onClick={() => openResched(appt)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
-                          background: '#EEF3FB', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 14,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2C5BA6',
-                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                        }}>⟳</button>
-                        <button title="Terminer & encaisser" onClick={() => openPay(appt)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
-                          background: '#E8F1FC', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 13,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', fontWeight: 800,
-                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                        }}>✓✓</button>
-                        <button title="Absent" onClick={() => noShowAppt(appt.id)} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
-                          background: '#F3F4F6', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 14,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700,
-                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                        }}>∅</button>
-                        <button title="Rédiger une ordonnance" onClick={() => { setState({ rxPrefill: { name: appt.patient, patientId: appt.patientId || null } }); go('dprescribe'); }} style={{
-                          background: '#EFEAFB', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B57A6',
-                        }}>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>
-                        </button>
-                        <button title="Démarrer la téléconsultation" onClick={() => { const room = `tabibo-appt-${appt.id}`; if (appt.patientId) ringPatient(appt.patientId, { room, doctorName: state?.appUser?.full_name || 'Votre médecin', spec: state?.myDoctor?.specialty }); setState({ teleRoom: room }); }} disabled={appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed'} style={{
-                          background: '#E7F6EE', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A06A',
-                          opacity: (appt.rawStatus === 'cancelled' || appt.rawStatus === 'completed') ? 0.4 : 1,
-                        }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                        </button>
-                      </div>
+                    {/* Actions — a single "⋯" menu so nothing is ever clipped */}
+                    <td style={{ padding: '10px 16px' }}>
+                      <RowActionsMenu actions={buildActions(appt)} />
                     </td>
                   </tr>
                 );

@@ -57,6 +57,13 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
   const [filterFrom, setFilterFrom] = useState('');   // YYYY-MM-DD
   const [filterTo, setFilterTo] = useState('');
 
+  // Service options: those defined by the doctor in Paramètres, plus any service
+  // already present on a past consultation (so historical rows stay filterable).
+  const serviceOpts = [...new Set([
+    ...((state?.services || []).map((s) => s?.name)),
+    ...consultations.map((c) => c.service),
+  ].filter(Boolean))];
+
   // Apply filters (incl. a date range) — the KPIs below react to these.
   const filtered = consultations.filter(c => {
     if (filterService && c.service !== filterService) return false;
@@ -301,11 +308,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
             style={{ padding: '9px 12px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, fontSize: 13, background: '#fff', color: DARK, outline: 'none', cursor: 'pointer', minWidth: 190 }}
           >
             <option value="">Tous les services</option>
-            <option value="Consultation générale">Consultation générale</option>
-            <option value="Bilan complet">Bilan complet</option>
-            <option value="Téléconsultation">Téléconsultation</option>
-            <option value="Suivi">Suivi</option>
-            <option value="Autre">Autre</option>
+            {serviceOpts.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
