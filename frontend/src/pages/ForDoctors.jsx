@@ -158,6 +158,9 @@ export default function ForDoctors() {
       patients: DEMO_PATIENTS,
       manualAppts: [...todayAppts, ...extraAppts],
       manualConsults: [...todayConsults, ...extraConsults, ...weekConsults, ...history],
+      // Working hours behind the demo agenda (Mon–Sat 09:00–18:00, Sun closed),
+      // so the calendar sizes its grid exactly like a real doctor's would.
+      weekEndMin: [WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, 0],
       screen: 'doctor',
     });
   };

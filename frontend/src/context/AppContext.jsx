@@ -1,9 +1,22 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor, fetchDoctorBySlug } from '../lib/api';
+import { fetchDoctors, getCurrentAppUser, fetchMyAppointments, apptToConsultation, fetchMyDoctor, fetchAppSettings, fetchMyPatients, fetchMyStaffDoctor, fetchDoctorBySlug, fetchAvailability } from '../lib/api';
 import { signIn as sbSignIn, signUp as sbSignUp, signOut as sbSignOut, getSession, onAuthChange, phoneLogin as sbPhoneLogin } from '../lib/auth';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { setPageMeta, SCREEN_META } from '../lib/seo.js';
 import { DOCTORS as MOCK_DOCTORS, DEMO_PATIENTS } from '../shared.jsx';
+
+// Availability rows → weekly end-of-day minutes (Mon=0 … Sun=6). Breaks are
+// ignored; a closed day stays 0. Feeds the calendar's grid-bottom sizing.
+function weekEndMinFromAvailability(rows) {
+  const ends = [0, 0, 0, 0, 0, 0, 0];
+  (rows || []).forEach((r) => {
+    if (r.is_break) return;
+    const ui = ((r.day_of_week || 0) + 6) % 7;          // DB Sun=0 → UI Mon=0
+    const [h, m] = String(r.end_time || '').split(':').map(Number);
+    if (Number.isFinite(h)) ends[ui] = Math.max(ends[ui], h * 60 + (m || 0));
+  });
+  return ends;
+}
 
 // Screens that require being signed in (reset to home if there's no session).
 const PROTECTED_SCREENS = new Set([
@@ -98,6 +111,9 @@ const initialState = {
   invoiceOpen: false, invoiceRow: null,
   appUser: null, myAppointments: [], authBusy: false, authError: '',
   myDoctor: null, myDoctorLoaded: false,
+  // Weekly working-hours END-OF-DAY minutes (Mon=0 … Sun=6), from Disponibilités.
+  // Used by the calendar to size the bottom of the grid. null until loaded.
+  weekEndMin: null,
   // Appointments the doctor adds manually (kept separate so a Supabase refresh
   // of `myAppointments`/`consultations` never wipes them).
   manualAppts: [], manualConsults: [],
@@ -243,6 +259,8 @@ export function AppProvider({ children }) {
           if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
           // Load the real patient roster (replaces demo data).
           try { if (md?.id) patch.patients = await fetchMyPatients(md.id); } catch (_) {}
+          // Weekly working hours → the calendar sizes its grid to the day's end.
+          try { if (md?.id) patch.weekEndMin = weekEndMinFromAvailability(await fetchAvailability(md.id)); } catch (_) {}
         } catch (e) { /* ignore */ }
         patch.myDoctorLoaded = true;
       } else if (u.role !== 'admin') {
@@ -256,6 +274,7 @@ export function AppProvider({ children }) {
             patch.consultations = appts.map(apptToConsultation);
             if (Array.isArray(md?.services) && md.services.length) patch.services = md.services;
             try { patch.patients = await fetchMyPatients(md.id); } catch (_) {}
+            try { patch.weekEndMin = weekEndMinFromAvailability(await fetchAvailability(md.id)); } catch (_) {}
             u.isStaff = true;   // let the login pages route them into the cabinet
           }
         } catch (_) { /* not staff */ }
@@ -423,7 +442,7 @@ export function AppProvider({ children }) {
     try { navigator.serviceWorker?.controller?.postMessage('CLEAR_RUNTIME'); } catch (e) { /* ignore */ }
     dispatch({
       appUser: null, patient: null, myAppointments: [], consultations: [], screen: 'home',
-      myDoctor: null, myDoctorLoaded: false, isStaff: false,
+      myDoctor: null, myDoctorLoaded: false, isStaff: false, weekEndMin: null,
       // Wipe every form / cache that holds personal data, so nothing from this
       // account can leak into the next login on a shared device or account switch.
       info: { name: '', phone: '', email: '', cin: '', motif: 'Consultation générale', notes: '' },

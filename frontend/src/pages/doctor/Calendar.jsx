@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { deleteAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
+import { deleteAppointment, updateAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
 import { greenBtn, greenBtnBusy } from '../../shared.jsx';
-import { moroccoNow } from '../../lib/time';
+import { moroccoNow, moroccoToUTCISO } from '../../lib/time';
 
 const PRIMARY = '#16A06A';
 const PRIMARY_DK = '#0E7C52';
@@ -79,9 +79,21 @@ function timeToTop(time) {
 // 'HH:MM' + minutes → 'HH:MM' (end time of a visit).
 function addMinutes(time, minutes) {
   const [h, m] = String(time || '0:0').split(':').map(Number);
-  const t = (h * 60 + (m || 0) + (Number(minutes) || 0)) % 1440;
+  const t = ((h * 60 + (m || 0) + (Number(minutes) || 0)) % 1440 + 1440) % 1440;
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
+// Minutes since 00:00 for an 'HH:MM' string.
+const hm = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+// Duration (min) between a start and an end 'HH:MM' — end after start on the same day.
+const diffMinutes = (start, end) => hm(end) - hm(start);
+
+// Consultation durations offered in the edit modal (mirrors the "Nouveau RDV" form).
+const DURATION_OPTS = [15, 20, 30, 45, 60, 75, 90, 105, 120];
+const durLabel = (d) => {
+  const h = Math.floor(d / 60), m = d % 60;
+  if (d < 60) return `${d} min`;
+  return m ? `${h} h ${m}` : `${h} h`;
+};
 
 // Given any Date, return { weekOffset, dayIdx } for navigation
 function dateToNav(d) {
@@ -98,17 +110,13 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const { isMobile } = useViewport();
 
-  // Dynamic hour axis: expand beyond the 08–19 default so appointments outside
-  // it (e.g. a cabinet open until 20:00) are always visible on the grid.
-  const apptHours = consultations
-    .map((c) => parseInt(String(c.time || '').split(':')[0], 10))
-    .filter((h) => Number.isFinite(h));
-  const startH = Math.min(START_HOUR, ...(apptHours.length ? apptHours : [START_HOUR]));
-  const endH = Math.max(END_HOUR, ...(apptHours.length ? apptHours.map((h) => h + 1) : [END_HOUR]));
-  const HOURS_DYN = Array.from({ length: endH - startH + 1 }, (_, i) => `${String(startH + i).padStart(2, '0')}:00`);
-  const timeToTopDyn = (time) => {
-    const [h, mm] = String(time || '9:0').split(':').map(Number);
-    return ((h - startH) + (mm || 0) / 60) * HOUR_HEIGHT;
+  // Weekly working hours (end-of-day minutes per UI day, Mon=0 … Sun=6) — loaded
+  // into global state for real doctors and set by the sales demo. Used, together
+  // with the day's appointments, to size the bottom of the grid.
+  const weekEndMin = state?.weekEndMin;
+  const workEndMinFor = (d) => {
+    if (!Array.isArray(weekEndMin)) return 0;
+    return weekEndMin[(d.getDay() + 6) % 7] || 0;
   };
 
   // Service colours + legend are driven by the doctor's actual services.
@@ -189,17 +197,38 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
     periodLabel = `${FR_MONTHS[monday.getMonth()]} ${monday.getFullYear()}`;
   }
 
+  // Demo (demo_) and local (local_) ids live only in memory; everything else is
+  // a real DB row that must be persisted through the API.
+  const isManualId = (id) => { const s = String(id); return s.startsWith('local_') || s.startsWith('demo_'); };
+
   // ── Edit helpers ───────────────────────────────────────────────────────────
-  const openEdit  = (c)  => setEditData({ ...c });
+  const openEdit  = (c)  => setEditData({ ...c, durationMin: Math.max(15, Number(c.durationMin) || 30) });
   const closeEdit = ()   => setEditData(null);
   const setField  = (k, v) => setEditData(d => ({ ...d, [k]: v }));
-  const saveEdit  = () => {
-    // Route the update to the correct source list (manual vs. DB-backed).
-    const isManual = String(editData.id).startsWith('local_');
-    if (isManual) {
-      setState({ manualConsults: (state.manualConsults || []).map(c => c.id === editData.id ? editData : c) });
+  const saveEdit  = async () => {
+    const ed  = { ...editData, durationMin: Math.max(15, Number(editData.durationMin) || 30) };
+    const dur = ed.durationMin;
+    // The appointment (dashboard / "Rendez-vous") copy must move in lock-step with
+    // the calendar copy, so date, time, duration, service and patient stay in sync
+    // across every screen.
+    const newDatetime = moroccoToUTCISO(ed.date, ed.time);
+    const patchAppt = (a) => ({ ...a, datetime: newDatetime, durationMin: dur, reason: ed.service, patientName: ed.patient });
+    if (isManualId(ed.id)) {
+      setState({
+        manualConsults: (state.manualConsults || []).map(c => c.id === ed.id ? ed : c),
+        manualAppts:    (state.manualAppts || []).map(a => a.id === ed.id ? patchAppt(a) : a),
+      });
     } else {
-      setState({ consultations: (state.consultations || []).map(c => c.id === editData.id ? editData : c) });
+      // Optimistic UI update, then persist to the database.
+      setState({
+        consultations:  (state.consultations || []).map(c => c.id === ed.id ? ed : c),
+        myAppointments: (state.myAppointments || []).map(a => a.id === ed.id ? patchAppt(a) : a),
+      });
+      try {
+        await updateAppointment(ed.id, { datetime: newDatetime, duration_minutes: dur, reason: ed.service, notes: ed.notes || null });
+      } catch (e) {
+        setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
+      }
     }
     closeEdit();
   };
@@ -230,7 +259,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
   const deleteAppt = async () => {
     const id = editData.id;
-    const isManual = String(id).startsWith('local_');
+    const isManual = isManualId(id);
     if (isManual) {
       setState({
         manualConsults: (state.manualConsults || []).filter(c => c.id !== id),
@@ -249,7 +278,40 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   };
 
   // ── Shared grid body ───────────────────────────────────────────────────────
-  const renderGridBody = (days) => (
+  // The hour axis is sized to the VISIBLE days: it starts at 08:00 (or earlier
+  // if something is scheduled before that) and its bottom edge sits TWO HOURS
+  // after the latest of — the day's working-hours end (Disponibilités) and the
+  // end of the last appointment booked that day. So a 18:45 visit no longer sits
+  // flush against the bottom: the grid runs on to ~21:00, leaving room to breathe
+  // (and the "today" column keeps its green wash all the way down).
+  const renderGridBody = (days) => {
+    const keys = days.map(isoDate);
+    const dayAppts = consultations.filter(c => keys.includes(c.date));
+
+    // Latest minute that must stay visible = max(work-end, last appointment end).
+    let latestMin = 0;
+    dayAppts.forEach(c => {
+      const s = hm(c.time);
+      if (Number.isFinite(s)) latestMin = Math.max(latestMin, s + Math.max(15, Number(c.durationMin) || 30));
+    });
+    days.forEach(d => { latestMin = Math.max(latestMin, workEndMinFor(d)); });
+    // Earliest minute = min(08:00, work-start-agnostic first appointment).
+    let earliestMin = START_HOUR * 60;
+    dayAppts.forEach(c => { const s = hm(c.time); if (Number.isFinite(s)) earliestMin = Math.min(earliestMin, s); });
+
+    const startH = Math.max(0, Math.min(START_HOUR, Math.floor(earliestMin / 60)));
+    // +120 min of breathing room below the last item, rounded up to the hour.
+    const endH = Math.min(23, Math.max(END_HOUR, Math.ceil((latestMin + 120) / 60)));
+    const HOURS_DYN = Array.from({ length: endH - startH + 1 }, (_, i) => `${String(startH + i).padStart(2, '0')}:00`);
+    const timeToTopDyn = (time) => {
+      const [h, mm] = String(time || '9:0').split(':').map(Number);
+      return ((h - startH) + (mm || 0) / 60) * HOUR_HEIGHT;
+    };
+    // Full pixel height of the grid, so the "today" wash and columns are one
+    // continuous block down to the bottom edge regardless of appointment layout.
+    const gridH = (HOURS_DYN.length - 1) * HOUR_HEIGHT;
+
+    return (
     <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 300px)', paddingTop: 10 }}>
       {/* Time axis — same width + hairline as the header gutter, so the vertical
           rules line up perfectly with the day-header separators. */}
@@ -272,7 +334,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
         const nowTop   = ((nowMin / 60) - startH) * HOUR_HEIGHT;
         const showNow  = isToday && nowMin >= startH * 60 && nowMin <= endH * 60;
         return (
-          <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? TODAY_WASH : (isWeekend ? '#FBFCFB' : '#fff'), minWidth: 0 }}>
+          <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? TODAY_WASH : (isWeekend ? '#FBFCFB' : '#fff'), minWidth: 0, minHeight: gridH }}>
             {/* Hour grid lines + a lighter half-hour rule */}
             {HOURS_DYN.slice(0, -1).map(h => (
               <div key={h} style={{ height: HOUR_HEIGHT, borderBottom: `1px solid ${GRID}`, position: 'relative' }}>
@@ -311,7 +373,8 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
         );
       })}
     </div>
-  );
+    );
+  };
 
   // ── Month view ─────────────────────────────────────────────────────────────
   const renderMonthView = () => {
@@ -524,16 +587,49 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                 <input value={editData.patient} onChange={e => setField('patient', e.target.value)} style={inp} />
               </div>
 
-              {/* Date + Time */}
+              {/* Date + start time */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={lbl}>Date</label>
                   <input type="date" value={editData.date} onChange={e => setField('date', e.target.value)} style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>Heure</label>
+                  <label style={lbl}>Heure de début</label>
                   <input type="time" value={editData.time} onChange={e => setField('time', e.target.value)} style={inp} />
                 </div>
+              </div>
+
+              {/* Duration + end time — the two are linked: change one and the
+                  other follows, so the doctor can set the visit length either way. */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={lbl}>Durée</label>
+                  <select
+                    value={DURATION_OPTS.includes(Number(editData.durationMin)) ? Number(editData.durationMin) : ''}
+                    onChange={e => setField('durationMin', Number(e.target.value))}
+                    style={{ ...inp, cursor: 'pointer' }}
+                  >
+                    {!DURATION_OPTS.includes(Number(editData.durationMin)) && (
+                      <option value="">{Math.max(15, Number(editData.durationMin) || 30)} min</option>
+                    )}
+                    {DURATION_OPTS.map(d => <option key={d} value={d}>{durLabel(d)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Heure de fin</label>
+                  <input
+                    type="time"
+                    value={addMinutes(editData.time, editData.durationMin)}
+                    onChange={e => {
+                      const d = diffMinutes(editData.time, e.target.value);
+                      if (d >= 5 && d <= 600) setField('durationMin', d);
+                    }}
+                    style={inp}
+                  />
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: MUTED, marginTop: -6 }}>
+                {editData.time} → <strong style={{ color: DARK }}>{addMinutes(editData.time, editData.durationMin)}</strong> · {Math.max(15, Number(editData.durationMin) || 30)} min
               </div>
 
               {/* Service */}
