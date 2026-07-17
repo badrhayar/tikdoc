@@ -42,9 +42,13 @@ export default function ForDoctors() {
     : '';
 
   // Interactive demo: opens the doctor dashboard with realistic sample data.
-  // No account needed — the perfect tool for face-to-face sales.
+  // No account needed — the perfect tool for face-to-face sales. The whole week
+  // (Mon–Sat) is populated, and TODAY's live appointments are mirrored 1:1 into
+  // the calendar + availability so the agenda, "Rendez-vous", the dashboard and
+  // "Disponibilités" all tell the exact same story.
   const startDemo = () => {
     const now = new Date();
+    const p2 = (n) => String(n).padStart(2, '0');
     // Anchor the demo to MOROCCO's today (matching how the dashboard counts),
     // clamped into working hours so there's ALWAYS a current, testable day — no
     // matter the hour of entry (even at 23:30, the appointments stay on today
@@ -53,32 +57,107 @@ export default function ForDoctors() {
     const t0 = m.dateISO;
     const WORK_START = 9 * 60, WORK_END = 18 * 60;
     const anchor = Math.min(Math.max(m.minutes, WORK_START + 45), WORK_END - 45);
-    const fmt = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+    const fmt = (min) => `${p2(Math.floor(min / 60))}:${p2(min % 60)}`;
     const at = (min) => moroccoToUTCISO(t0, fmt(min));    // today (Morocco) → correct UTC instant
-    const daysAgo = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const daysAgo = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
     const mkAppt = (id, min, name, phone, reason, status, extra = {}) => ({ id: `demo_${id}`, datetime: at(min), durationMin: 30, status, patientName: name, patientPhone: phone, reason, notes: '', ...extra });
+
+    // ── TODAY's live appointments — drive "Ma journée" (waiting room + counts) ──
+    const todayAppts = [
+      // One patient checked in 12 min ago → the live waiting room is always
+      // populated, so "faire entrer en consultation" is testable at any time.
+      mkAppt(2, anchor - 30, 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed', { durationMin: 30, arrivedAt: new Date(now.getTime() - 12 * 60000).toISOString() }),
+      mkAppt(1, anchor,      'Fatima Zahra Benali',  '+212 6 12 34 56 78', 'Consultation générale', 'confirmed', { durationMin: 30 }),
+      mkAppt(3, anchor + 30, 'Amina Tazi',           '+212 6 78 90 12 34', 'Bilan complet', 'pending', { durationMin: 45 }),
+      mkAppt(4, anchor + 90, 'Hassan Berrada',       '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed', { durationMin: 15 }),
+    ];
+    // Today's calendar rows MIRROR those live appointments 1:1 (same demo_ ids,
+    // times and durations) so the agenda shows exactly today's rendez-vous — and
+    // the "Confirmer" button still works from the calendar (it looks the row up
+    // in manualAppts by id).
+    const todayConsults = [
+      { id: 'demo_2', patient: 'Mohamed Rachid Alami', age: 52, sex: 'M', service: 'Suivi',                 date: t0, time: fmt(anchor - 30), durationMin: 30, amount: 200, pay: '—', status: 'En attente', notes: '' },
+      { id: 'demo_1', patient: 'Fatima Zahra Benali',  age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: fmt(anchor),      durationMin: 30, amount: 300, pay: '—', status: 'En attente', notes: '' },
+      { id: 'demo_3', patient: 'Amina Tazi',           age: 22, sex: 'F', service: 'Bilan complet',         date: t0, time: fmt(anchor + 30), durationMin: 45, amount: 500, pay: '—', status: 'En attente', notes: '' },
+      { id: 'demo_4', patient: 'Hassan Berrada',       age: 38, sex: 'M', service: 'Téléconsultation',      date: t0, time: fmt(anchor + 90), durationMin: 15, amount: 250, pay: '—', status: 'En attente', notes: '' },
+    ];
+
+    // ── A full week (Mon–Sat) with varied consultation types, so the agenda
+    //    looks like a real, busy cabinet. Past days are settled ("Payé"),
+    //    upcoming days are still "En attente". Times sit on a clean grid and
+    //    durations fit the gap, so nothing overlaps. ──
+    const SERVICES = [
+      ['Consultation générale', 30, 300], ['Téléconsultation', 20, 250],
+      ['Bilan complet', 40, 500],         ['Suivi', 30, 200],
+      ['Échographie', 30, 400],           ['Contraception', 20, 250],
+      ['Suivi de grossesse', 30, 350],
+    ];
+    const TIMES = ['09:00', '09:40', '10:20', '11:00', '11:40', '14:00', '14:40', '15:20', '16:00', '16:40'];
+    const PER_DAY = [7, 8, 6, 7, 8, 5];              // Mon…Sat — busy but not overloaded
+    const PAY_OPTS = ['Espèces', 'CMI', 'M-Wallet'];
+    const pt = (i) => DEMO_PATIENTS[i % DEMO_PATIENTS.length];
+    const dow = (new Date(`${t0}T12:00:00`).getDay() + 6) % 7;   // Mon=0
+    const weekday = (i) => { const d = new Date(`${t0}T12:00:00`); d.setDate(d.getDate() - dow + i); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
+
+    const weekConsults = [];
+    for (let i = 0; i < 6; i++) {                    // Mon…Sat
+      const date = weekday(i);
+      if (date === t0) continue;                     // today is the mirror above
+      const past = date < t0;
+      for (let k = 0; k < PER_DAY[i]; k++) {
+        const [service, durationMin, amount] = SERVICES[(i * 2 + k) % SERVICES.length];
+        const person = pt(i * 3 + k);
+        weekConsults.push({
+          id: `local_w${i}_${k}`,
+          patient: person.name, age: person.age, sex: person.sex,
+          service, date, time: TIMES[k], durationMin, amount,
+          pay: past ? PAY_OPTS[k % PAY_OPTS.length] : '—',
+          status: past ? 'Payé' : 'En attente', notes: '',
+        });
+      }
+    }
+
+    // Fill the REST of today around the live cluster so today is as busy as the
+    // other days — without ever overlapping the live appointments. Morning
+    // visits are already done (completed + paid); afternoon visits are still to
+    // come (confirmed). Each lands in BOTH manualAppts (dashboard/rendez-vous)
+    // and manualConsults (calendar/disponibilités) under the same id, so every
+    // screen agrees. How many fit depends on the hour the demo is opened, which
+    // is exactly how a real day fills up.
+    const hm = (t) => (+t.slice(0, 2)) * 60 + (+t.slice(3, 5));
+    const svcOf = (name) => SERVICES.find((s) => s[0] === name) || SERVICES[0];
+    const clusterStart = anchor - 30;         // first live appt (Mohamed)
+    const clusterEnd = anchor + 90 + 15;      // last live appt end (Hassan)
+    const extraAppts = [], extraConsults = [];
+    let nid = 10;
+    const addToday = (time, service, done) => {
+      const [, durationMin, amount] = svcOf(service);
+      const start = hm(time);
+      if (done ? start + durationMin > clusterStart : start < clusterEnd + 10) return; // never touch the cluster
+      const person = pt(nid);
+      extraAppts.push(done
+        ? { id: `demo_${nid}`, datetime: at(start), durationMin, status: 'completed', paid: true, fee: amount, amountPaid: amount, payMethod: 'cash', patientName: person.name, patientPhone: person.phone, reason: service, notes: '' }
+        : { id: `demo_${nid}`, datetime: at(start), durationMin, status: 'confirmed', fee: amount, patientName: person.name, patientPhone: person.phone, reason: service, notes: '' });
+      extraConsults.push({ id: `demo_${nid}`, patient: person.name, age: person.age, sex: person.sex, service, date: t0, time, durationMin, amount, pay: done ? 'Espèces' : '—', status: done ? 'Payé' : 'En attente', notes: '' });
+      nid++;
+    };
+    [['09:00', 'Consultation générale'], ['09:40', 'Suivi'], ['10:20', 'Échographie'], ['11:00', 'Bilan complet']].forEach(([t, s]) => addToday(t, s, true));
+    [['14:00', 'Consultation générale'], ['14:40', 'Téléconsultation'], ['15:20', 'Suivi'], ['16:00', 'Contraception'], ['16:40', 'Consultation générale']].forEach(([t, s]) => addToday(t, s, false));
+
+    // A little older history so the monthly statistics have depth.
+    const history = [
+      { id: 'local_h1', patient: 'Omar Chraibi',    age: 67, sex: 'M', service: 'Consultation générale', date: daysAgo(9),  time: '09:30', durationMin: 30, amount: 300, pay: 'Espèces',  status: 'Payé', notes: '' },
+      { id: 'local_h2', patient: 'Nadia Benbrahim', age: 61, sex: 'F', service: 'Échographie',           date: daysAgo(10), time: '11:00', durationMin: 30, amount: 400, pay: 'CMI',      status: 'Payé', notes: '' },
+      { id: 'local_h3', patient: 'Karim Bensouda',  age: 29, sex: 'M', service: 'Suivi',                 date: daysAgo(12), time: '15:00', durationMin: 30, amount: 200, pay: 'M-Wallet', status: 'Payé', notes: '' },
+      { id: 'local_h4', patient: 'Layla Cherkaoui', age: 35, sex: 'F', service: 'Suivi de grossesse',    date: daysAgo(13), time: '10:00', durationMin: 30, amount: 350, pay: 'Espèces',  status: 'Payé', notes: '' },
+      { id: 'local_h5', patient: 'Driss El Fassi',  age: 58, sex: 'M', service: 'Téléconsultation',      date: daysAgo(15), time: '16:30', durationMin: 20, amount: 250, pay: 'M-Wallet', status: 'Payé', notes: '' },
+    ];
+
     setState({
       demoDoctor: true,
       patients: DEMO_PATIENTS,
-      manualAppts: [
-        // One patient checked in 12 min ago → the live waiting room is always
-        // populated, so "faire entrer en consultation" is testable at any time.
-        mkAppt(2, anchor - 30, 'Mohamed Rachid Alami', '+212 6 23 45 67 89', 'Suivi hypertension', 'confirmed', { durationMin: 30, arrivedAt: new Date(now.getTime() - 12 * 60000).toISOString() }),
-        mkAppt(1, anchor, 'Fatima Zahra Benali', '+212 6 12 34 56 78', 'Consultation générale', 'confirmed', { durationMin: 30 }),
-        mkAppt(3, anchor + 30, 'Amina Tazi', '+212 6 78 90 12 34', 'Bilan complet', 'pending', { durationMin: 45 }),
-        mkAppt(4, anchor + 90, 'Hassan Berrada', '+212 6 67 89 01 23', 'Téléconsultation', 'confirmed', { durationMin: 15 }),
-      ],
-      manualConsults: [
-        // Today's calendar entries reuse the appointment ids so the calendar can
-        // show/confirm their booking status (demo of the confirm-from-calendar flow).
-        { id: 'demo_1', patient: 'Fatima Zahra Benali', age: 34, sex: 'F', service: 'Consultation générale', date: t0, time: fmt(anchor), durationMin: 30, amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
-        { id: 'demo_3', patient: 'Amina Tazi', age: 22, sex: 'F', service: 'Bilan complet', date: t0, time: fmt(anchor + 30), durationMin: 45, amount: 500, pay: '—', status: 'En attente', notes: '' },
-        { id: 'dc2', patient: 'Mohamed Rachid Alami', age: 52, sex: 'M', service: 'Suivi', date: daysAgo(1), time: '10:00', amount: 200, pay: 'CMI', status: 'Payé', notes: '' },
-        { id: 'dc3', patient: 'Khadija Oumghar', age: 28, sex: 'F', service: 'Bilan complet', date: daysAgo(2), time: '11:00', amount: 500, pay: 'Espèces', status: 'Payé', notes: '' },
-        { id: 'dc4', patient: 'Youssef El Mansouri', age: 45, sex: 'M', service: 'Consultation générale', date: daysAgo(3), time: '14:30', amount: 300, pay: '—', status: 'En attente', notes: '' },
-        { id: 'dc5', patient: 'Amina Tazi', age: 22, sex: 'F', service: 'Téléconsultation', date: daysAgo(5), time: '16:00', amount: 250, pay: 'M-Wallet', status: 'Payé', notes: '' },
-        { id: 'dc6', patient: 'Omar Chraibi', age: 67, sex: 'M', service: 'Consultation générale', date: daysAgo(8), time: '09:30', amount: 300, pay: 'Espèces', status: 'Payé', notes: '' },
-      ],
+      manualAppts: [...todayAppts, ...extraAppts],
+      manualConsults: [...todayConsults, ...extraConsults, ...weekConsults, ...history],
       screen: 'doctor',
     });
   };

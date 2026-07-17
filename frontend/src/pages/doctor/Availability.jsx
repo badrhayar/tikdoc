@@ -175,9 +175,18 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         slotDuration,
       )
     : [];
+  // In the sales demo there is no database, so fetchBookedSlots never runs
+  // (no doctorId). Derive the taken intervals straight from the demo agenda so
+  // "Disponibilités" marks the same slots réservé that the calendar shows booked.
+  const demoBooked = (!doctorId && state?.demoDoctor)
+    ? (state.manualConsults || [])
+        .filter((c) => c.date === selDate && c.status !== 'Annulé')
+        .map((c) => ({ start: c.time, minutes: Number(c.durationMin) || slotDuration }))
+    : null;
+  const effectiveBooked = demoBooked || bookedIvals;
   // Every slot a taken visit spans on this date (a long visit marks all the
   // slots it covers as réservé, not just its start).
-  const bookedForDate = slotsOverlappingBooked(bookedIvals, daySlots, slotDuration);
+  const bookedForDate = slotsOverlappingBooked(effectiveBooked, daySlots, slotDuration);
   // Slots blocked by enabled prayers on the selected date — the slot whose
   // window contains the prayer, consistent with the doctor's slot duration.
   const prayerSlotsForSel = prayerBlock
