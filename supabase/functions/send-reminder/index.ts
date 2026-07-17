@@ -508,7 +508,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: false, error: "unknown type" }, 400);
   } catch (e) {
-    console.error(e);
-    return json({ ok: false, error: String(e) }, 500);
+    console.error(e);                                     // details stay server-side
+    return json({ ok: false, error: "server_error" }, 500); // never echo internals
   }
 });

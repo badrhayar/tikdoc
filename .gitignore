@@ -11,6 +11,10 @@ node_modules/
 # Build output
 dist/
 
+# Packaged project archives (delivered to the user, never committed — a full
+# source archive alongside the deploy is a needless exposure surface)
+*.zip
+
 # Manual backups (scripts/backup.sh output) — data, never commit
 backups/
 

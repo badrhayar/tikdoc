@@ -14,6 +14,9 @@ jobs:
       - name: npm audit (production deps must have zero known vulns)
         working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
+      - name: npm audit (build/dev deps — supply-chain gate, incl. bundler)
+        working-directory: frontend
+        run: npm audit --audit-level=high
   secret-scan:
     runs-on: ubuntu-latest
     steps:

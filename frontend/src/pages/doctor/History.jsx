@@ -85,7 +85,11 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
   function exportCSV() {
     const cols = ['Patient', 'Âge', 'Sexe', 'Service', 'Date', 'Heure', 'Montant (MAD)', 'Paiement', 'Statut'];
     const esc = (v) => {
-      const s = String(v ?? '');
+      let s = String(v ?? '');
+      // Neutralize spreadsheet formula injection: a cell starting with = + - @
+      // (or a leading tab/CR) is treated as a formula by Excel/Sheets. Prefix a
+      // quote so patient-controlled names/notes can't execute on open.
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [cols.join(',')];

@@ -38,7 +38,7 @@ export default function BookingShare() {
 
   const toast = (msg) => setState({ toast: msg, toastShow: true });
   // Escape anything interpolated into the poster HTML (defense-in-depth).
-  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); toast('Lien copié ✓'); }
     catch { toast('Copie impossible — sélectionnez le lien manuellement.'); }
@@ -60,7 +60,7 @@ export default function BookingShare() {
           <h1 style="font-size:34px;line-height:1.2;margin:0 0 12px">Réservez votre rendez-vous en ligne</h1>
           <p style="font-size:18px;color:#6B7B76;margin:0 0 28px">Scannez ce QR code avec l'appareil photo de votre téléphone</p>
           <img src="${qr}" style="width:300px;height:300px"/>
-          <p style="font-size:20px;font-weight:800;color:${G};margin:26px 0 0">${prettyLink}</p>
+          <p style="font-size:20px;font-weight:800;color:${G};margin:26px 0 0">${esc(prettyLink)}</p>
           <p style="font-size:15px;color:#6B7B76;margin-top:26px">Plus d'attente au téléphone — choisissez votre créneau en quelques secondes.</p>
         </div>
         <script>window.onload=function(){setTimeout(function(){window.print()},350)}</script>

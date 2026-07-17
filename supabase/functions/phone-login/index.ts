@@ -39,36 +39,67 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Brute-force guard: at most 20 attempts per phone or per IP per 10 minutes
+    // Brute-force guard: at most 20 attempts per phone / 40 per IP per 10 min
     // (uniform "invalid" response — a limiter must not become its own oracle).
-    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    // Client IP: trust the LAST x-forwarded-for hop — the platform appends the
+    // real peer address on the right, so the left-most token is client-spoofable.
+    // Sanitize to IP characters so the value can never perturb a query.
+    const xff = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const ip = (xff.length ? xff[xff.length - 1] : "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45) || "unknown";
     const ident = String(phone).replace(/\D/g, "").slice(-12) || "unknown";
+    const since = new Date(Date.now() - 10 * 60e3).toISOString();
+
+    // Per-phone limit — values bound via .eq() (never interpolated into a filter),
+    // and FAIL CLOSED: if the count cannot be read we treat the attempt as
+    // throttled rather than letting brute force through. (login_throttle lives in
+    // the same DB as auth, so a real outage here already blocks logins anyway.)
     try {
-      const since = new Date(Date.now() - 10 * 60e3).toISOString();
+      const { count, error } = await admin.from("login_throttle")
+        .select("id", { count: "exact", head: true })
+        .eq("identifier", ident).gte("created_at", since);
+      if (error || (count ?? 0) >= 20) { await jitter(); return invalid(); }
+    } catch (_) { await jitter(); return invalid(); }
+
+    // Per-IP limit — best-effort (IP is only semi-trustworthy); never fail closed
+    // on it so a shared NAT or a limiter hiccup can't lock legitimate users out.
+    try {
       const { count } = await admin.from("login_throttle")
         .select("id", { count: "exact", head: true })
-        .or(`identifier.eq.${ident},ip.eq.${ip}`)
-        .gte("created_at", since);
-      if ((count ?? 0) >= 20) { await jitter(); return invalid(); }
+        .eq("ip", ip).gte("created_at", since);
+      if ((count ?? 0) >= 40) { await jitter(); return invalid(); }
+    } catch (_) { /* ignore */ }
+
+    try {
       await admin.from("login_throttle").insert({ identifier: ident, ip });
       // Opportunistic cleanup so the table never grows unbounded.
       if (crypto.getRandomValues(new Uint8Array(1))[0] < 8) {
         await admin.from("login_throttle").delete().lt("created_at", new Date(Date.now() - 24 * 3600e3).toISOString());
       }
-    } catch (_) { /* limiter must never take logins down */ }
+    } catch (_) { /* recording the attempt is best-effort */ }
 
     // 1) Resolve the email server-side (service role; RPC is no longer public).
+    const anon = createClient(SUPABASE_URL, ANON_KEY);
     const { data: email } = await admin.rpc("email_for_phone", { p: String(phone) });
-    if (!email) { await jitter(); return invalid(); }
+    if (!email) {
+      // Unknown number: perform an equivalent anon sign-in against a bogus email
+      // so latency can't distinguish "no account" from "wrong password", then the
+      // same uniform jitter + response as every other failure path.
+      await anon.auth.signInWithPassword({
+        email: `x${crypto.getRandomValues(new Uint32Array(1))[0]}@no-account.invalid`,
+        password,
+        options: captchaToken ? { captchaToken } : undefined,
+      }).catch(() => {});
+      await jitter();
+      return invalid();
+    }
 
     // 2) Authenticate with the public anon client so CAPTCHA is enforced.
-    const anon = createClient(SUPABASE_URL, ANON_KEY);
     const { data, error } = await anon.auth.signInWithPassword({
       email,
       password,
       options: captchaToken ? { captchaToken } : undefined,
     });
-    if (error || !data?.session) return invalid();
+    if (error || !data?.session) { await jitter(); return invalid(); }
 
     // 3) Hand the session back; the browser calls supabase.auth.setSession().
     return json({

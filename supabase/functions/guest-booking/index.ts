@@ -76,16 +76,27 @@ async function sendWhatsAppOtp(to: string, code: string) {
   return res.ok;
 }
 
-// Doctor-protection checks shared by start & verify.
+// Cabinet closed (congés / absences) on that date. This depends only on PUBLIC
+// data (doctor_time_off is world-readable), so it is safe to reveal in `start`.
+async function cabinetClosedOnDate(admin: ReturnType<typeof createClient>, doctorId: string, datetime?: string): Promise<string | null> {
+  if (!datetime) return null;
+  const dayStr = new Date(datetime).toLocaleDateString("en-CA", { timeZone: "Africa/Casablanca" });
+  const { data: off } = await admin.from("doctor_time_off")
+    .select("id").eq("doctor_id", doctorId)
+    .lte("start_date", dayStr).gte("end_date", dayStr).limit(1);
+  if (off && off.length) return "Le cabinet est fermé à cette date — choisissez une autre date.";
+  return null;
+}
+
+// FULL doctor-protection checks. These are IDENTITY-dependent (they reveal
+// whether a phone has a booking / no-show / blocklist history with the doctor)
+// and MUST run only in `verify`, after the OTP has proven phone ownership —
+// running them in `start` would be an unauthenticated phone↔doctor enumeration
+// oracle (each returns a distinct message and, refusing before any OTP row is
+// written, never consumes rate-limit quota).
 async function bookingRefusal(admin: ReturnType<typeof createClient>, doctorId: string, phone: string, datetime?: string): Promise<string | null> {
-  // Cabinet closed (congés / absences) on that date.
-  if (datetime) {
-    const dayStr = new Date(datetime).toLocaleDateString("en-CA", { timeZone: "Africa/Casablanca" });
-    const { data: off } = await admin.from("doctor_time_off")
-      .select("id").eq("doctor_id", doctorId)
-      .lte("start_date", dayStr).gte("end_date", dayStr).limit(1);
-    if (off && off.length) return "Le cabinet est fermé à cette date — choisissez une autre date.";
-  }
+  const closed = await cabinetClosedOnDate(admin, doctorId, datetime);
+  if (closed) return closed;
   // Blocklist: any roster entry for this cabinet with this phone and status 'Bloqué'.
   const { data: blocked } = await admin.from("doctor_patients")
     .select("id").eq("doctor_id", doctorId).eq("status", "Bloqué").eq("phone", phone).limit(1);
@@ -109,7 +120,11 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const p = await req.json().catch(() => ({}));
-    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    // Trust the LAST x-forwarded-for hop (the platform appends the real peer
+    // address on the right; the left-most token is client-spoofable). Sanitize
+    // to IP characters so it can never perturb a query.
+    const xff = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const ip = (xff.length ? xff[xff.length - 1] : "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45) || "unknown";
 
     // ── status ────────────────────────────────────────────────────────────────
     if (p.action === "status") return json({ ok: true, enabled: waEnabled });
@@ -119,7 +134,7 @@ Deno.serve(async (req) => {
     // ── start: validate → rate-limit → send the code ─────────────────────────
     if (p.action === "start") {
       const phone = normPhone(p.phone);
-      const name = String(p.name || "").trim();
+      const name = String(p.name || "").trim().slice(0, 120);
       const doctorId = String(p.doctorId || "");
       const datetime = String(p.datetime || "");
       if (!phone) return json({ ok: false, error: "Numéro de téléphone invalide." }, 400);
@@ -139,8 +154,12 @@ Deno.serve(async (req) => {
         .select("id", { count: "exact", head: true }).eq("ip", ip).gt("created_at", hourAgo);
       if ((perIp ?? 0) >= 10) return json({ ok: false, error: "Trop de tentatives — réessayez plus tard." }, 429);
 
-      const refusal = await bookingRefusal(admin, doctorId, phone, datetime);
-      if (refusal) return json({ ok: false, error: refusal }, 403);
+      // Only the PUBLIC cabinet-closed check runs pre-verification. The identity-
+      // dependent refusals (existing booking, no-shows, blocklist) are deferred to
+      // `verify` — running them here would leak a phone↔doctor relationship to an
+      // unauthenticated probe. They are still enforced after OTP verification.
+      const closed = await cabinetClosedOnDate(admin, doctorId, datetime);
+      if (closed) return json({ ok: false, error: closed }, 403);
 
       // Slot still free? (final race handled by the unique index at insert)
       const { count: taken } = await admin.from("appointments")
@@ -151,7 +170,7 @@ Deno.serve(async (req) => {
 
       // Cryptographically secure 6-digit code (Math.random is predictable).
       const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000);
-      const payload = { doctorId, datetime: new Date(datetime).toISOString(), name, reason: String(p.reason || "") || null };
+      const payload = { doctorId, datetime: new Date(datetime).toISOString(), name, reason: String(p.reason || "").slice(0, 500) || null };
       await admin.from("booking_otps").insert({
         phone, ip, code_hash: await sha256(code + phone), payload,
         expires_at: new Date(Date.now() + 10 * 60e3).toISOString(),
