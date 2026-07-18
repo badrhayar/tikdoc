@@ -1,691 +1,441 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { deleteAppointment, updateAppointment, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
-import { greenBtn, greenBtnBusy } from '../../shared.jsx';
-import { moroccoNow, moroccoToUTCISO } from '../../lib/time';
+import { fetchTimeOff, addTimeOff } from '../../lib/api';
+import { moroccoNow } from '../../lib/time';
+import ApptPanel from '../../components/ApptPanel';
 
-const PRIMARY = '#16A06A';
-const PRIMARY_DK = '#0E7C52';
-const DARK    = '#15314A';
-const BG      = '#F4F8F5';
-const BORDER  = '#EAEFEC';
-const MUTED   = '#6B7B76';
-// One hairline colour everywhere so the day separators and the hour rules read
-// as a single, consistent grid. The "today" accent is derived from the brand
-// green (same hue as the primary button) — a solid pale green in the header and
-// a translucent green wash down the column.
-const GRID       = '#ECF1EE';
-const TODAY_HEAD = '#E7F6EE';
-const TODAY_WASH = 'rgba(22,160,106,0.06)';
-const GUTTER     = 56;   // time-axis width — identical in the header and the body
+// ─────────────────────────────────────────────────────────────────────────────
+// Agenda du cabinet — Doctolib-grade professional calendar.
+//   • Three views: Liste · Journée · Semaine (default Semaine; Journée on mobile)
+//   • Week: 7 day columns ("mar. 28"), today = teal circle, red "now" line
+//   • Day: 08:00→20:00 grid at 15-minute resolution, empty slots clickable
+//   • List: upcoming appointments grouped by date
+//   • Absences (journée bloquée / férié) shown as gray blocks
+//   • Clicking any appointment opens the detail panel (ApptPanel)
+// ─────────────────────────────────────────────────────────────────────────────
 
-const HOUR_HEIGHT = 64;
-const START_HOUR  = 8;
-const END_HOUR    = 19;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) =>
-  `${String(START_HOUR + i).padStart(2, '0')}:00`
-);
+const TEAL   = '#0F6E56';
+const DARK   = '#15314A';
+const BG     = '#F4F8F5';
+const MUTED  = '#6B7B76';
+const GRID   = '#ECF1EE';
+const GRID_SOFT = '#F4F7F5';
+const RED    = '#E23B55';
+const GUTTER = 54;
 
-const FR_DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-const FR_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const FR_MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+const HOUR_H_WEEK = 60;    // px per hour (week view)
+const HOUR_H_DAY  = 104;   // px per hour (day view, 15-min slots = 26 px)
+const DAY_START = 8, DAY_END = 20;
 
-const SVC_COLORS = {
-  'Consultation générale': { color: '#16A06A', bg: '#D1FAE5', border: '#6EE7B7' },
-  'Téléconsultation':      { color: '#0EA5E9', bg: '#E0F2FE', border: '#7DD3FC' },
-  'Bilan complet':         { color: '#F59E0B', bg: '#FEF3C7', border: '#FDE68A' },
-  'Suivi':                 { color: '#7C3AED', bg: '#EDE9FE', border: '#C4B5FD' },
-  'Échographie':           { color: '#EC4899', bg: '#FCE7F3', border: '#F9A8D4' },
-  'Contraception':         { color: '#14B8A6', bg: '#CCFBF1', border: '#99F6E4' },
-  'Suivi de grossesse':    { color: '#F97316', bg: '#FFEDD5', border: '#FED7AA' },
-};
-const DEFAULT_COLOR = { color: '#14B8A6', bg: '#CCFBF1', border: '#99F6E4' };
-const svcColor = (svc) => SVC_COLORS[svc] || DEFAULT_COLOR;
+const FR_DAYS  = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+const FR_DAYS_FULL = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const FR_MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const FR_MONTHS_SHORT = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
-const SERVICE_OPTS = Object.keys(SVC_COLORS);
-const PAY_OPTS    = ['Espèces', 'CMI', 'M-Wallet'];
-const STATUS_OPTS = ['Payé', 'En attente', 'Annulé'];
+const PALETTE = [
+  { color: '#0F6E56', bg: '#DCEFE7', border: '#B7DECE' },
+  { color: '#2563EB', bg: '#DEE9FC', border: '#BFD4F7' },
+  { color: '#B45309', bg: '#FCEBD4', border: '#F5D8AC' },
+  { color: '#7C3AED', bg: '#E9E2FB', border: '#D3C4F5' },
+  { color: '#BE185D', bg: '#FBE0EC', border: '#F5C0D8' },
+  { color: '#0E7490', bg: '#DCF1F6', border: '#B8E2EC' },
+  { color: '#B91C1C', bg: '#FBE2E2', border: '#F3C3C3' },
+];
 
-function isoDate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
+const p2 = (n) => String(n).padStart(2, '0');
+const isoOf = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const hm = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const fmtMin = (min) => `${p2(Math.floor(min / 60))}:${p2(min % 60)}`;
+const addMin = (t, m) => fmtMin((hm(t) + m) % 1440);
 
-// weekOffset 0 = the week containing Morocco's "today" — reckoned on the Morocco
-// calendar so the highlighted day is correct regardless of the device timezone.
 const _mo = moroccoNow();
-const _moToday = new Date(_mo.year, _mo.month, _mo.day);
-const BASE_MONDAY = new Date(_mo.year, _mo.month, _mo.day - ((_moToday.getDay() + 6) % 7));
+const BASE_MONDAY = new Date(_mo.year, _mo.month, _mo.day - (((new Date(_mo.year, _mo.month, _mo.day)).getDay() + 6) % 7));
 const TODAY_STR = _mo.dateISO;
 
-function getMondayOfWeek(offset) {
-  const d = new Date(BASE_MONDAY);
-  d.setDate(BASE_MONDAY.getDate() + offset * 7);
-  return d;
-}
-
-function buildWeekDays(monday) {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
-function timeToTop(time) {
-  const [h, m] = time.split(':').map(Number);
-  return ((h - START_HOUR) + m / 60) * HOUR_HEIGHT;
-}
-
-// 'HH:MM' + minutes → 'HH:MM' (end time of a visit).
-function addMinutes(time, minutes) {
-  const [h, m] = String(time || '0:0').split(':').map(Number);
-  const t = ((h * 60 + (m || 0) + (Number(minutes) || 0)) % 1440 + 1440) % 1440;
-  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-}
-// Minutes since 00:00 for an 'HH:MM' string.
-const hm = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
-// Duration (min) between a start and an end 'HH:MM' — end after start on the same day.
-const diffMinutes = (start, end) => hm(end) - hm(start);
-
-// Consultation durations offered in the edit modal (mirrors the "Nouveau RDV" form).
-const DURATION_OPTS = [15, 20, 30, 45, 60, 75, 90, 105, 120];
-const durLabel = (d) => {
-  const h = Math.floor(d / 60), m = d % 60;
-  if (d < 60) return `${d} min`;
-  return m ? `${h} h ${m}` : `${h} h`;
-};
-
-// Given any Date, return { weekOffset, dayIdx } for navigation
-function dateToNav(d) {
-  const dayOfWeek = (d.getDay() + 6) % 7; // Mon=0
-  const mondayOfWeek = new Date(d);
-  mondayOfWeek.setDate(d.getDate() - dayOfWeek);
-  const diffMs = mondayOfWeek - BASE_MONDAY;
-  const offset = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
-  return { offset, dayIdx: dayOfWeek };
-}
+// Tabler-style inline icons.
+const SI = { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const VideoIcon  = () => <svg {...SI}><rect x="2" y="6" width="13" height="12" rx="2"/><path d="M15 11l6-4v10l-6-4z"/></svg>;
+const PersonIcon = () => <svg {...SI}><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3.5-6 7-6s7 2 7 6"/></svg>;
+const isTele = (svc) => /t[ée]l[ée]/i.test(svc || '');
 
 export default function Calendar({ state, setState, go, openNewAppt }) {
-  // Real (DB) + manually-added appointments.
-  const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const { isMobile } = useViewport();
+  const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
 
-  // Weekly working hours (end-of-day minutes per UI day, Mon=0 … Sun=6) — loaded
-  // into global state for real doctors and set by the sales demo. Used, together
-  // with the day's appointments, to size the bottom of the grid.
-  const weekEndMin = state?.weekEndMin;
-  const workEndMinFor = (d) => {
-    if (!Array.isArray(weekEndMin)) return 0;
-    return weekEndMin[(d.getDay() + 6) % 7] || 0;
-  };
+  // Default: week on desktop, day on mobile (week is too wide for phones).
+  const [view, setView] = useState(isMobile ? 'Journée' : 'Semaine');
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selDayIdx, setSelDayIdx] = useState(((new Date(_mo.year, _mo.month, _mo.day)).getDay() + 6) % 7);
+  const [dayMenu, setDayMenu] = useState(null);          // { dateISO, x, y }
+  const [, setTick] = useState(0);
 
-  // Service colours + legend are driven by the doctor's actual services.
-  const svcNames = (state?.services?.length ? state.services.map(s => s.name).filter(Boolean) : Object.keys(SVC_COLORS));
-  const PALETTE = [
-    { color: '#16A06A', bg: '#D1FAE5', border: '#6EE7B7' },
-    { color: '#0EA5E9', bg: '#E0F2FE', border: '#7DD3FC' },
-    { color: '#F59E0B', bg: '#FEF3C7', border: '#FDE68A' },
-    { color: '#7C3AED', bg: '#EDE9FE', border: '#C4B5FD' },
-    { color: '#EC4899', bg: '#FCE7F3', border: '#F9A8D4' },
-    { color: '#14B8A6', bg: '#CCFBF1', border: '#99F6E4' },
-  ];
+  // Live "now" line.
+  useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
+  const nowMin = (() => { const n = moroccoNow(); return n.hour * 60 + n.minute; })();
+
+  // Absences: real cabinets → doctor_time_off; demo → state.demoTimeOff.
+  const doctorId = state?.myDoctor?.id;
+  const [timeOff, setTimeOff] = useState([]);
+  useEffect(() => {
+    if (!doctorId) { setTimeOff(state?.demoTimeOff || []); return; }
+    let on = true;
+    fetchTimeOff(doctorId, { upcomingOnly: false }).then((r) => on && setTimeOff(r)).catch(() => {});
+    return () => { on = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorId, state?.demoTimeOff]);
+  const offFor = (dateISO) => timeOff.find((r) => dateISO >= r.start_date && dateISO <= r.end_date) || null;
+
+  // Service colours from the doctor's own services.
+  const svcNames = (state?.services?.length ? state.services.map((s) => s.name).filter(Boolean) : []);
   const svcColorMap = {};
-  svcNames.forEach((n, i) => { svcColorMap[n] = SVC_COLORS[n] || PALETTE[i % PALETTE.length]; });
-  const svcColor = (s) => svcColorMap[s] || SVC_COLORS[s] || DEFAULT_COLOR;
+  svcNames.forEach((n, i) => { svcColorMap[n] = PALETTE[i % PALETTE.length]; });
+  const svcColor = (s) => svcColorMap[s] || PALETTE[(String(s).length + 2) % PALETTE.length];
 
-  const [view, setView]               = useState('Semaine');
-  const [weekOffset, setWeekOffset]   = useState(0);
-  const [selDayIdx, setSelDayIdx]     = useState(4); // Fri
-  const [editData, setEditData]       = useState(null);
+  // ── Derived week ───────────────────────────────────────────────────────────
+  const monday = new Date(BASE_MONDAY); monday.setDate(BASE_MONDAY.getDate() + weekOffset * 7);
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  const selDate = weekDays[selDayIdx];
+  const selISO = isoOf(selDate);
 
-  // Re-render every minute so the live "now" indicator tracks the real time.
-  const [, setNowTick] = useState(0);
-  useEffect(() => { const t = setInterval(() => setNowTick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
-  const nowMo  = moroccoNow();
-  const nowMin = nowMo.hour * 60 + nowMo.minute;
+  const openPanel = (id) => setState({ apptPanel: id });
 
-  // ── Derived week days ──────────────────────────────────────────────────────
-  const monday   = getMondayOfWeek(weekOffset);
-  const weekDays = buildWeekDays(monday);
-  const weekKeys = weekDays.map(isoDate);
+  // Pre-fill the global "Nouveau rendez-vous" modal on an empty slot.
+  const newApptAt = (dateISO, time) => {
+    openNewAppt?.();
+    setTimeout(() => setState({ newAppt: { ...(state.newAppt || {}), date: dateISO, time, durationMinutes: 30 } }), 40);
+  };
 
   // ── Navigation ─────────────────────────────────────────────────────────────
-  const prevPeriod = () => {
-    if (view === 'Mois') {
-      // go to previous month's first week
-      const mon = getMondayOfWeek(weekOffset);
-      const prev = new Date(mon.getFullYear(), mon.getMonth() - 1, 1);
-      const { offset } = dateToNav(prev);
-      setWeekOffset(offset);
-    } else if (view === 'Jour') {
-      if (selDayIdx === 0) { setWeekOffset(o => o - 1); setSelDayIdx(6); }
-      else setSelDayIdx(i => i - 1);
-    } else {
-      setWeekOffset(o => o - 1);
-    }
+  const goPrev = () => { if (view === 'Journée') { selDayIdx === 0 ? (setWeekOffset((o) => o - 1), setSelDayIdx(6)) : setSelDayIdx((i) => i - 1); } else setWeekOffset((o) => o - 1); };
+  const goNext = () => { if (view === 'Journée') { selDayIdx === 6 ? (setWeekOffset((o) => o + 1), setSelDayIdx(0)) : setSelDayIdx((i) => i + 1); } else setWeekOffset((o) => o + 1); };
+  const goToday = () => { setWeekOffset(0); setSelDayIdx(((new Date(_mo.year, _mo.month, _mo.day)).getDay() + 6) % 7); };
+  const jumpTo = (iso) => {
+    if (!iso) return;
+    const d = new Date(`${iso}T12:00:00`);
+    const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    setWeekOffset(Math.round((mon - BASE_MONDAY) / (7 * 86400000)));
+    setSelDayIdx((d.getDay() + 6) % 7);
   };
 
-  const nextPeriod = () => {
-    if (view === 'Mois') {
-      const mon = getMondayOfWeek(weekOffset);
-      const next = new Date(mon.getFullYear(), mon.getMonth() + 1, 1);
-      const { offset } = dateToNav(next);
-      setWeekOffset(offset);
-    } else if (view === 'Jour') {
-      if (selDayIdx === 6) { setWeekOffset(o => o + 1); setSelDayIdx(0); }
-      else setSelDayIdx(i => i + 1);
-    } else {
-      setWeekOffset(o => o + 1);
-    }
-  };
+  const periodLabel = view === 'Journée'
+    ? `${FR_DAYS_FULL[selDayIdx]} ${selDate.getDate()} ${FR_MONTHS[selDate.getMonth()]} ${selDate.getFullYear()}`
+    : `${weekDays[0].getDate()} – ${weekDays[6].getDate()} ${FR_MONTHS_SHORT[weekDays[6].getMonth()]} ${weekDays[6].getFullYear()}`;
 
-  const goToday = () => { setWeekOffset(0); setSelDayIdx(4); };
+  // Grid hour range: 08→20, extended if an appointment falls outside.
+  const visibleKeys = view === 'Journée' ? [selISO] : weekDays.map(isoOf);
+  const visAppts = consultations.filter((c) => visibleKeys.includes(c.date) && c.status !== 'Annulé');
+  let startH = DAY_START, endH = DAY_END;
+  visAppts.forEach((c) => {
+    const s = hm(c.time); const e = s + (Number(c.durationMin) || 30);
+    startH = Math.min(startH, Math.floor(s / 60));
+    endH = Math.max(endH, Math.ceil(e / 60));
+  });
 
-  // ── Period label ───────────────────────────────────────────────────────────
-  let periodLabel;
-  if (view === 'Semaine') {
-    const sun = weekDays[6];
-    if (monday.getMonth() === sun.getMonth()) {
-      periodLabel = `${monday.getDate()} – ${sun.getDate()} ${FR_MONTHS_SHORT[monday.getMonth()]} ${sun.getFullYear()}`;
-    } else {
-      periodLabel = `${monday.getDate()} ${FR_MONTHS_SHORT[monday.getMonth()]} – ${sun.getDate()} ${FR_MONTHS_SHORT[sun.getMonth()]} ${sun.getFullYear()}`;
-    }
-  } else if (view === 'Jour') {
-    const d = weekDays[selDayIdx];
-    periodLabel = `${FR_DAY_SHORT[selDayIdx]} ${d.getDate()} ${FR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-  } else {
-    periodLabel = `${FR_MONTHS[monday.getMonth()]} ${monday.getFullYear()}`;
-  }
-
-  // Demo (demo_) and local (local_) ids live only in memory; everything else is
-  // a real DB row that must be persisted through the API.
-  const isManualId = (id) => { const s = String(id); return s.startsWith('local_') || s.startsWith('demo_'); };
-
-  // ── Edit helpers ───────────────────────────────────────────────────────────
-  const openEdit  = (c)  => setEditData({ ...c, durationMin: Math.max(15, Number(c.durationMin) || 30) });
-  const closeEdit = ()   => setEditData(null);
-  const setField  = (k, v) => setEditData(d => ({ ...d, [k]: v }));
-  const saveEdit  = async () => {
-    const ed  = { ...editData, durationMin: Math.max(15, Number(editData.durationMin) || 30) };
-    const dur = ed.durationMin;
-    // The appointment (dashboard / "Rendez-vous") copy must move in lock-step with
-    // the calendar copy, so date, time, duration, service and patient stay in sync
-    // across every screen.
-    const newDatetime = moroccoToUTCISO(ed.date, ed.time);
-    const patchAppt = (a) => ({ ...a, datetime: newDatetime, durationMin: dur, reason: ed.service, patientName: ed.patient });
-    if (isManualId(ed.id)) {
-      setState({
-        manualConsults: (state.manualConsults || []).map(c => c.id === ed.id ? ed : c),
-        manualAppts:    (state.manualAppts || []).map(a => a.id === ed.id ? patchAppt(a) : a),
-      });
-    } else {
-      // Optimistic UI update, then persist to the database.
-      setState({
-        consultations:  (state.consultations || []).map(c => c.id === ed.id ? ed : c),
-        myAppointments: (state.myAppointments || []).map(a => a.id === ed.id ? patchAppt(a) : a),
-      });
+  // ── Day-level actions (⋮ menu) ─────────────────────────────────────────────
+  const blockDay = async (dateISO, reason) => {
+    setDayMenu(null);
+    if (offFor(dateISO)) { setState({ toast: 'Cette journée est déjà bloquée.', toastShow: true }); return; }
+    if (doctorId) {
       try {
-        await updateAppointment(ed.id, { datetime: newDatetime, duration_minutes: dur, reason: ed.service, notes: ed.notes || null });
-      } catch (e) {
-        setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true });
-      }
-    }
-    closeEdit();
-  };
-  // Booking status of the currently-open appointment (pending | confirmed | …).
-  const apptFor = (id) => [...(state?.manualAppts || []), ...(state?.myAppointments || [])].find(a => a.id === id);
-  const bookStatus = editData ? apptFor(editData.id)?.status : null;
-
-  // Confirm a patient-booked appointment → notifies the patient (email + WhatsApp).
-  const [confirming, setConfirming] = useState(false);
-  const confirmBooking = async () => {
-    const id = editData.id;
-    const isManual = String(id).startsWith('local_') || String(id).startsWith('demo_');
-    setConfirming(true);
-    try {
-      if (isManual) {
-        setState({ manualAppts: (state.manualAppts || []).map(a => a.id === id ? { ...a, status: 'confirmed' } : a), toast: 'Rendez-vous confirmé ✓', toastShow: true });
-      } else {
-        await updateAppointmentStatus(id, 'confirmed');
-        setState({ myAppointments: (state.myAppointments || []).map(a => a.id === id ? { ...a, status: 'confirmed' } : a), toast: 'Rendez-vous confirmé — le patient est notifié ✓', toastShow: true });
-        sendApptWhatsApp(id, 'confirmed');
-        notifyApptEmail(id, 'confirmed');
-      }
-      closeEdit();
-    } catch (e) {
-      setState({ toast: 'Confirmation impossible : ' + (e?.message || 'erreur'), toastShow: true });
-    } finally { setConfirming(false); }
-  };
-
-  const deleteAppt = async () => {
-    const id = editData.id;
-    const isManual = isManualId(id);
-    if (isManual) {
-      setState({
-        manualConsults: (state.manualConsults || []).filter(c => c.id !== id),
-        manualAppts:    (state.manualAppts || []).filter(a => a.id !== id),
-      });
+        const row = await addTimeOff(doctorId, dateISO, dateISO, reason);
+        setTimeOff((l) => [...l, row]);
+        setState({ toast: `Journée ${reason === 'Férié' ? 'fériée' : 'bloquée'} — les patients ne peuvent plus réserver ✓`, toastShow: true });
+      } catch (e) { setState({ toast: 'Blocage impossible : ' + (e?.message || 'erreur'), toastShow: true }); }
     } else {
-      // Remove from the UI immediately, then delete in the database.
-      setState({
-        consultations:  (state.consultations || []).filter(c => c.id !== id),
-        myAppointments: (state.myAppointments || []).filter(a => a.id !== id),
-      });
-      try { await deleteAppointment(id); }
-      catch (e) { setState({ toast: 'Suppression impossible : ' + (e?.message || 'erreur'), toastShow: true }); }
+      const row = { id: `local_off_${dateISO}`, start_date: dateISO, end_date: dateISO, reason };
+      setState({ demoTimeOff: [...(state.demoTimeOff || []), row], toast: 'Journée bloquée ✓', toastShow: true });
     }
-    closeEdit();
   };
+  const gotoBreaks = (dateISO) => { setDayMenu(null); setState({ availFocusDate: dateISO }); go('davail'); };
 
-  // ── Shared grid body ───────────────────────────────────────────────────────
-  // The hour axis is sized to the VISIBLE days: it starts at 08:00 (or earlier
-  // if something is scheduled before that) and its bottom edge sits TWO HOURS
-  // after the latest of — the day's working-hours end (Disponibilités) and the
-  // end of the last appointment booked that day. So a 18:45 visit no longer sits
-  // flush against the bottom: the grid runs on to ~21:00, leaving room to breathe
-  // (and the "today" column keeps its green wash all the way down).
-  const renderGridBody = (days) => {
-    const keys = days.map(isoDate);
-    const dayAppts = consultations.filter(c => keys.includes(c.date));
+  // Close the day menu on outside click / Escape.
+  useEffect(() => {
+    if (!dayMenu) return undefined;
+    const close = () => setDayMenu(null);
+    const esc = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
+  }, [dayMenu]);
 
-    // Latest minute that must stay visible = max(work-end, last appointment end).
-    let latestMin = 0;
-    dayAppts.forEach(c => {
-      const s = hm(c.time);
-      if (Number.isFinite(s)) latestMin = Math.max(latestMin, s + Math.max(15, Number(c.durationMin) || 30));
-    });
-    days.forEach(d => { latestMin = Math.max(latestMin, workEndMinFor(d)); });
-    // Earliest minute = min(08:00, work-start-agnostic first appointment).
-    let earliestMin = START_HOUR * 60;
-    dayAppts.forEach(c => { const s = hm(c.time); if (Number.isFinite(s)) earliestMin = Math.min(earliestMin, s); });
-
-    const startH = Math.max(0, Math.min(START_HOUR, Math.floor(earliestMin / 60)));
-    // +120 min of breathing room below the last item, rounded up to the hour.
-    const endH = Math.min(23, Math.max(END_HOUR, Math.ceil((latestMin + 120) / 60)));
-    const HOURS_DYN = Array.from({ length: endH - startH + 1 }, (_, i) => `${String(startH + i).padStart(2, '0')}:00`);
-    const timeToTopDyn = (time) => {
-      const [h, mm] = String(time || '9:0').split(':').map(Number);
-      return ((h - startH) + (mm || 0) / 60) * HOUR_HEIGHT;
-    };
-    // Full pixel height of the grid, so the "today" wash and columns are one
-    // continuous block down to the bottom edge regardless of appointment layout.
-    const gridH = (HOURS_DYN.length - 1) * HOUR_HEIGHT;
-
+  // ── Appointment block (shared week/day) ────────────────────────────────────
+  const ApptBlock = ({ c, hourH, tight }) => {
+    const col = svcColor(c.service);
+    const top = ((hm(c.time) / 60) - startH) * hourH;
+    const dur = Math.max(15, Number(c.durationMin) || 30);
+    const height = Math.max(20, (dur / 60) * hourH) - 2;
+    const oneLine = height < 34;
     return (
-    <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 300px)', paddingTop: 10 }}>
-      {/* Time axis — same width + hairline as the header gutter, so the vertical
-          rules line up perfectly with the day-header separators. */}
-      <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}`, background: '#fff' }}>
-        {HOURS_DYN.map((h, i) => (
-          <div key={h} style={{ height: i < HOURS_DYN.length - 1 ? HOUR_HEIGHT : 0, position: 'relative' }}>
-            <span style={{ position: 'absolute', top: -8, right: 8, fontSize: 10.5, color: MUTED, fontWeight: 600, whiteSpace: 'nowrap', userSelect: 'none', fontVariantNumeric: 'tabular-nums' }}>{h}</span>
-          </div>
-        ))}
+      <div onClick={(e) => { e.stopPropagation(); openPanel(c.id); }} title={`${c.time} · ${c.patient} · ${c.service}`}
+        style={{ position: 'absolute', top: top + 1, left: 3, right: 3, height, background: col.bg, borderLeft: `3px solid ${col.color}`, border: `1px solid ${col.border}`, borderLeftWidth: 3, borderLeftColor: col.color, borderRadius: 5, padding: oneLine ? '1px 6px' : '3px 7px', cursor: 'pointer', overflow: 'hidden', zIndex: 2, transition: 'box-shadow .12s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.boxShadow = '0 6px 18px -6px rgba(13,43,30,0.35)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.zIndex = 2; e.currentTarget.style.boxShadow = 'none'; }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+            {(c.patient || 'Patient').toUpperCase().split(' ').slice(-1)[0]} {(c.patient || '').split(' ').slice(0, -1).join(' ')} <span style={{ fontWeight: 700, color: col.color }}>{c.time}</span>
+          </span>
+          <span style={{ color: col.color, display: 'flex', flexShrink: 0 }}>{isTele(c.service) ? <VideoIcon /> : <PersonIcon />}</span>
+        </div>
+        {!oneLine && !tight && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service} · {dur} min</div>}
       </div>
-
-      {/* Day columns */}
-      {days.map((d, colIdx) => {
-        const key     = isoDate(d);
-        const isToday  = key === TODAY_STR;
-        const isWeekend = ((d.getDay() + 6) % 7) >= 5;   // Sat/Sun
-        const appts   = consultations
-          .filter(c => c.date === key)
-          .sort((a, b) => String(a.time).localeCompare(String(b.time)));
-        const nowTop   = ((nowMin / 60) - startH) * HOUR_HEIGHT;
-        const showNow  = isToday && nowMin >= startH * 60 && nowMin <= endH * 60;
-        return (
-          <div key={key} style={{ flex: 1, borderRight: colIdx < days.length - 1 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? TODAY_WASH : (isWeekend ? '#FBFCFB' : '#fff'), minWidth: 0, minHeight: gridH }}>
-            {/* Hour grid lines + a lighter half-hour rule */}
-            {HOURS_DYN.slice(0, -1).map(h => (
-              <div key={h} style={{ height: HOUR_HEIGHT, borderBottom: `1px solid ${GRID}`, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: HOUR_HEIGHT / 2, left: 0, right: 0, borderBottom: `1px dashed ${GRID}`, opacity: 0.7 }} />
-              </div>
-            ))}
-            {/* Live "now" indicator — a thin brand-green line with a dot, today only */}
-            {showNow && (
-              <div style={{ position: 'absolute', top: nowTop, left: 0, right: 0, height: 0, borderTop: `2px solid ${PRIMARY}`, zIndex: 4, pointerEvents: 'none' }}>
-                <span style={{ position: 'absolute', left: -3, top: -4, width: 8, height: 8, borderRadius: '50%', background: PRIMARY, boxShadow: '0 0 0 3px rgba(22,160,106,0.18)' }} />
-              </div>
-            )}
-            {/* Appointment blocks — soft colour fill, colored spine, real height */}
-            {appts.map(c => {
-              const col    = svcColor(c.service);
-              const top    = timeToTopDyn(c.time);
-              const dur    = Math.max(15, Number(c.durationMin) || 30);
-              const height = Math.max(24, (dur / 60) * HOUR_HEIGHT);
-              const tight  = height < 42;
-              return (
-                <div
-                  key={c.id}
-                  onClick={() => openEdit(c)}
-                  title={`${c.time} · ${c.patient} · ${c.service}`}
-                  style={{ position: 'absolute', top: top + 1, left: 4, right: 4, height: height - 2, background: col.bg, boxShadow: `inset 3px 0 0 ${col.color}, 0 1px 2px rgba(13,43,30,0.08)`, border: `1px solid ${col.border}`, borderRadius: 8, padding: tight ? '2px 8px 2px 11px' : '4px 9px 4px 12px', cursor: 'pointer', overflow: 'hidden', zIndex: 1, transition: 'box-shadow .12s, transform .12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${col.color}, 0 6px 16px -4px rgba(13,43,30,0.24)`; }}
-                  onMouseLeave={e => { e.currentTarget.style.zIndex = 1;  e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${col.color}, 0 1px 2px rgba(13,43,30,0.08)`; }}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 800, color: col.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{tight ? c.time : `${c.time}–${addMinutes(c.time, dur)}`} · {dur} min</div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.1px' }}>{c.patient}</div>
-                  {height > 58 && <div style={{ fontSize: 10, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.service}</div>}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
     );
   };
 
-  // ── Month view ─────────────────────────────────────────────────────────────
-  const renderMonthView = () => {
-    const year  = monday.getFullYear();
-    const month = monday.getMonth();
-    const firstDay  = new Date(year, month, 1);
-    const firstDow  = (firstDay.getDay() + 6) % 7; // Mon=0
-    const daysInMth = new Date(year, month + 1, 0).getDate();
-
-    const cells = [];
-    for (let i = 0; i < firstDow; i++) cells.push(null);
-    for (let d = 1; d <= daysInMth; d++) cells.push(d);
-    while (cells.length % 7 !== 0) cells.push(null);
-
+  // ── Week view ──────────────────────────────────────────────────────────────
+  const renderWeek = () => {
+    const hourH = HOUR_H_WEEK;
+    const hours = Array.from({ length: endH - startH }, (_, i) => startH + i);
+    const showNow = nowMin >= startH * 60 && nowMin <= endH * 60 && weekDays.some((d) => isoOf(d) === TODAY_STR);
+    const nowTop = ((nowMin / 60) - startH) * hourH;
     return (
-      <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
-        {/* Day name headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${BORDER}` }}>
-          {FR_DAY_SHORT.map(d => (
-            <div key={d} style={{ padding: '10px 0', textAlign: 'center', fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d}</div>
-          ))}
-        </div>
-        {/* Day cells */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-          {cells.map((day, idx) => {
-            if (!day) return (
-              <div key={`e${idx}`} style={{ height: 90, borderBottom: `1px solid ${BORDER}`, borderRight: idx % 7 < 6 ? `1px solid ${BORDER}` : 'none', background: '#FAFAFA' }} />
-            );
-            const key     = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            const dayAppts = consultations.filter(c => c.date === key);
-            const isToday  = key === TODAY_STR;
-            const onClick  = () => {
-              const { offset, dayIdx } = dateToNav(new Date(year, month, day));
-              setWeekOffset(offset);
-              setSelDayIdx(dayIdx);
-              setView('Jour');
-            };
+      <div style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
+        {/* Headers */}
+        <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}` }}>
+          <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
+          {weekDays.map((d, i) => {
+            const iso = isoOf(d);
+            const isToday = iso === TODAY_STR;
             return (
-              <div
-                key={key}
-                onClick={onClick}
-                style={{ height: 90, padding: '6px 7px', borderBottom: `1px solid ${BORDER}`, borderRight: idx % 7 < 6 ? `1px solid ${BORDER}` : 'none', background: isToday ? '#F0FDF8' : '#fff', cursor: 'pointer', overflow: 'hidden' }}
-                onMouseEnter={e => e.currentTarget.style.background = isToday ? '#E7F6EE' : '#F5FFFE'}
-                onMouseLeave={e => e.currentTarget.style.background = isToday ? '#F0FDF8' : '#fff'}
-              >
-                <div style={{ fontSize: 13, fontWeight: isToday ? 800 : 600, color: isToday ? '#fff' : DARK, background: isToday ? PRIMARY : 'transparent', width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>{day}</div>
-                {dayAppts.slice(0, 2).map(a => {
-                  const col = svcColor(a.service);
-                  return (
-                    <div key={a.id} onClick={e => { e.stopPropagation(); openEdit(a); }} style={{ fontSize: 10, fontWeight: 600, color: col.color, background: col.bg, borderRadius: 3, padding: '1px 4px', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {a.time} {a.patient.split(' ')[0]}
-                    </div>
-                  );
-                })}
-                {dayAppts.length > 2 && <div style={{ fontSize: 10, color: MUTED }}>+{dayAppts.length - 2} autres</div>}
+              <div key={iso} style={{ flex: 1, minWidth: 0, borderRight: i < 6 ? `1px solid ${GRID}` : 'none', padding: '8px 4px 7px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, position: 'relative', background: isToday ? '#F2FAF7' : '#fff' }}>
+                <span onClick={() => { setSelDayIdx(i); setView('Journée'); }} title="Voir la journée" style={{ fontSize: 12.5, fontWeight: 700, color: isToday ? TEAL : MUTED, cursor: 'pointer' }}>{FR_DAYS[i]}</span>
+                <span onClick={() => { setSelDayIdx(i); setView('Journée'); }} style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13.5, fontWeight: 800, background: isToday ? TEAL : 'transparent', color: isToday ? '#fff' : DARK, cursor: 'pointer' }}>{d.getDate()}</span>
+                <button onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setDayMenu(dayMenu?.dateISO === iso ? null : { dateISO: iso, x: r.left, y: r.bottom + 4 }); }}
+                  aria-label={`Actions du ${FR_DAYS[i]} ${d.getDate()}`} onMouseDown={(e) => e.stopPropagation()}
+                  style={{ position: 'absolute', right: 3, top: 8, width: 22, height: 22, border: 'none', background: 'transparent', color: '#9AA8A2', cursor: 'pointer', borderRadius: 6, fontSize: 15, lineHeight: 1, fontWeight: 800 }}>⋮</button>
               </div>
             );
           })}
         </div>
+        {/* Body */}
+        <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 250px)', position: 'relative' }}>
+          <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}`, background: '#fff' }}>
+            {hours.map((h) => (
+              <div key={h} style={{ height: hourH, position: 'relative' }}>
+                <span style={{ position: 'absolute', top: -7, right: 7, fontSize: 10.5, color: MUTED, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{h > startH ? `${p2(h)}:00` : ''}</span>
+              </div>
+            ))}
+          </div>
+          {weekDays.map((d, colIdx) => {
+            const iso = isoOf(d);
+            const isToday = iso === TODAY_STR;
+            const off = offFor(iso);
+            const appts = consultations.filter((c) => c.date === iso && c.status !== 'Annulé');
+            return (
+              <div key={iso} onClick={() => !off && newApptAt(iso, fmtMin(Math.max(startH * 60, Math.min((endH - 1) * 60, 540))))}
+                style={{ flex: 1, minWidth: 0, borderRight: colIdx < 6 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? 'rgba(15,110,86,0.045)' : '#fff' }}>
+                {hours.map((h) => (
+                  <div key={h} style={{ height: hourH, borderBottom: `1px solid ${GRID}`, position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: hourH / 2, left: 0, right: 0, borderBottom: `1px solid ${GRID_SOFT}` }} />
+                  </div>
+                ))}
+                {off && (
+                  <div style={{ position: 'absolute', inset: '2px 3px', background: 'repeating-linear-gradient(-45deg,#EEF1F0,#EEF1F0 8px,#E5EAE8 8px,#E5EAE8 16px)', border: '1px solid #DBE2DF', borderRadius: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 14, zIndex: 1 }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: '#5A6B65', background: '#fff', borderRadius: 6, padding: '3px 10px', border: '1px solid #DBE2DF' }}>{off.reason === 'Férié' ? 'Férié' : 'Absence'}</span>
+                  </div>
+                )}
+                {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} tight />)}
+              </div>
+            );
+          })}
+          {/* Red "now" line across all columns */}
+          {showNow && (
+            <div style={{ position: 'absolute', left: GUTTER, right: 0, top: nowTop, zIndex: 5, pointerEvents: 'none', borderTop: `2px dashed ${RED}` }}>
+              <span style={{ position: 'absolute', left: -5, top: -5, width: 9, height: 9, borderRadius: '50%', background: RED }} />
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  // ── Input style ────────────────────────────────────────────────────────────
-  const inp = { width: '100%', padding: '8px 10px', fontSize: 13, border: `1px solid ${BORDER}`, borderRadius: 8, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif', outline: 'none' };
-  const lbl = { fontSize: 12, fontWeight: 600, color: DARK, marginBottom: 4, display: 'block' };
-
-  return (
-    <div style={{ padding: isMobile ? 4 : 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-
-      {/* ── Top bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-        {/* Nav arrows */}
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[['‹', prevPeriod], ['›', nextPeriod]].map(([arrow, fn]) => (
-            <button key={arrow} onClick={fn} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${BORDER}`, background: '#fff', cursor: 'pointer', fontSize: 18, color: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1 }}>{arrow}</button>
-          ))}
+  // ── Day view (15-minute resolution, clickable empty slots) ─────────────────
+  const renderDay = () => {
+    const hourH = HOUR_H_DAY;
+    const slotH = hourH / 4;
+    const iso = selISO;
+    const isToday = iso === TODAY_STR;
+    const off = offFor(iso);
+    const appts = consultations.filter((c) => c.date === iso && c.status !== 'Annulé');
+    const covered = (min) => appts.some((c) => min >= hm(c.time) && min < hm(c.time) + (Number(c.durationMin) || 30));
+    const slots = [];
+    for (let m = startH * 60; m < endH * 60; m += 15) slots.push(m);
+    const showNow = isToday && nowMin >= startH * 60 && nowMin <= endH * 60;
+    return (
+      <div style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}`, background: isToday ? '#F2FAF7' : '#fff' }}>
+          <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
+          <div style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? TEAL : MUTED }}>{FR_DAYS[selDayIdx]}</span>
+            <span style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, background: isToday ? TEAL : 'transparent', color: isToday ? '#fff' : DARK }}>{selDate.getDate()}</span>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>{appts.length} rendez-vous</span>
+            <button onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setDayMenu(dayMenu ? null : { dateISO: iso, x: r.left - 160, y: r.bottom + 4 }); }}
+              aria-label="Actions de la journée" onMouseDown={(e) => e.stopPropagation()}
+              style={{ marginLeft: 'auto', width: 30, height: 30, border: `1px solid ${GRID}`, background: '#fff', color: MUTED, cursor: 'pointer', borderRadius: 8, fontSize: 16, fontWeight: 800, lineHeight: 1 }}>⋮</button>
+          </div>
         </div>
-
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: DARK, flex: 1 }}>{periodLabel}</h2>
-
-        {/* Today */}
-        <button onClick={goToday} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Aujourd'hui
-        </button>
-
-        {/* View toggle */}
-        <div style={{ display: 'flex', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, overflow: 'hidden' }}>
-          {['Jour', 'Semaine', 'Mois'].map((v, i) => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', borderRight: i < 2 ? `1px solid ${BORDER}` : 'none', background: view === v ? PRIMARY : 'transparent', color: view === v ? '#fff' : MUTED, transition: 'all 0.15s' }}>{v}</button>
-          ))}
-        </div>
-
-        {/* "Nouveau RDV" lives in the global top bar (DoctorApp) — no duplicate here. */}
-      </div>
-
-      {/* ── Week view ── */}
-      {view === 'Semaine' && (
-        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflowX: isMobile ? 'auto' : 'hidden', overflowY: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
-         <div style={{ minWidth: isMobile ? 640 : 'auto' }}>
-          {/* Day headers — gutter width + hairline match the body exactly, so
-              every vertical separator is one continuous line down the grid. */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}` }}>
-            <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
-            {weekDays.map((d, i) => {
-              const key     = isoDate(d);
-              const isToday = key === TODAY_STR;
-              const isWeekend = i >= 5;
-              const count   = consultations.filter(c => c.date === key).length;
+        <div style={{ display: 'flex', overflowY: 'auto', maxHeight: 'calc(100vh - 250px)', position: 'relative' }}>
+          <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}`, background: '#fff' }}>
+            {Array.from({ length: endH - startH }, (_, i) => startH + i).map((h) => (
+              <div key={h} style={{ height: hourH, position: 'relative' }}>
+                <span style={{ position: 'absolute', top: -7, right: 7, fontSize: 10.5, color: MUTED, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{h > startH ? `${p2(h)}:00` : ''}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1, position: 'relative', background: isToday ? 'rgba(15,110,86,0.03)' : '#fff' }}>
+            {slots.map((m) => {
+              const isHour = m % 60 === 0;
+              const isHalf = m % 30 === 0;
+              const free = !covered(m) && !off;
               return (
-                <div
-                  key={i}
-                  onClick={() => { setSelDayIdx(i); setView('Jour'); }}
-                  title="Voir ce jour"
-                  style={{ flex: 1, padding: '9px 0 8px', textAlign: 'center', borderRight: i < 6 ? `1px solid ${GRID}` : 'none', borderTop: `3px solid ${isToday ? PRIMARY : 'transparent'}`, background: isToday ? TODAY_HEAD : 'transparent', cursor: 'pointer', transition: 'background .12s', minWidth: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.background = isToday ? '#DCF0E6' : '#F6FAF8'}
-                  onMouseLeave={e => e.currentTarget.style.background = isToday ? TODAY_HEAD : 'transparent'}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? PRIMARY_DK : (isWeekend ? '#9AA8A2' : MUTED), textTransform: 'uppercase', letterSpacing: '0.07em' }}>{FR_DAY_SHORT[i]}</div>
-                  {/* Doctolib-style date pill: today is a filled brand-green circle */}
-                  <div style={{ width: 30, height: 30, margin: '3px auto 0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, lineHeight: 1, background: isToday ? PRIMARY : 'transparent', color: isToday ? '#fff' : DARK, boxShadow: isToday ? '0 4px 10px -3px rgba(22,160,106,0.55)' : 'none' }}>{d.getDate()}</div>
-                  {/* Appointment count for the day (kept subtle) */}
-                  <div style={{ height: 13, marginTop: 2 }}>
-                    {count > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? PRIMARY_DK : '#9AA8A2' }}>{count} RDV</span>}
-                  </div>
+                <div key={m} onClick={() => free && newApptAt(iso, fmtMin(m))}
+                  className={free ? 'sa-freeslot' : undefined}
+                  style={{ height: slotH, borderBottom: `1px solid ${isHour ? GRID : isHalf ? GRID_SOFT : 'transparent'}`, boxSizing: 'border-box', cursor: free ? 'pointer' : 'default', position: 'relative' }}
+                  onMouseEnter={(e) => { if (free) { e.currentTarget.style.background = '#EAF6F1'; e.currentTarget.dataset.h = '1'; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; delete e.currentTarget.dataset.h; }}>
+                  {free && <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10.5, fontWeight: 700, color: '#9DBBAF', opacity: 0, transition: 'opacity .1s', pointerEvents: 'none' }} className="sa-slotlbl">+ {fmtMin(m)}</span>}
                 </div>
               );
             })}
-          </div>
-          {renderGridBody(weekDays)}
-         </div>
-        </div>
-      )}
-
-      {/* ── Day view ── */}
-      {view === 'Jour' && (() => {
-        const d = weekDays[selDayIdx];
-        const isToday = isoDate(d) === TODAY_STR;
-        return (
-          <div style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.06)' }}>
-            <div style={{ display: 'flex', borderBottom: `1px solid ${GRID}` }}>
-              <div style={{ width: GUTTER, flexShrink: 0, borderRight: `1px solid ${GRID}` }} />
-              <div style={{ flex: 1, padding: '12px 0', textAlign: 'center', borderTop: `3px solid ${isToday ? PRIMARY : 'transparent'}`, background: isToday ? TODAY_HEAD : 'transparent' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? PRIMARY_DK : MUTED, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{FR_DAY_SHORT[selDayIdx]}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? PRIMARY_DK : DARK, marginTop: 2 }}>{d.getDate()} {FR_MONTHS_SHORT[d.getMonth()]}</div>
-                {isToday && <div style={{ fontSize: 11, color: PRIMARY, fontWeight: 700, marginTop: 2 }}>Aujourd'hui</div>}
+            <style>{`.sa-freeslot:hover .sa-slotlbl{opacity:1 !important}`}</style>
+            {off && (
+              <div style={{ position: 'absolute', inset: '2px 4px', background: 'repeating-linear-gradient(-45deg,#EEF1F0,#EEF1F0 8px,#E5EAE8 8px,#E5EAE8 16px)', border: '1px solid #DBE2DF', borderRadius: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 18, zIndex: 1 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: '#5A6B65', background: '#fff', borderRadius: 6, padding: '4px 12px', border: '1px solid #DBE2DF' }}>{off.reason === 'Férié' ? 'Férié' : `Absence${off.reason ? ` — ${off.reason}` : ''}`}</span>
               </div>
-            </div>
-            {renderGridBody([d])}
+            )}
+            {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} />)}
+            {showNow && (
+              <div style={{ position: 'absolute', left: 0, right: 0, top: ((nowMin / 60) - startH) * hourH, zIndex: 5, pointerEvents: 'none', borderTop: `2px dashed ${RED}` }}>
+                <span style={{ position: 'absolute', left: -5, top: -5, width: 9, height: 9, borderRadius: '50%', background: RED }} />
+              </div>
+            )}
           </div>
-        );
-      })()}
+        </div>
+      </div>
+    );
+  };
 
-      {/* ── Month view ── */}
-      {view === 'Mois' && renderMonthView()}
-
-      {/* ── Legend — driven by the doctor's own services ── */}
-      <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
-        {svcNames.map((svc) => {
-          const c = svcColor(svc);
+  // ── List view ──────────────────────────────────────────────────────────────
+  const renderList = () => {
+    const upcoming = consultations
+      .filter((c) => c.date >= TODAY_STR && c.status !== 'Annulé')
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const groups = [];
+    upcoming.forEach((c) => {
+      const g = groups.find((x) => x.date === c.date);
+      g ? g.items.push(c) : groups.push({ date: c.date, items: [c] });
+    });
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 860 }}>
+        {groups.length === 0 && (
+          <div style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, padding: '38px 20px', textAlign: 'center', color: MUTED, fontSize: 13.5 }}>
+            Aucun rendez-vous à venir. Cliquez sur « Nouveau rendez-vous » pour en ajouter un.
+          </div>
+        )}
+        {groups.map((g) => {
+          const d = new Date(`${g.date}T12:00:00`);
+          const isToday = g.date === TODAY_STR;
           return (
-            <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: c.bg, border: `2px solid ${c.color}` }} />
-              <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{svc}</span>
+            <div key={g.date} style={{ background: '#fff', border: `1px solid ${GRID}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(21,49,74,0.05)' }}>
+              <div style={{ padding: '11px 18px', borderBottom: `1px solid ${GRID}`, display: 'flex', alignItems: 'center', gap: 10, background: isToday ? '#F2FAF7' : '#FBFCFB' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: isToday ? TEAL : DARK }}>
+                  {isToday ? "Aujourd'hui — " : ''}{FR_DAYS_FULL[(d.getDay() + 6) % 7]} {d.getDate()} {FR_MONTHS[d.getMonth()]} {d.getFullYear()}
+                </span>
+                <span style={{ fontSize: 11.5, color: MUTED, fontWeight: 700 }}>{g.items.length} RDV</span>
+              </div>
+              {g.items.map((c, i) => {
+                const col = svcColor(c.service);
+                return (
+                  <div key={c.id} onClick={() => openPanel(c.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 18px', borderBottom: i < g.items.length - 1 ? `1px solid ${GRID_SOFT}` : 'none', cursor: 'pointer', borderLeft: `3px solid ${col.color}` }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#F6FAF8'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <span style={{ fontSize: 13.5, fontWeight: 800, color: TEAL, minWidth: 46, fontVariantNumeric: 'tabular-nums' }}>{c.time}</span>
+                    <span style={{ fontSize: 11.5, color: MUTED, minWidth: 48 }}>{Math.max(15, Number(c.durationMin) || 30)} min</span>
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.patient}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, color: col.color, background: col.bg, border: `1px solid ${col.border}`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+                      {isTele(c.service) ? <VideoIcon /> : <PersonIcon />} {c.service}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
       </div>
+    );
+  };
 
-      {/* ── Edit Modal ── */}
-      {editData && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={closeEdit}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(21,49,74,0.2)' }} onClick={e => e.stopPropagation()}>
+  return (
+    <div style={{ padding: isMobile ? 6 : 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
 
-            {/* Modal header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22 }}>
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: DARK }}>Modifier le rendez-vous</div>
-                <div style={{ fontSize: 12, color: svcColor(editData.service).color, fontWeight: 600, marginTop: 3 }}>{editData.service}</div>
-              </div>
-              <button onClick={closeEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: MUTED, lineHeight: 1, padding: 0 }}>×</button>
-            </div>
+      {/* ── Top bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['‹', goPrev], ['›', goNext]].map(([a, fn]) => (
+            <button key={a} onClick={fn} aria-label={a === '‹' ? 'Précédent' : 'Suivant'} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', cursor: 'pointer', fontSize: 18, color: DARK, fontWeight: 700, lineHeight: 1 }}>{a}</button>
+          ))}
+        </div>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: DARK, letterSpacing: '-0.2px', flex: isMobile ? '1 1 100%' : 1, order: isMobile ? 10 : 0 }}>{periodLabel}</h2>
+        {/* Date picker — jump to any date */}
+        <input type="date" value={selISO} onChange={(e) => jumpTo(e.target.value)} aria-label="Aller à une date"
+          style={{ height: 34, border: `1px solid ${GRID}`, borderRadius: 8, padding: '0 8px', fontSize: 12.5, color: DARK, background: '#fff', fontFamily: 'inherit', cursor: 'pointer' }} />
+        <button onClick={goToday} style={{ padding: '7px 14px', height: 34, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Aujourd'hui</button>
+        {/* View tabs */}
+        <div style={{ display: 'flex', background: '#fff', border: `1px solid ${GRID}`, borderRadius: 10, overflow: 'hidden' }}>
+          {['Liste', 'Journée', 'Semaine'].map((v, i) => (
+            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', borderRight: i < 2 ? `1px solid ${GRID}` : 'none', background: view === v ? TEAL : 'transparent', color: view === v ? '#fff' : MUTED, transition: 'all .15s' }}>{v}</button>
+          ))}
+        </div>
+      </div>
 
-            <div style={{ display: 'grid', gap: 14 }}>
-              {/* Booking status + confirm (the secretary/doctor can confirm here) */}
-              {bookStatus && bookStatus !== 'completed' && bookStatus !== 'cancelled' && bookStatus !== 'no_show' && (
-                <div style={{ background: bookStatus === 'confirmed' ? '#E7F6EE' : '#FEF6E7', border: `1px solid ${bookStatus === 'confirmed' ? '#CDE7DA' : '#F6E0AE'}`, borderRadius: 10, padding: '12px 14px' }}>
-                  {bookStatus === 'confirmed' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#0E7C52' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                      Rendez-vous confirmé
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#9A6510' }}>Réservé par le patient</div>
-                        <div style={{ fontSize: 11.5, color: '#9A6510' }}>En attente de confirmation.</div>
-                      </div>
-                      <button onClick={confirmBooking} disabled={confirming} style={{ ...greenBtn, ...greenBtnBusy(confirming) }}>
-                        {confirming ? 'Confirmation…' : 'Confirmer le rendez-vous'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+      {view === 'Semaine' && (isMobile
+        ? <div style={{ overflowX: 'auto' }}><div style={{ minWidth: 720 }}>{renderWeek()}</div></div>
+        : renderWeek())}
+      {view === 'Journée' && renderDay()}
+      {view === 'Liste' && renderList()}
 
-              {/* Patient */}
-              <div>
-                <label style={lbl}>Patient</label>
-                <input value={editData.patient} onChange={e => setField('patient', e.target.value)} style={inp} />
-              </div>
-
-              {/* Date + start time */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={lbl}>Date</label>
-                  <input type="date" value={editData.date} onChange={e => setField('date', e.target.value)} style={inp} />
-                </div>
-                <div>
-                  <label style={lbl}>Heure de début</label>
-                  <input type="time" value={editData.time} onChange={e => setField('time', e.target.value)} style={inp} />
-                </div>
-              </div>
-
-              {/* Duration + end time — the two are linked: change one and the
-                  other follows, so the doctor can set the visit length either way. */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={lbl}>Durée</label>
-                  <select
-                    value={DURATION_OPTS.includes(Number(editData.durationMin)) ? Number(editData.durationMin) : ''}
-                    onChange={e => setField('durationMin', Number(e.target.value))}
-                    style={{ ...inp, cursor: 'pointer' }}
-                  >
-                    {!DURATION_OPTS.includes(Number(editData.durationMin)) && (
-                      <option value="">{Math.max(15, Number(editData.durationMin) || 30)} min</option>
-                    )}
-                    {DURATION_OPTS.map(d => <option key={d} value={d}>{durLabel(d)}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={lbl}>Heure de fin</label>
-                  <input
-                    type="time"
-                    value={addMinutes(editData.time, editData.durationMin)}
-                    onChange={e => {
-                      const d = diffMinutes(editData.time, e.target.value);
-                      if (d >= 5 && d <= 600) setField('durationMin', d);
-                    }}
-                    style={inp}
-                  />
-                </div>
-              </div>
-              <div style={{ fontSize: 12, color: MUTED, marginTop: -6 }}>
-                {editData.time} → <strong style={{ color: DARK }}>{addMinutes(editData.time, editData.durationMin)}</strong> · {Math.max(15, Number(editData.durationMin) || 30)} min
-              </div>
-
-              {/* Service */}
-              <div>
-                <label style={lbl}>Service</label>
-                <select value={editData.service} onChange={e => setField('service', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
-                  {svcNames.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-
-              {/* Amount + Payment */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={lbl}>Montant (MAD)</label>
-                  <input type="number" min="0" value={editData.amount} onChange={e => setField('amount', Number(e.target.value))} style={inp} />
-                </div>
-                <div>
-                  <label style={lbl}>Paiement</label>
-                  <select value={editData.pay} onChange={e => setField('pay', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
-                    {PAY_OPTS.map(p => <option key={p}>{p}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Status pills */}
-              <div>
-                <label style={lbl}>Statut</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {STATUS_OPTS.map(s => {
-                    const active = editData.status === s;
-                    return (
-                      <button key={s} onClick={() => setField('status', s)} style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: `1.5px solid ${active ? PRIMARY : BORDER}`, background: active ? '#E7F6EE' : '#fff', color: active ? PRIMARY : MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.12s' }}>{s}</button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label style={lbl}>Notes</label>
-                <textarea value={editData.notes} onChange={e => setField('notes', e.target.value)} rows={3} style={{ ...inp, resize: 'vertical', minHeight: 72 }} />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-              <button onClick={deleteAppt} title="Supprimer le rendez-vous" style={{ flex: '0 0 auto', padding: '11px 14px', borderRadius: 10, border: '1px solid #F2C2CD', background: '#FCE8EC', color: '#C2415C', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
-                Supprimer
-              </button>
-              <button onClick={closeEdit} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={saveEdit} style={{ ...greenBtn, flex: 2 }}>Enregistrer</button>
-            </div>
-          </div>
+      {/* ── Legend ── */}
+      {view !== 'Liste' && svcNames.length > 0 && (
+        <div style={{ display: 'flex', gap: 14, marginTop: 12, flexWrap: 'wrap' }}>
+          {svcNames.map((svc) => {
+            const c = svcColor(svc);
+            return (
+              <span key={svc} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: c.bg, border: `2px solid ${c.color}` }} />
+                <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{svc}</span>
+              </span>
+            );
+          })}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: '#EEF1F0', border: '2px solid #B9C4C0' }} />
+            <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>Absence</span>
+          </span>
         </div>
       )}
+
+      {/* ── Day ⋮ menu ── */}
+      {dayMenu && (
+        <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'fixed', left: Math.max(8, Math.min(dayMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 240)), top: dayMenu.y, width: 232, background: '#fff', border: `1px solid ${GRID}`, borderRadius: 12, boxShadow: '0 16px 42px rgba(13,43,30,0.22)', zIndex: 900, overflow: 'hidden', padding: 5 }}>
+          <div style={{ padding: '7px 11px 5px', fontSize: 10.5, fontWeight: 800, color: '#9AA8A2', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {new Date(`${dayMenu.dateISO}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+          {[
+            { label: 'Bloquer la journée', fn: () => blockDay(dayMenu.dateISO, 'Journée bloquée') },
+            { label: 'Marquer comme férié', fn: () => blockDay(dayMenu.dateISO, 'Férié') },
+            { label: 'Ajouter une pause (créneaux)', fn: () => gotoBreaks(dayMenu.dateISO) },
+          ].map((it) => (
+            <button key={it.label} onClick={it.fn}
+              style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderRadius: 8, padding: '9px 11px', fontSize: 13, fontWeight: 600, color: DARK, cursor: 'pointer' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#F1F6F3'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Appointment detail panel ── */}
+      <ApptPanel state={state} setState={setState} go={go} openNewAppt={openNewAppt} />
     </div>
   );
 }

@@ -82,6 +82,19 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const weekStart = new Date(baseMonday); weekStart.setDate(baseMonday.getDate() + weekOffset * 7);
   const weekDates = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(weekStart.getDate() + i); return d; });
   const [selDate, setSelDate] = useState(todayISO);
+  // Deep-link from the agenda ("Ajouter une pause") → open on that date's slots.
+  useEffect(() => {
+    const d = state?.availFocusDate;
+    if (!d) return;
+    setState({ availFocusDate: null });
+    if (d >= todayISO) {
+      setSelDate(d);
+      const target = new Date(`${d}T12:00:00`);
+      const mon = new Date(target); mon.setDate(target.getDate() - ((target.getDay() + 6) % 7));
+      setWeekOffset(Math.max(0, Math.round((mon - baseMonday) / (7 * 86400000))));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.availFocusDate]);
   const [blockedForDate, setBlockedForDate] = useState(new Set());
   const [bookedIvals, setBookedIvals] = useState([]);   // [{start,minutes}] taken on selDate
   const [slotsSaving, setSlotsSaving] = useState(false);

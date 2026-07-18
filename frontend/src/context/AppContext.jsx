@@ -64,7 +64,7 @@ const URL_SCREENS = new Set([
   'docregister', 'admin', 'forgotpw', 'resetpw', 'contact', 'pmessages',
   'confidentialite', 'rxverify', 'verified', 'checkemail',
   'doctor', 'dcal', 'dappts', 'dhist', 'dpatients', 'ddocs', 'davail',
-  'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff',
+  'dnotif', 'dstats', 'dabo', 'dsettings', 'dchat', 'dshare', 'dprescribe', 'dstaff', 'dpfile',
 ]);
 const pathScreen = () => {
   try {
@@ -130,6 +130,12 @@ const initialState = {
   // Demo-only in-memory conversations (sales demo). Shared by the dashboard
   // preview and the Messages page so they tell one coherent story.
   demoChats: [],
+  // Demo-only dossier patient data + calendar absences (sales demo).
+  demoMedical: {}, demoNotes: [], demoTimeOff: [],
+  // Appointment detail panel (Doctolib-style slide-in) — consultation id.
+  apptPanel: null,
+  // Dossier patient deep-link (patient object + optional linked appointment).
+  pfilePatient: null, pfileApptId: null,
   activeChatId: 1,
   consultations: [],
   now: Date.now(),
@@ -455,6 +461,7 @@ export function AppProvider({ children }) {
       newAppt: { name: '', phone: '', cin: '', motif: 'Consultation générale', date: '2024-05-16', time: '09:00', notes: '' },
       naMatch: null,
       manualAppts: [], manualConsults: [], patients: [], chats: [], demoChats: [],
+      demoMedical: {}, demoNotes: [], demoTimeOff: [], apptPanel: null, pfilePatient: null, pfileApptId: null,
       bookForRel: null,
     });
   };

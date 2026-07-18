@@ -5,6 +5,7 @@ import Icon from '../../components/Icon';
 import { updateAppointmentStatus, updateAppointment, markAppointmentPaid, markArrived, markInConsultation, sendApptWhatsApp, notifyApptEmail, ringPatient, STATUS_FR, PAY_METHOD_FR } from '../../lib/api';
 import { moroccoToUTCISO, moPartsOf } from '../../lib/time.js';
 import Pager, { usePager } from '../../components/Pager';
+import ApptPanel from '../../components/ApptPanel';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -465,9 +466,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                       transition: 'background 0.1s',
                     }}
                   >
-                    {/* Patient */}
+                    {/* Patient — click opens the appointment detail panel */}
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div onClick={() => setState({ apptPanel: appt.id })} title="Détails du rendez-vous" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                         <div style={{
                           width: 36, height: 36, borderRadius: '50%', background: appt.color,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -629,6 +630,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
           </div>
         </div>
       )}
+
+      {/* Appointment detail panel — opened by clicking a patient row */}
+      <ApptPanel state={state} setState={setState} go={go} openNewAppt={openNewAppt} />
     </div>
   );
 }

@@ -57,6 +57,7 @@ import Chat from './Chat';
 import BookingShare from './BookingShare';
 import Prescriptions from './Prescriptions';
 import Staff from './Staff';
+import PatientFile from './PatientFile';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -237,6 +238,7 @@ export default function DoctorApp() {
     dpatients: Patients, ddocs: Documents, davail: Availability,
     dnotif: Notifications, dstats: Statistics, dabo: Subscription, dsettings: Settings,
     dchat: Chat, dshare: BookingShare, dprescribe: Prescriptions, dstaff: Staff,
+    dpfile: PatientFile,
   };
   const SubScreen = (state.isStaff && STAFF_HIDDEN.has(screen)) ? Dashboard : (SUB[screen] || Dashboard);
 
@@ -518,7 +520,7 @@ export default function DoctorApp() {
           </div>
         )}
 
-        <main style={{ flex:1, minWidth:0, padding: screen==='dchat' ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
+        <main style={{ flex:1, minWidth:0, padding: (screen==='dchat' || screen==='dpfile') ? 0 : (isMobile ? 14 : 26), overflowY: screen==='dchat' ? 'hidden' : 'auto' }}>
           <SubScreen state={state} setState={setState} go={go} openNewAppt={openNewAppt} openAddPatient={openAddPatient} />
         </main>
 

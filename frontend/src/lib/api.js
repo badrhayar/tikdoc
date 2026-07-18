@@ -379,6 +379,11 @@ export function mapAppointment(row, nameById = {}) {
     consultNote: row.consult_note || null,
     // Consultation flow (see 20260712120000_consultation_flow.sql).
     inConsultAt: row.in_consultation_at || null,
+    // Appointment panel flags (see 20260731120000_dossier_patient.sql).
+    onWaitlist: !!row.on_waitlist,
+    referringDoctor: row.referring_doctor || '',
+    firstVisit: !!row.first_visit,
+    noShowExcused: !!row.no_show_excused,
   };
 }
 
@@ -1064,6 +1069,71 @@ export async function updateAppointment(id, fields) {
     .single();
   if (error) throw error;
   return data;
+}
+
+// ── Dossier patient (see 20260731120000_dossier_patient.sql) ────────────────
+// patient_key = roster row id (doctor_patients.id) as text, falling back to
+// the lowercased patient name for walk-ins without a roster row.
+export const patientKeyOf = (p) =>
+  p?.id != null && !String(p.id).startsWith('local_') ? String(p.id) : (p?.name || '').trim().toLowerCase();
+
+/** Load the antécédents/mode de vie record for one patient (or null). */
+export async function fetchMedicalHistory(doctorId, patientKey) {
+  const { data, error } = await supabase
+    .from('medical_history')
+    .select('id, data, updated_at')
+    .eq('doctor_id', doctorId)
+    .eq('patient_key', patientKey)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Upsert the antécédents/mode de vie record for one patient. */
+export async function saveMedicalHistory(doctorId, patientKey, data) {
+  const { data: row, error } = await supabase
+    .from('medical_history')
+    .upsert({ doctor_id: doctorId, patient_key: patientKey, data, updated_at: new Date().toISOString() }, { onConflict: 'doctor_id,patient_key' })
+    .select()
+    .single();
+  if (error) throw error;
+  return row;
+}
+
+/** Consultation notes for one patient, newest first. */
+export async function fetchConsultationNotes(doctorId, patientKey, limit = 50) {
+  const { data, error } = await supabase
+    .from('consultation_notes')
+    .select('id, appointment_id, data, created_at, updated_at')
+    .eq('doctor_id', doctorId)
+    .eq('patient_key', patientKey)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+/** Create a consultation note (observation médicale). */
+export async function createConsultationNote(doctorId, { patientKey, appointmentId = null, data }) {
+  const { data: row, error } = await supabase
+    .from('consultation_notes')
+    .insert({ doctor_id: doctorId, patient_key: patientKey, appointment_id: appointmentId, data })
+    .select()
+    .single();
+  if (error) throw error;
+  return row;
+}
+
+/** Update an existing consultation note. */
+export async function updateConsultationNote(id, data) {
+  const { data: row, error } = await supabase
+    .from('consultation_notes')
+    .update({ data, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return row;
 }
 
 /** Delete an appointment (DB-backed; manual/local ones are handled in state). */
