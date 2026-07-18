@@ -107,12 +107,21 @@ export default function ForDoctors() {
       for (let k = 0; k < PER_DAY[i]; k++) {
         const [service, durationMin, amount] = SERVICES[(i * 2 + k) % SERVICES.length];
         const person = pt(i * 3 + k);
+        // Booking status drives the acceptance / cancellation / no-show KPIs.
+        // Most visits are honoured; a few realistic exceptions keep the demo's
+        // rates believable (not a flat 100 %).
+        let booking = past ? 'completed' : 'confirmed';
+        let status = past ? 'Payé' : 'En attente';
+        let pay = past ? PAY_OPTS[k % PAY_OPTS.length] : '—';
+        const rr = (i * 3 + k) % 17;
+        if (past && rr === 4) { booking = 'no_show'; status = 'En attente'; pay = '—'; }   // patient absent
+        else if (past && rr === 9) { booking = 'cancelled'; status = 'Annulé'; pay = '—'; } // annulé
+        else if (!past && rr === 6) { booking = 'pending'; }                                 // à confirmer
         weekConsults.push({
           id: `local_w${i}_${k}`,
           patient: person.name, age: person.age, sex: person.sex,
           service, date, time: TIMES[k], durationMin, amount,
-          pay: past ? PAY_OPTS[k % PAY_OPTS.length] : '—',
-          status: past ? 'Payé' : 'En attente', notes: '',
+          pay, status, booking, notes: '',
         });
       }
     }
@@ -146,18 +155,77 @@ export default function ForDoctors() {
 
     // A little older history so the monthly statistics have depth.
     const history = [
-      { id: 'local_h1', patient: 'Omar Chraibi',    age: 67, sex: 'M', service: 'Consultation générale', date: daysAgo(9),  time: '09:30', durationMin: 30, amount: 300, pay: 'Espèces',  status: 'Payé', notes: '' },
-      { id: 'local_h2', patient: 'Nadia Benbrahim', age: 61, sex: 'F', service: 'Échographie',           date: daysAgo(10), time: '11:00', durationMin: 30, amount: 400, pay: 'CMI',      status: 'Payé', notes: '' },
-      { id: 'local_h3', patient: 'Karim Bensouda',  age: 29, sex: 'M', service: 'Suivi',                 date: daysAgo(12), time: '15:00', durationMin: 30, amount: 200, pay: 'M-Wallet', status: 'Payé', notes: '' },
-      { id: 'local_h4', patient: 'Layla Cherkaoui', age: 35, sex: 'F', service: 'Suivi de grossesse',    date: daysAgo(13), time: '10:00', durationMin: 30, amount: 350, pay: 'Espèces',  status: 'Payé', notes: '' },
-      { id: 'local_h5', patient: 'Driss El Fassi',  age: 58, sex: 'M', service: 'Téléconsultation',      date: daysAgo(15), time: '16:30', durationMin: 20, amount: 250, pay: 'M-Wallet', status: 'Payé', notes: '' },
+      { id: 'local_h1', patient: 'Omar Chraibi',    age: 67, sex: 'M', service: 'Consultation générale', date: daysAgo(9),  time: '09:30', durationMin: 30, amount: 300, pay: 'Espèces',  status: 'Payé', booking: 'completed', notes: '' },
+      { id: 'local_h2', patient: 'Nadia Benbrahim', age: 61, sex: 'F', service: 'Échographie',           date: daysAgo(10), time: '11:00', durationMin: 30, amount: 400, pay: 'CMI',      status: 'Payé', booking: 'completed', notes: '' },
+      { id: 'local_h3', patient: 'Karim Bensouda',  age: 29, sex: 'M', service: 'Suivi',                 date: daysAgo(12), time: '15:00', durationMin: 30, amount: 200, pay: 'M-Wallet', status: 'Payé', booking: 'completed', notes: '' },
+      { id: 'local_h4', patient: 'Layla Cherkaoui', age: 35, sex: 'F', service: 'Suivi de grossesse',    date: daysAgo(13), time: '10:00', durationMin: 30, amount: 350, pay: 'Espèces',  status: 'Payé', booking: 'completed', notes: '' },
+      { id: 'local_h5', patient: 'Driss El Fassi',  age: 58, sex: 'M', service: 'Téléconsultation',      date: daysAgo(15), time: '16:30', durationMin: 20, amount: 250, pay: 'M-Wallet', status: 'Payé', booking: 'completed', notes: '' },
+    ];
+
+    // ── LAST MONTH — a full previous calendar month of activity, so every
+    //    "ce mois vs mois dernier" comparison (Tableau de bord + Statistiques)
+    //    has a real baseline. Volume is a touch lower than this month so the
+    //    demo tells a healthy-growth story. ──
+    const [cyN, cmN] = t0.split('-').map(Number);              // current year, month (1-12)
+    const lastM = cmN === 1 ? 12 : cmN - 1;
+    const lastY = cmN === 1 ? cyN - 1 : cyN;
+    const lastMonthDate = (day) => `${lastY}-${p2(lastM)}-${p2(day)}`;
+    // A touch lighter than this month, so the demo tells a healthy-growth story
+    // (this month to date comes out ahead of last month to the same day).
+    const LM_PER_WD = [3, 3, 2, 3, 3, 2, 0];                   // Lun…Dim volume
+    const lastMonthConsults = [];
+    let lmid = 0;
+    for (let day = 1; day <= 28; day++) {
+      const dISO = lastMonthDate(day);
+      const wd = (new Date(`${dISO}T12:00:00`).getDay() + 6) % 7;   // Mon=0 … Dim=6
+      const perDay = LM_PER_WD[wd];
+      for (let k = 0; k < perDay; k++) {
+        const [service, durationMin, amount] = SERVICES[(day + k) % SERVICES.length];
+        const person = pt(day * 2 + k + 1);
+        let booking = 'completed', status = 'Payé', pay = PAY_OPTS[(day + k) % PAY_OPTS.length];
+        const rr = (day * 5 + k) % 16;
+        if (rr === 0) { booking = 'cancelled'; status = 'Annulé'; pay = '—'; }
+        else if (rr === 7) { booking = 'no_show'; status = 'En attente'; pay = '—'; }
+        else if (rr === 11) { booking = 'completed'; status = 'En attente'; pay = '—'; }   // honoré, non réglé
+        lastMonthConsults.push({
+          id: `local_lm${lmid++}`,
+          patient: person.name, age: person.age, sex: person.sex,
+          service, date: dISO, time: TIMES[k % TIMES.length], durationMin, amount,
+          pay, status, booking, notes: '',
+        });
+      }
+    }
+
+    // ── Messages — real, openable conversations shared by the dashboard preview
+    //    and the Messages page (so the demo tells one coherent story). ──
+    const agoISO = (min) => new Date(now.getTime() - min * 60000).toISOString();
+    const demoChats = [
+      { id: 'demo_c1', peer: 'Fatima Zahra Benali', peerId: 'demo_p1', messages: [
+        { id: 'c1m1', from: 'patient', content: 'Bonjour Docteur, je confirme mon rendez-vous de demain.', sent_at: agoISO(40) },
+        { id: 'c1m2', from: 'doctor',  content: 'Bonjour, c’est bien noté. À demain 9h00, pensez à apporter vos dernières analyses.', sent_at: agoISO(36) },
+        { id: 'c1m3', from: 'patient', content: 'Parfait, merci beaucoup !', sent_at: agoISO(34) },
+      ] },
+      { id: 'demo_c2', peer: 'Mohamed Rachid Alami', peerId: 'demo_p2', messages: [
+        { id: 'c2m1', from: 'patient', content: 'Ma tension était à 13/8 ce matin, tout va bien.', sent_at: agoISO(180) },
+        { id: 'c2m2', from: 'doctor',  content: 'Très bien, continuez le traitement à la même dose. On refait le point au prochain contrôle.', sent_at: agoISO(172) },
+      ] },
+      { id: 'demo_c3', peer: 'Amina Tazi', peerId: 'demo_p3', messages: [
+        { id: 'c3m1', from: 'doctor',  content: 'Bonjour Amina, vos résultats de bilan sont normaux, rien d’inquiétant.', sent_at: agoISO(1560) },
+        { id: 'c3m2', from: 'patient', content: 'Merci beaucoup pour la consultation !', sent_at: agoISO(1520) },
+      ] },
+      { id: 'demo_c4', peer: 'Layla Cherkaoui', peerId: 'demo_p4', messages: [
+        { id: 'c4m1', from: 'patient', content: 'Docteur, est-ce que je peux prendre du paracétamol pour les maux de tête ?', sent_at: agoISO(2880) },
+        { id: 'c4m2', from: 'doctor',  content: 'Oui, 1g maximum 3 fois par jour si besoin. Si les douleurs persistent au-delà de 3 jours, revenez me voir.', sent_at: agoISO(2860) },
+        { id: 'c4m3', from: 'patient', content: 'D’accord, merci Docteur.', sent_at: agoISO(2850) },
+      ] },
     ];
 
     setState({
       demoDoctor: true,
       patients: DEMO_PATIENTS,
       manualAppts: [...todayAppts, ...extraAppts],
-      manualConsults: [...todayConsults, ...extraConsults, ...weekConsults, ...history],
+      manualConsults: [...todayConsults, ...extraConsults, ...weekConsults, ...history, ...lastMonthConsults],
+      demoChats,
       // Working hours behind the demo agenda (Mon–Sat 09:00–18:00, Sun closed),
       // so the calendar sizes its grid exactly like a real doctor's would.
       weekEndMin: [WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, 0],

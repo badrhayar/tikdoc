@@ -3,6 +3,7 @@ import { STATUS_FR, fetchConversationPreviews, isImageMessage, markInConsultatio
 import { moTime, moDateKeyOf, moroccoNow } from '../../lib/time';
 import { useViewport } from '../../hooks/useViewport';
 import { initials as initialsOf, tint, greenBtn, greenBtnBusy } from '../../shared.jsx';
+import { monthlyReport, ymOf } from '../../lib/metrics';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -36,7 +37,7 @@ const statusBorderColor = (status) => {
 
 const KPIS = [
   { label: "Rendez-vous aujourd'hui", value: '8', badge: '+2', up: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>, ic: '#0E7C52', ib: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)' },
-  { label: 'Patients ce mois', value: '47', badge: '+12%', up: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>, ic: '#3B6FB0', ib: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)' },
+  { label: 'Rendez-vous ce mois', value: '47', badge: '+12%', up: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M9 15l2 2 4-4"/></svg>, ic: '#3B6FB0', ib: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)' },
   { label: 'Revenus du mois', value: '4 200', unit: 'MAD', badge: '+8%', up: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, ic: '#C28A1B', ib: 'linear-gradient(140deg,#FEF3DC,#FBE9C2)' },
   { label: 'Note moyenne', value: '4.8', unit: '★', badge: '+0.2', up: true, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 6.9-1z"/></svg>, ic: '#C2466A', ib: 'linear-gradient(140deg,#FCE7EE,#F8D4E1)' },
 ];
@@ -58,15 +59,18 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const appUserId = state?.appUser?.id;
   useEffect(() => {
     if (!appUserId) {
-      setInbox(state?.demoDoctor ? [
-        { id: 'd1', patientName: 'Fatima Zahra Benali', last: { content: 'Bonjour Docteur, je confirme mon rendez-vous de demain.', sent_at: new Date(Date.now() - 40 * 60000).toISOString() } },
-        { id: 'd2', patientName: 'Mohamed Rachid Alami', last: { content: 'Ma tension était à 13/8 ce matin, tout va bien.', sent_at: new Date(Date.now() - 3 * 3600000).toISOString() } },
-        { id: 'd3', patientName: 'Amina Tazi', last: { content: 'Merci beaucoup pour la consultation !', sent_at: new Date(Date.now() - 26 * 3600000).toISOString() } },
-      ] : []);
+      // Demo: preview the SAME conversations the Messages page shows, newest
+      // last-message first, so the dashboard and the inbox stay consistent.
+      const demoInbox = (state?.demoChats || [])
+        .map((c) => ({ id: c.id, patientName: c.peer, last: c.messages[c.messages.length - 1] }))
+        .filter((c) => c.last)
+        .sort((a, b) => new Date(b.last.sent_at) - new Date(a.last.sent_at))
+        .slice(0, 4);
+      setInbox(state?.demoDoctor ? demoInbox : []);
       return;
     }
     fetchConversationPreviews(4).then(setInbox).catch(() => {});
-  }, [appUserId, state?.demoDoctor]);
+  }, [appUserId, state?.demoDoctor, state?.demoChats]);
   // Greeting: real doctor name + today's actual date (Morocco time).
   const fullName = state?.appUser?.full_name || '';
   const docLabel = fullName ? (/^dr/i.test(fullName) ? fullName : `Dr. ${fullName}`) : 'Docteur';
@@ -134,25 +138,25 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
   const expectedToday = todayAppts.filter((a) => a.status !== 'no_show').reduce((s, a) => s + (a.paid ? (a.amountPaid || a.fee || 0) : (a.fee || 0)), 0);
   const remainingToday = todayAppts.filter((a) => a.status !== 'completed' && a.status !== 'no_show' && !(a.arrivedAt || a.arrived_at)).length;
   const waitMin = (a) => Math.max(1, Math.round((nowTick - new Date(a.arrivedAt || a.arrived_at).getTime()) / 60000));
-  const monthConsults = consults.filter((c) => c.date && c.date.slice(0, 7) === monthKey);
-  const monthRevenue = monthConsults.filter((c) => c.status === 'Payé').reduce((s, c) => s + (c.amount || 0), 0);
-  const monthPatients = new Set(monthConsults.map((c) => (c.patient || '').toLowerCase()).filter(Boolean)).size;
+  // Monthly figures — the single source of truth (same module the Statistics
+  // page uses), so the dashboard and the stats always agree, real AND demo.
+  // "Ce mois" = the whole current calendar month (start → end).
+  const month = monthlyReport(state, ymOf(todayKey), null);
+  const monthRevenue = month.revenue;   // Σ des consultations « Payé » du mois
   const rating = state?.myDoctor?.rating ? `${state.myDoctor.rating}` : '—';
-  const cancelled = consults.filter((c) => c.status === 'Annulé').length;
-  const acceptRate = consults.length ? Math.round((consults.length - cancelled) / consults.length * 100) : 0;
-  const svcDur = (state?.services || []).map((s) => Number(s.duration) || 0).filter(Boolean);
-  const avgDur = svcDur.length ? Math.round(svcDur.reduce((a, b) => a + b, 0) / svcDur.length) : 20;
+  const acceptRate = month.acceptRate;
+  const avgDur = month.avgDuration || 0;
 
   const kpis = [
     { ...KPIS[0], value: String(todayCount) },
-    { ...KPIS[1], value: String(monthPatients) },
+    { ...KPIS[1], value: String(month.count) },
     { ...KPIS[2], value: monthRevenue.toLocaleString('fr-FR'), unit: 'MAD' },
     { ...KPIS[3], value: rating, unit: '★' },
   ];
   const secondary = [
-    { label: "Taux d'acceptation", value: acceptRate + '%', sub: 'Des rendez-vous', iconBg: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)', iconColor: '#0E7C52',
+    { label: "Taux d'acceptation", value: acceptRate + '%', sub: 'Ce mois-ci', iconBg: 'linear-gradient(140deg,#E7F6EE,#D5EFE1)', iconColor: '#0E7C52',
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg> },
-    { label: 'Durée moy. consultation', value: avgDur + ' min', sub: "D'après vos services", iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0',
+    { label: 'Durée moy. consultation', value: (avgDur || '—') + (avgDur ? ' min' : ''), sub: 'Ce mois-ci', iconBg: 'linear-gradient(140deg,#E8F1FC,#D7E8F9)', iconColor: '#3B6FB0',
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
   ];
 

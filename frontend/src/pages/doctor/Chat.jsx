@@ -38,7 +38,10 @@ const fmtTime = (iso) => {
 
 export default function Chat({ state, setState }) {
   const appUser = state?.appUser;
-  const isDoctor = appUser?.role === 'doctor';
+  // Sales demo: no account, so conversations live in state (state.demoChats) and
+  // every send/read is local. The viewer "is" the cabinet/doctor here.
+  const isDemo = !appUser && !!state?.demoDoctor;
+  const isDoctor = appUser?.role === 'doctor' || isDemo;
   const { isMobile } = useViewport();
 
   const [convs, setConvs] = useState([]);
@@ -54,6 +57,12 @@ export default function Chat({ state, setState }) {
 
   // Load conversations for the signed-in user; returns the mapped list.
   const loadConvs = async (autoOpen = true) => {
+    if (isDemo) {
+      const mapped = (state?.demoChats || []).map((c, i) => ({ id: c.id, ci: i, peer: c.peer, peerId: c.peerId }));
+      setConvs(mapped);
+      if (autoOpen) setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
+      return mapped;
+    }
     try {
       const list = await fetchConversations();
       const mapped = list.map((c, i) => ({ id: c.id, ci: i, peer: isDoctor ? c.patientName : c.doctorName, peerId: isDoctor ? c.patientId : c.doctorId }));
@@ -68,11 +77,12 @@ export default function Chat({ state, setState }) {
   // patient may have started a brand-new conversation) + a slow poll fallback in
   // case realtime is unavailable.
   useEffect(() => {
+    if (isDemo) { loadConvs(false); return undefined; }   // demo: no realtime, state-driven
     const unsub = subscribeToInbox({ onMessage: () => loadConvs(false), onConversation: () => loadConvs(false) });
     const t = setInterval(() => loadConvs(false), 6000);
     return () => { try { unsub(); } catch (e) { /* ignore */ } clearInterval(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDoctor]);
+  }, [isDoctor, isDemo, state?.demoChats]);
 
   // Candidate peers to start a new chat with = the doctor's account-linked
   // patients (roster + shared appointments), minus anyone already in a chat.
@@ -120,6 +130,11 @@ export default function Chat({ state, setState }) {
   // Load messages for the active conversation, then live-stream new ones.
   useEffect(() => {
     if (!activeId) { setMsgs([]); return; }
+    if (isDemo) {
+      const c = (state?.demoChats || []).find((x) => x.id === activeId);
+      setMsgs((c?.messages || []).map((m) => ({ id: m.id, mine: m.from === 'doctor', type: 'text', text: m.content, url: m.content, time: fmtTime(m.sent_at) })));
+      return;
+    }
     let unsub = () => {};
     // Re-fetch from the server, keeping any not-yet-persisted optimistic bubbles.
     const refetch = async () => {
@@ -156,7 +171,8 @@ export default function Chat({ state, setState }) {
       });
     })();
     return () => { unsub(); clearPoll(); };
-  }, [activeId, appUser?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, appUser?.id, isDemo, state?.demoChats]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs.length, activeId]);
 
@@ -164,7 +180,16 @@ export default function Chat({ state, setState }) {
 
   const doSend = async () => {
     const text = inputVal.trim();
-    if (!text || !activeId || !appUser) return;
+    if (!text || !activeId) return;
+    if (isDemo) {
+      // Append the doctor's reply to the in-memory conversation; the effect
+      // re-renders the thread from state.demoChats.
+      const msg = { id: 'd_' + Date.now(), from: 'doctor', content: text, sent_at: new Date().toISOString() };
+      setState({ demoChats: (state.demoChats || []).map((c) => c.id === activeId ? { ...c, messages: [...c.messages, msg] } : c) });
+      setInputVal('');
+      return;
+    }
+    if (!appUser) return;
     setInputVal('');
     setMsgs((m) => [...m, { id: 'tmp_' + Date.now(), mine: true, type: 'text', text, time: 'maintenant' }]);
     try { await sendMessage(activeId, appUser.id, text); }
@@ -177,6 +202,12 @@ export default function Chat({ state, setState }) {
 
   const removeConversation = async (id) => {
     if (!id || !window.confirm('Supprimer cette conversation ? Les messages seront définitivement effacés.')) return;
+    if (isDemo) {
+      setState({ demoChats: (state.demoChats || []).filter((c) => c.id !== id) });
+      setConvs((list) => list.filter((c) => c.id !== id));
+      if (activeId === id) { setActiveId(null); setMsgs([]); }
+      return;
+    }
     try {
       await deleteConversation(id);
       setConvs((list) => list.filter((c) => c.id !== id));
@@ -190,7 +221,14 @@ export default function Chat({ state, setState }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || !activeId || !appUser) return;
+    if (!file || !activeId) return;
+    if (isDemo) {   // demo: preview locally, nothing to persist
+      const url = URL.createObjectURL(file);
+      const msg = { id: 'd_' + Date.now(), from: 'doctor', content: url, sent_at: new Date().toISOString() };
+      setState({ demoChats: (state.demoChats || []).map((c) => c.id === activeId ? { ...c, messages: [...c.messages, msg] } : c) });
+      return;
+    }
+    if (!appUser) return;
     try {
       const url = await uploadChatImage(file);
       setMsgs((m) => [...m, { id: 'tmp_' + Date.now(), mine: true, type: 'image', url, text: url, time: 'maintenant' }]);
@@ -216,10 +254,12 @@ export default function Chat({ state, setState }) {
       <div style={{ width: isMobile ? '100%' : 300, flexShrink: 0, borderRight: `1px solid ${BORDER_STRONG}`, background: '#fff', display: (isMobile && activeId) ? 'none' : 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER_STRONG}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: HEADER_BG }}>
           <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Messages</span>
-          <button onClick={() => setShowNew(true)} title="Nouvelle conversation" style={{ ...greenBtn }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            Nouveau
-          </button>
+          {!isDemo && (
+            <button onClick={() => setShowNew(true)} title="Nouvelle conversation" style={{ ...greenBtn }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Nouveau
+            </button>
+          )}
         </div>
 
         <div style={{ margin: 12 }}>
@@ -342,11 +382,13 @@ export default function Chat({ state, setState }) {
             <div style={{ color: "#CBD5D0", display: "flex" }}><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: DARK }}>Aucune conversation</div>
             <div style={{ fontSize: 14, color: MUTED, maxWidth: 280, textAlign: 'center' }}>
-              {isDoctor ? 'Démarrez une conversation avec un de vos patients.' : 'Démarrez une conversation avec un médecin déjà consulté.'}
+              {isDemo ? 'Sélectionnez une conversation pour lire les échanges avec vos patients.' : isDoctor ? 'Démarrez une conversation avec un de vos patients.' : 'Démarrez une conversation avec un médecin déjà consulté.'}
             </div>
-            <button onClick={() => setShowNew(true)} style={{ ...greenBtn, marginTop: 4 }}>
-              + Nouvelle conversation
-            </button>
+            {!isDemo && (
+              <button onClick={() => setShowNew(true)} style={{ ...greenBtn, marginTop: 4 }}>
+                + Nouvelle conversation
+              </button>
+            )}
           </div>
         )}
       </div>

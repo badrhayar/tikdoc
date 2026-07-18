@@ -127,6 +127,9 @@ const initialState = {
   ],
   newSvcMotif: 'Consultation générale', newSvcPrice: '',
   chats: [],
+  // Demo-only in-memory conversations (sales demo). Shared by the dashboard
+  // preview and the Messages page so they tell one coherent story.
+  demoChats: [],
   activeChatId: 1,
   consultations: [],
   now: Date.now(),
@@ -451,7 +454,7 @@ export function AppProvider({ children }) {
       newPatient: { name: '', cin: '', phone: '', email: '', dob: '', sex: 'Femme', address: '', city: 'Casablanca', blood: '', allergies: '', chronic: '', insurance: 'CNSS', notes: '' },
       newAppt: { name: '', phone: '', cin: '', motif: 'Consultation générale', date: '2024-05-16', time: '09:00', notes: '' },
       naMatch: null,
-      manualAppts: [], manualConsults: [], patients: [], chats: [],
+      manualAppts: [], manualConsults: [], patients: [], chats: [], demoChats: [],
       bookForRel: null,
     });
   };

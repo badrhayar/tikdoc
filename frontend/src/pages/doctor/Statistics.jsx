@@ -3,6 +3,8 @@ import { useViewport } from '../../hooks/useViewport';
 import { fetchDoctorReviews, replyToReview } from '../../lib/api';
 import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 import Pager, { usePager } from '../../components/Pager';
+import { moroccoNow } from '../../lib/time';
+import { monthComparison, deltaPct, monthLabel, ymOf, FR_WEEKDAYS } from '../../lib/metrics';
 
 const PRIMARY = '#16A06A';
 const DARK = '#15314A';
@@ -12,10 +14,6 @@ const MUTED = '#6B7B76';
 const ROW_ALT = '#F5F9F7';
 const BORDER_STRONG = '#D5E5DD';
 const HEADER_BG = '#EDF5F0';
-
-const PERIODS = ['7 jours', '30 jours', '3 mois', '1 an'];
-
-const DAILY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const I = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
 // Icons for the mini-stat tiles (values are computed from real data below).
@@ -46,7 +44,38 @@ function SectionTitle({ icon, title, borderColor }) {
   );
 }
 
-function RevenueCard({ label, value, trend }) {
+// Month-over-month comparison chip. `mode` = 'pct' (relative, for amounts and
+// counts) or 'points' (absolute pp difference, for rates). `goodWhenDown` flips
+// the colour semantics for metrics where lower is better (pending, no-show…).
+function Delta({ cur, prev, mode = 'pct', goodWhenDown = false }) {
+  let dir, text;
+  if (mode === 'points') {
+    if (!prev && !cur) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données le mois dernier</div>;
+    const diff = Math.round((cur - prev) * 10) / 10;
+    dir = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    text = `${diff > 0 ? '+' : diff < 0 ? '−' : ''}${Math.abs(diff)} pt${Math.abs(diff) >= 2 ? 's' : ''}`;
+  } else {
+    const d = deltaPct(cur, prev);
+    if (d == null) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données le mois dernier</div>;
+    dir = d.dir;
+    text = `${dir === 'up' ? '+' : dir === 'down' ? '−' : ''}${d.pct}%`;
+  }
+  const neutral = dir === 'flat';
+  const good = goodWhenDown ? dir === 'down' : dir === 'up';
+  const color = neutral ? MUTED : good ? '#0E7C52' : '#C2466A';
+  const bg = neutral ? '#F1F4F3' : good ? '#E7F6EE' : '#FCE7EE';
+  return (
+    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11.5, fontWeight: 800, color, background: bg, borderRadius: 20, padding: '3px 8px' }}>
+        {!neutral && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: dir === 'down' ? 'rotate(180deg)' : 'none' }}><path d="M5 15l7-7 7 7" /></svg>}
+        {text}
+      </span>
+      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>vs mois dernier</span>
+    </div>
+  );
+}
+
+function RevenueCard({ label, value, foot }) {
   return (
     <div style={{
       backgroundColor: '#fff',
@@ -55,18 +84,16 @@ function RevenueCard({ label, value, trend }) {
       padding: 20,
       borderTop: `3px solid ${PRIMARY}`,
       flex: 1,
+      minWidth: 180,
     }}>
       <div style={{ fontSize: 13, color: MUTED, marginBottom: 10, fontWeight: 500 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700, color: DARK }}>{value}</div>
+      {foot}
     </div>
   );
 }
 
-function ConsultCard({ label, value, trend, trendDir, sub }) {
-  const isUp = trendDir === 'up';
-  const isDown = trendDir === 'down';
-  const trendColor = isUp ? PRIMARY : isDown ? '#EF4444' : MUTED;
-  const trendBg = isUp ? '#E8F8F1' : isDown ? '#FEE2E2' : '#F3F4F6';
+function ConsultCard({ label, value, sub, foot }) {
   return (
     <div style={{
       backgroundColor: '#fff',
@@ -75,17 +102,18 @@ function ConsultCard({ label, value, trend, trendDir, sub }) {
       padding: 20,
       borderTop: `3px solid #3B82F6`,
       flex: 1,
+      minWidth: 180,
     }}>
       <div style={{ fontSize: 13, color: MUTED, marginBottom: 10, fontWeight: 500 }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 700, color: DARK, marginBottom: 6 }}>{value}</div>
       <span style={{ fontSize: 11.5, color: MUTED }}>{sub}</span>
+      {foot}
     </div>
   );
 }
 
 export default function Statistics({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
-  const [period, setPeriod] = useState('30 jours');
 
   // ── Avis des patients (public reviews of this cabinet + doctor replies) ──
   const myDocId = state?.myDoctor?.id;
@@ -111,34 +139,35 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
     } finally { setReplySaving(null); }
   };
 
-  // Window (in days) for the selected period. EVERYTHING on this page derives
-  // from the same local consultation set, filtered by this window, so the KPIs
-  // are always internally consistent (and consistent with the Historique page).
-  const PERIOD_DAYS = { '7 jours': 7, '30 jours': 30, '3 mois': 90, '1 an': 365 };
-  const parse = (iso) => new Date(`${iso}T00:00:00`);
-  const periodStart = new Date(Date.now() - (PERIOD_DAYS[period] || 30) * 86400000);
+  // ── Ce mois-ci (jusqu'à aujourd'hui) vs le mois dernier (même jour) ──
+  // One source of truth (lib/metrics) shared with the dashboard, so every figure
+  // agrees — real accounts AND the sales demo.
+  const todayISO = moroccoNow().dateISO;
+  const cmp = monthComparison(state, todayISO);
+  const cur = cmp.current, prev = cmp.previous, curYm = cmp.curYm;
 
   const allConsultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
-  // Scope to the selected period for every metric below.
-  const consultations = allConsultations.filter(c => c.date && parse(c.date) >= periodStart);
+  const dayOf = (iso) => Number(String(iso).slice(8, 10)) || 0;
+  // Every section on this page is scoped to the current month, to date.
+  const consultations = allConsultations.filter(c => c.date && ymOf(c.date) === curYm && dayOf(c.date) <= cmp.toDay);
   const paid = consultations.filter(c => c.status === 'Payé');
-  const totalRevenue = paid.reduce((s, c) => s + (c.amount || 0), 0);
+  const totalRevenue = cur.revenue;
 
-  // Revenue by service
-  const byService = paid.reduce((acc, c) => {
-    acc[c.service] = (acc[c.service] || 0) + c.amount;
-    return acc;
-  }, {});
-  const services = Object.entries(byService).sort((a, b) => b[1] - a[1]);
+  // Revenue by service (current month, paid) — sorted, with last-month baseline.
+  const services = Object.entries(cur.byService)
+    .map(([label, o]) => [label, o.revenue, o.count])
+    .filter(([, rev]) => rev > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const svcRevMax = Math.max(...services.map(s => s[1]), 1);
 
-  // Demographics
+  // Demographics (current month)
   const totalPts = consultations.length || 1;
   const femmes = consultations.filter(c => c.sex === 'F').length;
   const hommes = consultations.filter(c => c.sex === 'M').length;
   const pctF = Math.round(femmes / totalPts * 100);
   const pctM = 100 - pctF;
 
-  // Age groups
+  // Age groups (current month)
   const ageGroups = [
     { label: '18–25 ans', count: consultations.filter(c => c.age >= 18 && c.age <= 25).length },
     { label: '26–35 ans', count: consultations.filter(c => c.age >= 26 && c.age <= 35).length },
@@ -148,7 +177,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   ];
   const maxAge = Math.max(...ageGroups.map(g => g.count), 1);
 
-  // Service counts
+  // Service counts (current month)
   const bySvcCount = consultations.reduce((acc, c) => {
     acc[c.service] = (acc[c.service] || 0) + 1;
     return acc;
@@ -156,49 +185,30 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   const svcRanking = Object.entries(bySvcCount).sort((a, b) => b[1] - a[1]);
   const maxSvcCount = svcRanking[0]?.[1] || 1;
 
-  // ALL revenue KPIs are driven by the selected period — no more fixed calendar
-  // cards that contradict the filter. Every figure below shares the same
-  // period-windowed `consultations`/`paid` source, so they stay coherent
-  // (encaissé = Σ paid, payées = count, panier = encaissé ÷ payées).
-  const today = new Date();
-  const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7)); startOfWeek.setHours(0, 0, 0, 0);
-  const panierMoyen = paid.length ? Math.round(totalRevenue / paid.length) : 0;
-  const pending = consultations.filter(c => c.status !== 'Payé' && c.status !== 'Annulé');
-  const pendingAmount = pending.reduce((s, c) => s + (c.amount || 0), 0);
+  // Revenue KPI cards — this month to date, each with a vs-last-month delta.
   const REVENUE_CARDS = [
-    { label: `Revenus encaissés (${period})`, value: totalRevenue.toLocaleString('fr-FR') + ' MAD' },
-    { label: 'Consultations payées', value: String(paid.length) },
-    { label: 'Panier moyen', value: panierMoyen.toLocaleString('fr-FR') + ' MAD' },
-    { label: "En attente d'encaissement", value: pendingAmount.toLocaleString('fr-FR') + ' MAD' },
+    { label: 'Revenus encaissés', value: cur.revenue.toLocaleString('fr-FR') + ' MAD', cur: cur.revenue, prev: prev.revenue },
+    { label: 'Consultations payées', value: String(cur.paidCount), cur: cur.paidCount, prev: prev.paidCount },
+    { label: 'Panier moyen', value: cur.panier.toLocaleString('fr-FR') + ' MAD', cur: cur.panier, prev: prev.panier },
+    { label: "En attente d'encaissement", value: cur.pendingAmount.toLocaleString('fr-FR') + ' MAD', cur: cur.pendingAmount, prev: prev.pendingAmount, goodWhenDown: true },
   ];
 
-  // Consultation KPIs over the selected period (same source as everything else).
-  const total = consultations.length;
-  const cancelled = consultations.filter(c => c.status === 'Annulé').length;
-  const cAccept = total ? Math.round((total - cancelled) / total * 100) : 0;
-  const cCancel = total ? Math.round(cancelled / total * 100) : 0;
-  // True no-shows come from the appointment status (apptToConsultation folds
-  // them into 'Annulé', so they can't be derived from the consultation set).
-  const periodAppts = [...(state?.manualAppts || []), ...(state?.myAppointments || [])]
-    .filter(a => a.datetime && new Date(a.datetime) >= periodStart && new Date(a.datetime) <= new Date());
-  const noShows = periodAppts.filter(a => a.status === 'no_show').length;
-  const cNoShow = periodAppts.length ? Math.round(noShows / periodAppts.length * 100) : 0;
+  // Consultation KPI cards — this month to date, vs last month.
   const CONSULT_CARDS = [
-    { label: 'Total consultations', value: total.toString(), sub: `sur ${period}` },
-    { label: "Taux d'acceptation", value: cAccept + '%', sub: 'non annulées' },
-    { label: 'Absences (no-show)', value: cNoShow + '%', sub: `${noShows} rendez-vous non honorés` },
-    { label: "Taux d'annulation", value: cCancel + '%', sub: 'des rendez-vous' },
+    { label: 'Total consultations', value: String(cur.total), sub: cmp.curLabel, cur: cur.total, prev: prev.total, mode: 'pct' },
+    { label: "Taux d'acceptation", value: cur.acceptRate + '%', sub: 'confirmés / réservés', cur: cur.acceptRate, prev: prev.acceptRate, mode: 'points' },
+    { label: 'Absences (no-show)', value: cur.noShowRate + '%', sub: `${cur.noShows} rendez-vous non honorés`, cur: cur.noShowRate, prev: prev.noShowRate, mode: 'points', goodWhenDown: true },
+    { label: "Taux d'annulation", value: cur.cancelRate + '%', sub: `${cur.cancelled} annulés`, cur: cur.cancelRate, prev: prev.cancelRate, mode: 'points', goodWhenDown: true },
   ];
 
-  // Daily revenue for the current week (Mon→Sun), from real paid consultations.
-  const dailyValues = DAILY_LABELS.map((_, i) => {
-    const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i);
-    const key = d.toDateString();
-    return paid.filter(c => c.date && parse(c.date).toDateString() === key).reduce((s, c) => s + c.amount, 0);
-  });
-  const dailyMax = Math.max(...dailyValues, 1);
+  // Weekday distribution across the current month: TWO bars per day — total paid
+  // revenue and total number of rendez-vous — each scaled to its own series.
+  const weekday = cur.weekday;                                  // [{revenue,count}] Lun…Dim
+  const wdRevMax = Math.max(...weekday.map(d => d.revenue), 1);
+  const wdCntMax = Math.max(...weekday.map(d => d.count), 1);
 
-  // Detailed indicators — derived from real data.
+  // Detailed indicators (current month).
+  const total = cur.total;
   const patientCounts = {};
   consultations.forEach(c => { const k = (c.patient || '').toLowerCase(); if (k) patientCounts[k] = (patientCounts[k] || 0) + 1; });
   const distinctPatients = Object.keys(patientCounts).length;
@@ -226,28 +236,13 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: DARK, margin: 0 }}>Statistiques &amp; Revenus</h1>
-          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Analysez vos performances et l'évolution de votre activité</p>
+          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Vos performances ce mois-ci, comparées au mois dernier</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 24,
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
-                backgroundColor: period === p ? PRIMARY : '#fff',
-                color: period === p ? '#fff' : MUTED,
-                border: period === p ? `1px solid ${PRIMARY}` : `1px solid ${BORDER_STRONG}`,
-                transition: 'all 0.15s',
-              }}
-            >
-              {p}
-            </button>
-          ))}
+        {/* Month context — everything below is “ce mois-ci” (jusqu'à aujourd'hui). */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '8px 16px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{cmp.curLabel}</span>
+          <span style={{ fontSize: 12, color: MUTED }}>vs {cmp.prevLabel}</span>
         </div>
       </div>
 
@@ -261,80 +256,78 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
       }}>
         <SectionTitle icon={ICON.revenus} title="Revenus" borderColor={PRIMARY} />
 
-        {/* Revenue KPI cards */}
+        {/* Revenue KPI cards — each with a vs-last-month comparison */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
           {REVENUE_CARDS.map((card) => (
-            <RevenueCard key={card.label} {...card} />
+            <RevenueCard key={card.label} label={card.label} value={card.value}
+              foot={<Delta cur={card.cur} prev={card.prev} goodWhenDown={card.goodWhenDown} />} />
           ))}
         </div>
 
-        {/* Revenue by service — horizontal bars */}
-        <div style={{ marginBottom: 32 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: '0 0 16px' }}>Revenus par service</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Revenue by service — horizontal bars, this month, vs last month */}
+        <div style={{ marginBottom: 34 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: '0 0 16px' }}>Revenus par service <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· ce mois-ci</span></h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {services.map(([label, amount], i) => {
               const pct = totalRevenue > 0 ? Math.round(amount / totalRevenue * 100) : 0;
+              const barPct = Math.round(amount / svcRevMax * 100);
               const color = SVC_COLORS[i % SVC_COLORS.length];
+              const prevRev = prev.byService[label]?.revenue || 0;
+              const d = deltaPct(amount, prevRev);
               return (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: DARK, minWidth: 160 }}>{label}</span>
-                  <div style={{
-                    flex: 2,
-                    background: '#F0F0F0',
-                    borderRadius: 5,
-                    overflow: 'hidden',
-                    height: 10,
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${pct}%`,
-                      background: color,
-                      borderRadius: 5,
-                      transition: 'width 0.4s ease',
-                    }} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: DARK, minWidth: 150, maxWidth: 190 }}>{label}</span>
+                  <div style={{ flex: 2, background: '#F0F3F1', borderRadius: 5, overflow: 'hidden', height: 10 }}>
+                    <div style={{ height: '100%', width: `${barPct}%`, background: color, borderRadius: 5, transition: 'width 0.4s ease' }} />
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: DARK, minWidth: 90, textAlign: 'right' }}>{amount.toLocaleString('fr-FR')} MAD</span>
-                  <span style={{ fontSize: 12, color: MUTED, minWidth: 36, textAlign: 'right' }}>{pct}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: DARK, minWidth: 92, textAlign: 'right' }}>{amount.toLocaleString('fr-FR')} MAD</span>
+                  <span style={{ fontSize: 12, color: MUTED, minWidth: 34, textAlign: 'right' }}>{pct}%</span>
+                  {/* vs last month for this service */}
+                  <span style={{ minWidth: 76, textAlign: 'right' }}>
+                    {d == null
+                      ? <span style={{ fontSize: 11, color: MUTED }}>nouveau</span>
+                      : <span style={{ fontSize: 11.5, fontWeight: 800, color: d.dir === 'up' ? '#0E7C52' : d.dir === 'down' ? '#C2466A' : MUTED }}>
+                          {d.dir === 'up' ? '▲' : d.dir === 'down' ? '▼' : '='} {d.pct}%
+                        </span>}
+                  </span>
                 </div>
               );
             })}
             {services.length === 0 && (
-              <div style={{ fontSize: 13, color: MUTED }}>Aucune donnée disponible.</div>
+              <div style={{ fontSize: 13, color: MUTED }}>Aucune donnée disponible ce mois-ci.</div>
             )}
           </div>
         </div>
 
-        {/* Daily revenue bar chart */}
+        {/* Weekday distribution — TWO bars per day: revenue + rendez-vous */}
         <div>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: '0 0 16px' }}>Évolution quotidienne (7 derniers jours)</h3>
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: 8,
-            height: 150,
-            padding: '0 4px',
-          }}>
-            {dailyValues.map((val, i) => {
-              const barH = Math.round((val / dailyMax) * 120);
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: 0 }}>Répartition par jour <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· ce mois-ci</span></h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: PRIMARY }} /> Revenus (MAD)
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: '#3B82F6' }} /> Rendez-vous
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: isMobile ? 6 : 14, height: 178, padding: '0 4px' }}>
+            {weekday.map((d, i) => {
+              const revH = Math.round((d.revenue / wdRevMax) * 130);
+              const cntH = Math.round((d.count / wdCntMax) * 130);
               return (
-                <div key={i} style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  height: '100%',
-                }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: DARK, marginBottom: 4 }}>{val}</span>
-                  <div style={{
-                    width: '100%',
-                    height: barH,
-                    backgroundColor: PRIMARY,
-                    borderRadius: '6px 6px 0 0',
-                    minHeight: 4,
-                    transition: 'height 0.3s ease',
-                  }} />
-                  <span style={{ fontSize: 11, color: MUTED, marginTop: 6 }}>{DAILY_LABELS[i]}</span>
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                  {/* two side-by-side bars */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 150, width: '100%', justifyContent: 'center' }}>
+                    <div title={`${d.revenue.toLocaleString('fr-FR')} MAD`} style={{ position: 'relative', width: isMobile ? 10 : 18, height: Math.max(d.revenue ? 4 : 0, revH), background: PRIMARY, borderRadius: '5px 5px 0 0', transition: 'height .3s ease' }}>
+                      {d.revenue > 0 && !isMobile && <span style={{ position: 'absolute', top: -15, left: '50%', transform: 'translateX(-50%)', fontSize: 9.5, fontWeight: 700, color: '#0E7C52', whiteSpace: 'nowrap' }}>{(d.revenue / 1000).toFixed(d.revenue >= 1000 ? 1 : 0)}k</span>}
+                    </div>
+                    <div title={`${d.count} rendez-vous`} style={{ position: 'relative', width: isMobile ? 10 : 18, height: Math.max(d.count ? 4 : 0, cntH), background: '#3B82F6', borderRadius: '5px 5px 0 0', transition: 'height .3s ease' }}>
+                      {d.count > 0 && !isMobile && <span style={{ position: 'absolute', top: -15, left: '50%', transform: 'translateX(-50%)', fontSize: 9.5, fontWeight: 700, color: '#2563EB' }}>{d.count}</span>}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11.5, color: MUTED, marginTop: 8, fontWeight: 600 }}>{FR_WEEKDAYS[i]}</span>
                 </div>
               );
             })}
@@ -353,7 +346,8 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         <SectionTitle icon={ICON.consults} title="Consultations" borderColor="#3B82F6" />
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {CONSULT_CARDS.map((card) => (
-            <ConsultCard key={card.label} {...card} />
+            <ConsultCard key={card.label} label={card.label} value={card.value} sub={card.sub}
+              foot={<Delta cur={card.cur} prev={card.prev} mode={card.mode} goodWhenDown={card.goodWhenDown} />} />
           ))}
         </div>
       </div>
