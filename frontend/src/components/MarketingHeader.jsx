@@ -96,9 +96,9 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
           onClick={() => go('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
         >
-          <BrandMark size={32} />
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
-            Tabib<span style={{ color: '#6FE0AE' }}>o</span>
+          <BrandMark plain size={34} />
+          <span style={{ fontFamily: "'Quicksand', 'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
+            Tabibo
           </span>
         </button>
 

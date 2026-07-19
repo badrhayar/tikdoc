@@ -6,6 +6,7 @@ import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../sha
 import Icon from '../components/Icon';
 import AuthChoice from '../components/AuthChoice';
 import SecurityTrust from '../components/SecurityTrust';
+import BrandMark from '../components/BrandMark';
 import MarketingFooter from '../components/MarketingFooter';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -113,9 +114,9 @@ export default function Landing() {
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: `0 ${padX}px`, height: isPhone ? 60 : 70, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 28 }}>
           {/* Logo */}
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
-            <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              Tabib<span style={{ color: '#6FE0AE' }}>o</span>
+            <BrandMark plain size={34} />
+            <span style={{ fontFamily: "'Quicksand', 'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px' }}>
+              Tabibo
             </span>
           </button>
 

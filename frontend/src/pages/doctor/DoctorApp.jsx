@@ -395,8 +395,8 @@ export default function DoctorApp() {
       {isMobile ? (
         <aside style={{ width:246, background:RAIL_BG, display:'flex', flexDirection:'column', overflowY:'auto', position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(6,32,23,0.5)' : 'none' }}>
           <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 18px 12px', cursor:'pointer' }}>
-            <BrandMark size={30} shadow />
-            <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:18, color:'#fff', letterSpacing:'-0.5px' }}>Tabib<span style={{ color:'#6FE0AE' }}>o</span></span>
+            <BrandMark plain size={30} />
+            <span style={{ fontFamily:"'Quicksand', sans-serif", fontWeight:700, fontSize:19, color:'#fff', letterSpacing:'-0.5px' }}>Tabibo</span>
           </div>
           <nav style={{ flex:1, padding:'2px 10px 14px', display:'flex', flexDirection:'column', gap:2 }}>
             {navItems.map((g) => g.items ? (
@@ -436,7 +436,7 @@ export default function DoctorApp() {
           {/* Level 1 — primary rail */}
           <aside style={{ width:RAIL_W, background:RAIL_BG, display:'flex', flexDirection:'column', position:'fixed', left:0, top:0, bottom:0, boxShadow:'inset -1px 0 0 rgba(255,255,255,0.06)', zIndex:60 }}>
             <div onClick={() => goNav('doctor')} title="Tabibo" style={{ display:'flex', justifyContent:'center', padding:'16px 0 14px', cursor:'pointer' }}>
-              <BrandMark size={34} shadow />
+              <BrandMark plain size={36} />
             </div>
             <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:3, overflowY:'auto', paddingBottom:8 }}>
               {navItems.map((g) => {
