@@ -20,8 +20,9 @@ const MUTED = '#6B7B76';
 const BORDER = '#E5ECE9';
 const BG = '#F7FAF8';
 
-const DUR_OPTS = [15, 20, 30, 45, 60];
-const durLbl = (d) => (d === 60 ? '1 h' : `${d} mn`);
+// Durations from 15 min to 2 h in the agreed steps.
+const DUR_OPTS = [15, 30, 45, 60, 75, 90, 105, 120];
+const durLbl = (d) => (d < 60 ? `${d} min` : d % 60 === 0 ? `${d / 60} h` : `${Math.floor(d / 60)} h ${String(d % 60).padStart(2, '0')}`);
 
 const I = { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 const IC = {

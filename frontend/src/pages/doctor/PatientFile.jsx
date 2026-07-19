@@ -23,8 +23,8 @@ const MUTED = '#6B7B76';
 const BORDER = '#E5ECE9';
 const BG = '#F4F8F5';
 
-const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, marginBottom: 16 };
-const inp = { width: '100%', padding: '9px 12px', fontSize: 13.5, border: '1px solid #D8E2DD', borderRadius: 9, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
+const card = { background: '#fff', border: '1px solid #E7EEEA', borderRadius: 16, padding: 22, marginBottom: 16, boxShadow: '0 1px 3px rgba(21,49,74,0.04)' };
+const inp = { width: '100%', padding: '10px 13px', fontSize: 13.5, border: '1px solid #DCE6E1', borderRadius: 10, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none', transition: 'border-color .12s, box-shadow .12s' };
 const lbl = { display: 'block', fontSize: 12, fontWeight: 600, color: '#5A6B65', margin: '0 0 6px', letterSpacing: '0.1px' };
 const h3s = { fontSize: 14, fontWeight: 600, color: DARK, margin: '0 0 12px', letterSpacing: '-0.2px' };
 
@@ -41,6 +41,20 @@ const IC = {
   file:  <svg {...I}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>,
   search:<svg {...I}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>,
 };
+
+// Premium card header: tinted icon chip + title + optional subtitle + right slot.
+function CardHead({ icon, title, sub, right }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+      <span style={{ width: 32, height: 32, borderRadius: 9, background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 140 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: DARK, letterSpacing: '-0.2px' }}>{title}</div>
+        {sub && <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{sub}</div>}
+      </div>
+      {right}
+    </div>
+  );
+}
 
 const SECTIONS = [
   { id: 'consult',  label: 'Consultation en cours' },
@@ -122,12 +136,12 @@ function RichText({ value, onChange, placeholder, minHeight = 84 }) {
   useEffect(() => { if (ref.current && ref.current.innerHTML !== (value || '')) ref.current.innerHTML = value || ''; }, []); // eslint-disable-line
   const cmd = (c, a) => { document.execCommand(c, false, a); ref.current?.focus(); onChange(ref.current?.innerHTML || ''); };
   const B = ({ label, style: st, onClick, title }) => (
-    <button onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title} style={{ minWidth: 26, height: 26, border: 'none', background: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: DARK, fontWeight: 700, ...st }}
-      onMouseEnter={(e) => e.currentTarget.style.background = '#EDF4F0'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>{label}</button>
+    <button onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title} style={{ minWidth: 24, height: 24, border: 'none', background: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: '#5A6B65', fontWeight: 600, ...st }}
+      onMouseEnter={(e) => e.currentTarget.style.background = '#EAF2EE'} onMouseLeave={(e) => e.currentTarget.style.background = 'none'}>{label}</button>
   );
   return (
-    <div style={{ border: `1px solid ${focused ? TEAL : '#D8E2DD'}`, borderRadius: 9, overflow: 'hidden', background: '#fff' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: '4px 6px', borderBottom: `1px solid ${BORDER}`, background: '#FBFCFB', flexWrap: 'wrap' }}>
+    <div style={{ border: `1px solid ${focused ? TEAL : '#DCE6E1'}`, borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: focused ? '0 0 0 3px rgba(15,110,86,0.07)' : 'none', transition: 'border-color .12s, box-shadow .12s' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '4px 7px', borderBottom: `1px solid #EEF3F0`, background: '#F8FBF9', flexWrap: 'wrap' }}>
         <B label="B" title="Gras" onClick={() => cmd('bold')} />
         <B label="I" title="Italique" style={{ fontStyle: 'italic' }} onClick={() => cmd('italic')} />
         <B label="U" title="Souligné" style={{ textDecoration: 'underline' }} onClick={() => cmd('underline')} />
@@ -136,7 +150,7 @@ function RichText({ value, onChange, placeholder, minHeight = 84 }) {
         <B label="• —" title="Liste à puces" onClick={() => cmd('insertUnorderedList')} />
         <B label="1. —" title="Liste numérotée" onClick={() => cmd('insertOrderedList')} />
         <span style={{ width: 1, height: 16, background: BORDER, margin: '0 4px' }} />
-        <select defaultValue="3" onChange={(e) => cmd('fontSize', e.target.value)} style={{ border: 'none', background: 'none', fontSize: 12, color: MUTED, cursor: 'pointer', outline: 'none' }}>
+        <select defaultValue="3" onChange={(e) => cmd('fontSize', e.target.value)} style={{ border: 'none', background: 'none', fontSize: 11.5, fontWeight: 600, color: '#5A6B65', cursor: 'pointer', outline: 'none' }}>
           <option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option>
         </select>
       </div>
@@ -403,35 +417,40 @@ export default function PatientFile({ state, setState, go }) {
     return Math.round((p / (t * t)) * 10) / 10;
   })();
 
-  const back = () => go('dcal');
+  // Back goes where the dossier was opened from: an appointment → the agenda;
+  // the patient picker → back to the list (clear the selection, stay here).
+  const fromAgenda = !!state?.pfileApptId;
+  const back = () => { if (fromAgenda) go('dcal'); else setState({ pfilePatient: null, pfileApptId: null }); };
+  const backLbl = fromAgenda ? "← Retour à l'agenda" : '← Retour aux patients';
 
   // ── Section contents ───────────────────────────────────────────────────────
   const renderConsult = () => (
     <>
       {/* Assistant de consultation */}
       <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-          <h3 style={{ ...h3s, margin: 0 }}>Assistant de consultation</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span title="Paramètres" style={{ color: MUTED, display: 'flex' }}>{IC.gear}</span>
-            <span title="Dictée" style={{ color: MUTED, display: 'flex' }}>{IC.mic}</span>
-            <button onClick={() => setTimerOn((v) => !v)} title={timerOn ? 'Mettre en pause' : 'Démarrer le chronomètre'}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1px solid ${timerOn ? '#BFE0D4' : '#D8E2DD'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 18, padding: '5px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: timerOn ? TEAL : '#C9D6D1' }} />
-              {timerLbl}
-            </button>
-            <button onClick={() => setIaOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-              {IC.spark} GÉNÉRER LA SYNTHÈSE
-            </button>
-          </div>
-        </div>
+        <CardHead icon={IC.spark} title="Assistant de consultation" sub="Chronométrez la consultation et générez une synthèse."
+          right={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+              {[['Paramètres', IC.gear], ['Dictée', IC.mic]].map(([t, ic]) => (
+                <span key={t} title={t} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #E2EAE6', background: '#fff', color: MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ic}</span>
+              ))}
+              <button onClick={() => setTimerOn((v) => !v)} title={timerOn ? 'Mettre en pause' : 'Démarrer le chronomètre'}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28, border: `1px solid ${timerOn ? '#BFE0D4' : '#E2EAE6'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 15, padding: '0 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: timerOn ? TEAL : '#C9D6D1' }} />
+                {timerLbl}
+              </button>
+              <button onClick={() => setIaOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)' }}>
+                {IC.spark} Générer la synthèse
+              </button>
+            </div>
+          } />
         <label style={lbl}>Informations non mentionnées à l'oral</label>
-        <textarea value={obs.oral} onChange={(e) => setObs((o) => ({ ...o, oral: e.target.value }))} rows={2} style={{ ...inp, resize: 'vertical' }} />
+        <textarea value={obs.oral} onChange={(e) => setObs((o) => ({ ...o, oral: e.target.value }))} rows={2} placeholder="Contexte, éléments à ne pas oublier…" style={{ ...inp, resize: 'vertical' }} />
       </div>
 
       {/* Observation médicale */}
       <div style={card}>
-        <h3 style={h3s}>Observation médicale</h3>
+        <CardHead icon={IC.steth} title="Observation médicale" sub="Enregistrée dans l'historique du patient." />
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
           <div><label style={lbl}>Nom du modèle</label><input value={obs.modele} onChange={(e) => setObs((o) => ({ ...o, modele: e.target.value }))} style={inp} /></div>
           <div><label style={lbl}>Motif</label><input value={obs.motif} onChange={(e) => setObs((o) => ({ ...o, motif: e.target.value }))} placeholder="Entrez le motif" style={inp} /></div>
@@ -460,20 +479,20 @@ export default function PatientFile({ state, setState, go }) {
 
   const renderPlanDeSoins = () => (
     <div style={{ ...card, position: isMobile ? 'static' : 'sticky', top: 12 }}>
-      <h3 style={h3s}>Plan de soins</h3>
+      <CardHead icon={IC.file} title="Plan de soins" sub="Prescrire et partager en un clic." />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {[
           { label: 'Ordonnance pharmacie', icon: IC.rx, fn: rxGo },
           { label: 'Ordonnance de biologie', icon: IC.bio, fn: bioGo },
           { label: 'Courrier', icon: IC.mail, fn: courrierGo },
-          { label: 'Autres', icon: IC.more, fn: () => go('ddocs') },
+          { label: 'Autres documents', icon: IC.more, fn: () => go('ddocs') },
         ].map((b) => (
           <button key={b.label} onClick={b.fn}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 8px', border: `1px solid ${BORDER}`, borderRadius: 11, background: '#fff', cursor: 'pointer', transition: 'all .12s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = '#F5FAF8'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.background = '#fff'; }}>
-            <span style={{ color: TEAL, display: 'flex' }}>{b.icon}</span>
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: DARK, textAlign: 'center', lineHeight: 1.3 }}>{b.label}</span>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, padding: '14px 8px', border: '1px solid #E7EEEA', borderRadius: 12, background: '#fff', cursor: 'pointer', transition: 'all .12s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#BFE0D4'; e.currentTarget.style.background = '#F5FAF8'; e.currentTarget.style.boxShadow = '0 4px 12px -6px rgba(13,43,30,0.18)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E7EEEA'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}>
+            <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{b.icon}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: DARK, textAlign: 'center', lineHeight: 1.3 }}>{b.label}</span>
           </button>
         ))}
       </div>
@@ -491,13 +510,13 @@ export default function PatientFile({ state, setState, go }) {
 
   const renderAntec = () => (
     <div style={card}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-        <h3 style={{ ...h3s, margin: 0 }}>Antécédents et mode de vie</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL }}>{savedMsg}</span>}
-          <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer'}</button>
-        </div>
-      </div>
+      <CardHead icon={IC.file} title="Antécédents et mode de vie" sub="Partagés avec toutes vos consultations."
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL }}>{savedMsg}</span>}
+            <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer'}</button>
+          </div>
+        } />
       <AntecedentBlock title="Antécédents médicaux" items={mh.medicaux} none={mh.noMedicaux} placeholder="Ex. Diabète de type 2"
         onChange={(p) => patchMh(p.none !== undefined ? { noMedicaux: p.none } : { medicaux: p.items })} />
       <AntecedentBlock title="Antécédents chirurgicaux" items={mh.chirurgicaux} none={mh.noChirurgicaux} placeholder="Ex. Appendicectomie (2015)"
@@ -641,13 +660,15 @@ export default function PatientFile({ state, setState, go }) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: BG, fontFamily: 'Inter, sans-serif', flexDirection: isMobile ? 'column' : 'row' }}>
+    <div className="pfile" style={{ display: 'flex', minHeight: '100vh', background: BG, fontFamily: 'Inter, sans-serif', flexDirection: isMobile ? 'column' : 'row' }}>
+      {/* Premium focus ring on every field of the dossier. */}
+      <style>{`.pfile input:focus,.pfile textarea:focus,.pfile select:focus{border-color:#0F6E56 !important;box-shadow:0 0 0 3px rgba(15,110,86,0.07)}`}</style>
 
       {/* ── Left sidebar ── */}
       <aside style={isMobile
         ? { background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '12px 14px' }
         : { width: 250, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, padding: '18px 14px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', boxSizing: 'border-box' }}>
-        <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12 }}>← Retour à l'agenda</button>
+        <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12 }}>{backLbl}</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 10 : 18 }}>
           <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
             {(patient.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}

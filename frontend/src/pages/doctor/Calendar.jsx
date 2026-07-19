@@ -59,6 +59,35 @@ const PersonIcon = () => <svg {...SI}><circle cx="12" cy="8" r="4"/><path d="M5 
 const isTele = (svc) => /t[ée]l[ée]/i.test(svc || '');
 const isLocalId = (id) => { const s = String(id); return s.startsWith('local_') || s.startsWith('demo_'); };
 
+// Side-by-side layout for overlapping appointments (Doctolib-style): appts
+// that overlap in time form a cluster and share the column width. Returns
+// { [id]: { col, cols } }.
+function layoutDay(appts) {
+  const items = appts
+    .map((c) => ({ id: c.id, s: hm(c.time), e: hm(c.time) + Math.max(15, Number(c.durationMin) || 30) }))
+    .sort((a, b) => a.s - b.s || a.e - b.e);
+  const res = {};
+  let cluster = [], clusterEnd = -1;
+  const flush = () => {
+    const colEnds = [];
+    cluster.forEach((it) => {
+      let col = colEnds.findIndex((end) => end <= it.s);
+      if (col === -1) { col = colEnds.length; colEnds.push(0); }
+      colEnds[col] = it.e;
+      res[it.id] = { col, cols: 0 };
+    });
+    cluster.forEach((it) => { res[it.id].cols = colEnds.length; });
+    cluster = []; clusterEnd = -1;
+  };
+  items.forEach((it) => {
+    if (cluster.length && it.s >= clusterEnd) flush();
+    cluster.push(it);
+    clusterEnd = Math.max(clusterEnd, it.e);
+  });
+  if (cluster.length) flush();
+  return res;
+}
+
 export default function Calendar({ state, setState, go, openNewAppt }) {
   const { isMobile } = useViewport();
   const consultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
@@ -233,16 +262,19 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   }, [dayMenu]);
 
   // ── Appointment block (shared week/day) ────────────────────────────────────
-  const ApptBlock = ({ c, hourH, tight }) => {
+  const ApptBlock = ({ c, hourH, tight, lay }) => {
     const col = svcColor(c.service);
     const top = ((hm(c.time) / 60) - startH) * hourH;
     const dur = Math.max(15, Number(c.durationMin) || 30);
     const height = Math.max(20, (dur / 60) * hourH) - 2;
     const oneLine = height < 34;
     const isMoving = c.id === moveId;
+    // Overlapping appointments share the width (cluster layout).
+    const { col: li = 0, cols = 1 } = lay || {};
+    const leftPct = (li / cols) * 100, widthPct = 100 / cols;
     return (
       <div onClick={(e) => { e.stopPropagation(); if (!moveId) openPanel(c.id); }} title={isMoving ? 'Rendez-vous en cours de déplacement' : `${c.time} · ${c.patient} · ${c.service}`}
-        style={{ position: 'absolute', top: top + 1, left: 3, right: 3, height, background: col.bg, borderLeft: `3px solid ${col.color}`, border: `1px solid ${col.border}`, borderLeftWidth: 3, borderLeftColor: col.color, borderRadius: 5, padding: oneLine ? '1px 6px' : '3px 7px', cursor: moveId ? 'default' : 'pointer', overflow: 'hidden', zIndex: 2, transition: 'box-shadow .12s', opacity: isMoving ? 0.4 : 1, pointerEvents: moveId ? 'none' : 'auto' }}
+        style={{ position: 'absolute', top: top + 1, left: `calc(${leftPct}% + 3px)`, width: `calc(${widthPct}% - 6px)`, boxSizing: 'border-box', height, background: col.bg, borderLeft: `3px solid ${col.color}`, border: `1px solid ${col.border}`, borderLeftWidth: 3, borderLeftColor: col.color, borderRadius: 5, padding: oneLine ? '1px 6px' : '3px 7px', cursor: moveId ? 'default' : 'pointer', overflow: 'hidden', zIndex: 2, transition: 'box-shadow .12s', opacity: isMoving ? 0.4 : 1, pointerEvents: moveId ? 'none' : 'auto' }}
         onMouseEnter={(e) => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.boxShadow = '0 6px 18px -6px rgba(13,43,30,0.35)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.zIndex = 2; e.currentTarget.style.boxShadow = 'none'; }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
@@ -295,6 +327,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             const isToday = iso === TODAY_STR;
             const off = offFor(iso);
             const appts = consultations.filter((c) => c.date === iso && c.status !== 'Annulé');
+            const laid = layoutDay(appts);
             return (
               <div key={iso}
                 onClick={(e) => { if (moveId) { placeMove(iso, snapMin(e, hourH)); } else if (!off) newApptAt(iso, fmtMin(Math.max(startH * 60, Math.min((endH - 1) * 60, 540)))); }}
@@ -311,7 +344,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: '#5A6B65', background: '#fff', borderRadius: 6, padding: '3px 10px', border: '1px solid #DBE2DF' }}>{off.reason === 'Férié' ? 'Férié' : 'Absence'}</span>
                   </div>
                 )}
-                {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} tight />)}
+                {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} tight lay={laid[c.id]} />)}
                 <GhostBlock iso={iso} hourH={hourH} />
               </div>
             );
@@ -335,6 +368,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
     const isToday = iso === TODAY_STR;
     const off = offFor(iso);
     const appts = consultations.filter((c) => c.date === iso && c.status !== 'Annulé');
+    const laid = layoutDay(appts);
     const covered = (min) => appts.some((c) => min >= hm(c.time) && min < hm(c.time) + (Number(c.durationMin) || 30));
     const slots = [];
     for (let m = startH * 60; m < endH * 60; m += 15) slots.push(m);
@@ -382,7 +416,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                 <span style={{ fontSize: 12.5, fontWeight: 800, color: '#5A6B65', background: '#fff', borderRadius: 6, padding: '4px 12px', border: '1px solid #DBE2DF' }}>{off.reason === 'Férié' ? 'Férié' : `Absence${off.reason ? ` — ${off.reason}` : ''}`}</span>
               </div>
             )}
-            {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} />)}
+            {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} lay={laid[c.id]} />)}
             <GhostBlock iso={iso} hourH={hourH} />
             {showNow && (
               <div style={{ position: 'absolute', left: 0, right: 0, top: ((nowMin / 60) - startH) * hourH, zIndex: 5, pointerEvents: 'none', borderTop: `2px dashed ${RED}` }}>
@@ -466,18 +500,18 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {[['‹', goPrev], ['›', goNext]].map(([a, fn]) => (
-            <button key={a} onClick={fn} aria-label={a === '‹' ? 'Précédent' : 'Suivant'} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', cursor: 'pointer', fontSize: 18, color: DARK, fontWeight: 700, lineHeight: 1 }}>{a}</button>
+            <button key={a} onClick={fn} aria-label={a === '‹' ? 'Précédent' : 'Suivant'} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', cursor: 'pointer', fontSize: 16, color: DARK, fontWeight: 600, lineHeight: 1 }}>{a}</button>
           ))}
         </div>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: DARK, letterSpacing: '-0.2px', flex: isMobile ? '1 1 100%' : 1, order: isMobile ? 10 : 0 }}>{periodLabel}</h2>
         {/* Date picker — jump to any date */}
         <input type="date" value={selISO} onChange={(e) => jumpTo(e.target.value)} aria-label="Aller à une date"
-          style={{ height: 34, border: `1px solid ${GRID}`, borderRadius: 8, padding: '0 8px', fontSize: 12.5, color: DARK, background: '#fff', fontFamily: 'inherit', cursor: 'pointer' }} />
-        <button onClick={goToday} style={{ padding: '7px 14px', height: 34, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Aujourd'hui</button>
+          style={{ height: 30, border: `1px solid ${GRID}`, borderRadius: 8, padding: '0 8px', fontSize: 12.5, color: DARK, background: '#fff', fontFamily: 'inherit', cursor: 'pointer' }} />
+        <button onClick={goToday} style={{ padding: '5px 12px', height: 30, borderRadius: 8, border: `1px solid ${GRID}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Aujourd'hui</button>
         {/* View tabs */}
         <div style={{ display: 'flex', background: '#fff', border: `1px solid ${GRID}`, borderRadius: 10, overflow: 'hidden' }}>
           {['Liste', 'Journée', 'Semaine'].map((v, i) => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', borderRight: i < 2 ? `1px solid ${GRID}` : 'none', background: view === v ? TEAL : 'transparent', color: view === v ? '#fff' : MUTED, transition: 'all .15s' }}>{v}</button>
+            <button key={v} onClick={() => setView(v)} style={{ padding: '6px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: 'none', borderRight: i < 2 ? `1px solid ${GRID}` : 'none', background: view === v ? TEAL : 'transparent', color: view === v ? '#fff' : MUTED, transition: 'all .15s' }}>{v}</button>
           ))}
         </div>
       </div>

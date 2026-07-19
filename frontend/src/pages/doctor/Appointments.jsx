@@ -397,9 +397,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
             onClick={printDaySheet}
             title="Imprimer la feuille de journée (liste du jour)"
             style={{
-              background: '#fff', color: DARK, border: `1px solid ${BORDER_STRONG}`, borderRadius: 10,
-              padding: '10px 16px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 7,
+              background: '#fff', color: DARK, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8,
+              padding: '5px 12px', minHeight: 30, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
