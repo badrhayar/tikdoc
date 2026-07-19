@@ -627,7 +627,7 @@ export default function PatientFile({ state, setState, go }) {
       </main>
 
       {/* ── Bottom action bar ── */}
-      <div style={{ position: 'fixed', left: isMobile ? 0 : 250, right: 0, bottom: 0, background: '#fff', borderTop: `1px solid ${BORDER}`, padding: isMobile ? '10px 12px' : '12px 22px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 50, flexWrap: 'wrap' }}>
+      <div style={{ position: 'fixed', right: isMobile ? 0 : 18, left: isMobile ? 0 : 'auto', bottom: isMobile ? 0 : 14, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: isMobile ? 0 : 13, boxShadow: '0 14px 40px -12px rgba(13,43,30,0.35)', padding: isMobile ? '10px 12px' : '11px 16px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 50, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: MUTED, fontWeight: 700, display: isMobile ? 'none' : 'block' }}>
           {civ} {patient.name}{linkedAppt ? ` · RDV ${new Date(linkedAppt.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' })}` : ''}
         </span>

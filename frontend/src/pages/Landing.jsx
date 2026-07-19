@@ -106,18 +106,16 @@ export default function Landing() {
     <div dir={dir} style={{ fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100vh' }}>
       {/* ── Header ── */}
       <header style={{
-        background: scrolled ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.96)',
-        backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-        borderBottom: `1px solid ${scrolled ? 'rgba(21,49,74,0.08)' : 'transparent'}`,
-        boxShadow: scrolled ? '0 6px 24px -16px rgba(13,43,30,0.4)' : 'none',
-        position: 'sticky', top: 0, zIndex: 50, transition: 'all 0.25s ease',
+        background: 'linear-gradient(90deg, #0C4A37 0%, #0A3D2D 100%)',
+        boxShadow: scrolled ? '0 1px 0 rgba(255,255,255,0.08), 0 10px 28px -12px rgba(6,32,23,0.6)' : '0 1px 0 rgba(255,255,255,0.08)',
+        position: 'sticky', top: 0, zIndex: 50, transition: 'box-shadow 0.25s ease',
       }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: `0 ${padX}px`, height: isPhone ? 60 : 70, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 28 }}>
           {/* Logo */}
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width: 32, height: 32, borderRadius: 9, boxShadow: '0 4px 12px -3px rgba(22,160,106,0.5)' }} />
-            <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: DARK, letterSpacing: '-0.5px' }}>
-              Tabib<span style={{ color: PRIMARY }}>o</span>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
+              Tabib<span style={{ color: '#6FE0AE' }}>o</span>
             </span>
           </button>
 
@@ -133,11 +131,11 @@ export default function Landing() {
                     onMouseEnter={() => setHoveredNav(item.key)}
                     onMouseLeave={() => setHoveredNav(null)}
                     style={{
-                      background: hoveredNav === item.key && !active ? '#F1F6F3' : 'none',
-                      border: 'none', cursor: 'pointer', padding: '6px 12px', fontSize: 14,
-                      fontWeight: active ? 700 : 500,
-                      color: active ? PRIMARY : (hoveredNav === item.key ? DARK : BODY),
-                      borderRadius: 9, transition: 'all 0.15s', whiteSpace: 'nowrap',
+                      background: active ? 'rgba(255,255,255,0.16)' : (hoveredNav === item.key ? 'rgba(255,255,255,0.09)' : 'none'),
+                      border: 'none', cursor: 'pointer', padding: '8px 14px', fontSize: 14,
+                      fontWeight: active ? 700 : 600,
+                      color: active ? '#fff' : 'rgba(255,255,255,0.78)',
+                      borderRadius: 10, transition: 'all 0.15s', whiteSpace: 'nowrap',
                     }}
                   >
                     {item.label}
@@ -153,10 +151,10 @@ export default function Landing() {
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setState({ langOpen: !langOpen })}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.24)', borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff' }}
                 >
                   <span>{t.langLabel}</span>
-                  <span style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>▾</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>▾</span>
                 </button>
                 {langOpen && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 8px)', [rtl ? 'left' : 'right']: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: '0 16px 40px -12px rgba(13,43,30,0.28)', minWidth: 168, zIndex: 100, overflow: 'hidden', animation: 'saFade .15s ease' }}>
@@ -208,7 +206,7 @@ export default function Landing() {
               <button
                 onClick={() => setMenuOpen(true)}
                 aria-label="Menu"
-                style={{ width: 44, height: 44, borderRadius: 11, background: '#fff', border: `1px solid ${BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: DARK }}
+                style={{ width: 44, height: 44, borderRadius: 11, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.24)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
               </button>

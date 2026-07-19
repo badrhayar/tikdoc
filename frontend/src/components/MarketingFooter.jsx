@@ -21,7 +21,7 @@ export default function MarketingFooter() {
   ];
 
   return (
-    <footer style={{ background: DARK, color: 'rgba(255,255,255,0.62)', padding: isPhone ? '40px 16px 24px' : '52px 24px 28px' }}>
+    <footer style={{ background: 'linear-gradient(180deg, #0A3D2D 0%, #072A1F 100%)', color: 'rgba(255,255,255,0.62)', padding: isPhone ? '40px 16px 24px' : '52px 24px 28px' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.4fr 1fr 1fr 1fr', gap: isPhone ? 24 : 40, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>

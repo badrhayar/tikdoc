@@ -58,6 +58,8 @@ import BookingShare from './BookingShare';
 import Prescriptions from './Prescriptions';
 import Staff from './Staff';
 import PatientFile from './PatientFile';
+import Tasks from './Tasks';
+import { taskBadge } from '../../lib/tasks';
 
 const G = '#16A06A';
 const DARK = '#15314A';
@@ -123,32 +125,39 @@ const IC = {
   dstaff:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 14.5c2.2.4 3.5 1.8 3.5 4"/></svg>,
 };
 
-// ── Doctolib-style icon rail (deep green) ────────────────────────────────────
-// Primary destinations live on the rail: icon with a small label beneath.
-// Everything else is one click away in the « Autres » panel.
-const RAIL = [
-  { screen:'doctor',     icon:IC.doctor,     label:'Accueil' },
-  { screen:'dcal',       icon:IC.dcal,       label:'Agenda' },
-  { screen:'dappts',     icon:IC.dappts,     label:'Rendez-vous' },
-  { screen:'dpatients',  icon:IC.dpatients,  label:'Patients' },
-  { screen:'dchat',      icon:IC.dchat,      label:'Messagerie', badge:'chat' },
-  { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
-  { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
-  { screen:'dstats',     icon:IC.dstats,     label:'Mon activité' },
+// ── Doctolib-style two-level rail (deep green) ───────────────────────────────
+// Level 1: primary destinations (icon + small label). Items with `items` open
+// a SECOND rail (lighter green) listing the group's screens.
+const IC_TASKS = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></svg>;
+const NAV = [
+  { key:'doctor',   screen:'doctor', icon:IC.doctor, label:'Accueil' },
+  { key:'dcal',     screen:'dcal',   icon:IC.dcal,   label:'Agenda' },
+  { key:'dtasks',   screen:'dtasks', icon:IC_TASKS,  label:'Tâches', badge:'tasks' },
+  { key:'patients', icon:IC.dpatients, label:'Gestion des patients', items:[
+    { screen:'dpatients',  icon:IC.dpatients,  label:'Liste des patients' },
+    { screen:'dpfile',     icon:IC.ddocs,      label:'Dossier patient' },
+    { screen:'dappts',     icon:IC.dappts,     label:'Rendez-vous' },
+    { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
+    { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
+    { screen:'dhist',      icon:IC.dhist,      label:'Historique consultations' },
+    { screen:'dshare',     icon:IC.dshare,     label:'Inviter mes patients' },
+  ] },
+  { key:'dstaff',   screen:'dstaff', icon:IC.dstaff, label:'Équipe' },
+  { key:'dchat',    screen:'dchat',  icon:IC.dchat,  label:'Messagerie', badge:'chat' },
+  { key:'dstats',   screen:'dstats', icon:IC.dstats, label:'Statistiques' },
+  { key:'settings', icon:IC.dsettings, label:'Paramètres', items:[
+    { screen:'dsettings', icon:IC.dpatients, label:'Mon profil' },
+    { screen:'davail',    icon:IC.davail,    label:'Disponibilités' },
+    { screen:'dabo',      icon:IC.dabo,      label:'Abonnement' },
+    { screen:'dnotif',    icon:IC.dnotif,    label:'Rappels & Notifications' },
+  ] },
 ];
-const RAIL_MORE = [
-  { screen:'davail',    icon:IC.davail,    label:'Disponibilités' },
-  { screen:'dhist',     icon:IC.dhist,     label:'Historique consultations' },
-  { screen:'dshare',    icon:IC.dshare,    label:'Inviter mes patients' },
-  { screen:'dnotif',    icon:IC.dnotif,    label:'Rappels & Notifications' },
-  { screen:'dabo',      icon:IC.dabo,      label:'Abonnement' },
-  { screen:'dstaff',    icon:IC.dstaff,    label:'Équipe' },
-  { screen:'dsettings', icon:IC.dsettings, label:'Paramètres' },
-];
-// Deep, luxurious green — the rail + top bar share one continuous surface.
+// Deep, luxurious green — the rails + top bar share one continuous surface.
 const RAIL_BG  = 'linear-gradient(180deg, #0C4A37 0%, #093226 100%)';
+const RAIL2_BG = 'linear-gradient(180deg, #14634B 0%, #0F4E3A 100%)';
 const TOP_BG   = 'linear-gradient(90deg, #0C4A37 0%, #0A3D2D 100%)';
 const RAIL_W   = 92;
+const RAIL2_W  = 196;
 
 // Items a secretary/assistant must not see (billing, team management, and
 // prescribing — an ordonnance is a medical act signed by the doctor only).
@@ -237,7 +246,7 @@ export default function DoctorApp() {
     dpatients: Patients, ddocs: Documents, davail: Availability,
     dnotif: Notifications, dstats: Statistics, dabo: Subscription, dsettings: Settings,
     dchat: Chat, dshare: BookingShare, dprescribe: Prescriptions, dstaff: Staff,
-    dpfile: PatientFile,
+    dpfile: PatientFile, dtasks: Tasks,
   };
   const SubScreen = (state.isStaff && STAFF_HIDDEN.has(screen)) ? Dashboard : (SUB[screen] || Dashboard);
 
@@ -356,116 +365,131 @@ export default function DoctorApp() {
     : [];
   const naMatched = state.naMatch != null;
 
+  // ── Two-level rail derivations ───────────────────────────────────────────
+  const staffFilter = (l) => state.isStaff ? l.filter(it => !STAFF_HIDDEN.has(it.screen)) : l;
+  const navItems = NAV
+    .map(g => g.items ? { ...g, items: staffFilter(g.items) } : g)
+    .filter(g => g.items ? g.items.length > 0 : !(state.isStaff && STAFF_HIDDEN.has(g.screen)));
+  const groupOfScreen = navItems.find(g => g.items && g.items.some(it => it.screen === screen))?.key || null;
+  const openKey = popMore === '__none' ? null : (popMore || groupOfScreen);
+  const openGroupDef = navItems.find(g => g.key === openKey && g.items) || null;
+  const tasksCount = taskBadge(state);
+  const badgeOf = (b) => b === 'chat' ? unreadChat : b === 'tasks' ? tasksCount : 0;
+  const clickNav = (g) => {
+    if (!g.items) { setPopMore(null); goNav(g.screen); return; }
+    if (openKey === g.key) { setPopMore('__none'); return; }         // collapse
+    setPopMore(g.key);
+    if (!g.items.some(it => it.screen === screen)) goNav(g.items[0].screen);
+  };
+  const railOffset = isMobile ? 0 : RAIL_W + (openGroupDef ? RAIL2_W : 0);
+
   return (
     <div style={{ display:'flex', minHeight:'100vh' }}>
       {/* Mobile drawer overlay */}
       {isMobile && navOpen && (
         <div onClick={() => setNavOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(13,43,30,0.45)', zIndex:99 }} />
       )}
-      {/* ── Icon rail (Doctolib-style, deep green) ── */}
-      {(() => {
-        const staffFilter = (l) => state.isStaff ? l.filter(it => !STAFF_HIDDEN.has(it.screen)) : l;
-        const railItems = staffFilter(RAIL);
-        const moreItems = staffFilter(RAIL_MORE);
-        const activeKey = screen === 'dpfile' ? 'dcal' : screen;
-        const moreActive = moreItems.some(it => it.screen === activeKey);
-        const badgeOf = (b) => b === 'chat' ? unreadChat : 0;
-
-        const RailItem = ({ icon, label, active, onClick, badge = 0, aria }) => (
-          <button onClick={onClick} aria-label={aria || label}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'rgba(255,255,255,0.16)' : 'transparent'; }}
-            style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.72)', transition:'background .15s, color .15s' }}>
-            <span style={{ display:'flex', position:'relative' }}>
-              {icon}
-              {badge > 0 && (
-                <span style={{ position:'absolute', top:-5, right:-8, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1, border:'1.5px solid #0C4A37' }}>{badge > 9 ? '9+' : badge}</span>
-              )}
-            </span>
-            <span style={{ fontSize:9.5, fontWeight:600, letterSpacing:'0.1px', lineHeight:1.15, textAlign:'center' }}>{label}</span>
-          </button>
-        );
-
-        if (isMobile) return (
-          <aside style={{ width:246, flexShrink:0, background:RAIL_BG, display:'flex', flexDirection:'column', overflowY:'auto', position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(6,32,23,0.5)' : 'none' }}>
-            <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 18px 14px', cursor:'pointer' }}>
-              <BrandMark size={30} shadow />
-              <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:18, color:'#fff', letterSpacing:'-0.5px' }}>Tabib<span style={{ color:'#6FE0AE' }}>o</span></span>
-            </div>
-            <nav style={{ flex:1, padding:'2px 10px 14px', display:'flex', flexDirection:'column', gap:2 }}>
-              {[...railItems, ...moreItems].map(({ screen:sc, icon, label, badge }) => {
-                const active = activeKey === sc;
-                const b = badgeOf(badge);
+      {/* ── Two-level icon rail (Doctolib-style, deep green, FIXED so it never
+             breaks while scrolling) ── */}
+      {isMobile ? (
+        <aside style={{ width:246, background:RAIL_BG, display:'flex', flexDirection:'column', overflowY:'auto', position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(6,32,23,0.5)' : 'none' }}>
+          <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 18px 12px', cursor:'pointer' }}>
+            <BrandMark size={30} shadow />
+            <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:18, color:'#fff', letterSpacing:'-0.5px' }}>Tabib<span style={{ color:'#6FE0AE' }}>o</span></span>
+          </div>
+          <nav style={{ flex:1, padding:'2px 10px 14px', display:'flex', flexDirection:'column', gap:2 }}>
+            {navItems.map((g) => g.items ? (
+              <div key={g.key}>
+                <div style={{ padding:'12px 12px 5px', fontSize:10.5, fontWeight:800, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:0.6 }}>{g.label}</div>
+                {g.items.map(({ screen:sc, icon, label }) => {
+                  const active = screen === sc;
+                  return (
+                    <button key={sc} onClick={() => goNav(sc)} style={{ display:'flex', alignItems:'center', gap:12, width:'100%', padding:'10px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
+                      <span style={{ display:'flex' }}>{icon}</span>{label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              (() => {
+                const active = screen === g.screen;
+                const b = badgeOf(g.badge);
                 return (
-                  <button key={sc} onClick={() => goNav(sc)}
-                    style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
-                    <span style={{ display:'flex', position:'relative' }}>{icon}
+                  <button key={g.key} onClick={() => goNav(g.screen)} style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
+                    <span style={{ display:'flex', position:'relative' }}>{g.icon}
                       {b > 0 && <span style={{ position:'absolute', top:-4, right:-7, minWidth:14, height:14, padding:'0 3px', borderRadius:7, background:'#E2748A', color:'#fff', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{b > 9 ? '9+' : b}</span>}
                     </span>
-                    {label}
+                    {g.label}
                   </button>
                 );
-              })}
-            </nav>
-            <button onClick={() => { setNavOpen(false); authSignOut(); }} style={{ display:'flex', alignItems:'center', gap:11, margin:'0 10px 16px', padding:'11px 12px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:11, background:'rgba(255,255,255,0.08)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-              Déconnexion
-            </button>
-          </aside>
-        );
-
-        return (
-          <aside style={{ width:RAIL_W, flexShrink:0, background:RAIL_BG, display:'flex', flexDirection:'column', position:'sticky', top:0, height:'100vh', boxShadow:'inset -1px 0 0 rgba(255,255,255,0.06)', zIndex:60 }}>
+              })()
+            ))}
+          </nav>
+          <button onClick={() => { setNavOpen(false); authSignOut(); }} style={{ display:'flex', alignItems:'center', gap:11, margin:'0 10px 16px', padding:'11px 12px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:11, background:'rgba(255,255,255,0.08)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Déconnexion
+          </button>
+        </aside>
+      ) : (
+        <>
+          {/* Level 1 — primary rail */}
+          <aside style={{ width:RAIL_W, background:RAIL_BG, display:'flex', flexDirection:'column', position:'fixed', left:0, top:0, bottom:0, boxShadow:'inset -1px 0 0 rgba(255,255,255,0.06)', zIndex:60 }}>
             <div onClick={() => goNav('doctor')} title="Tabibo" style={{ display:'flex', justifyContent:'center', padding:'16px 0 14px', cursor:'pointer' }}>
               <BrandMark size={34} shadow />
             </div>
             <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:3, overflowY:'auto', paddingBottom:8 }}>
-              {railItems.map(({ screen:sc, icon, label, badge }) => (
-                <RailItem key={sc} icon={icon} label={label} active={activeKey === sc} badge={badgeOf(badge)} onClick={() => goNav(sc)} />
-              ))}
-              {/* Autres — everything else, one click away */}
-              {moreItems.length > 0 && (
-                <RailItem
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
-                  label="Autres" active={moreActive || popMore} aria="Autres fonctionnalités"
-                  onClick={() => setPopMore(v => !v)} />
-              )}
+              {navItems.map((g) => {
+                const active = g.items ? openKey === g.key || groupOfScreen === g.key : screen === g.screen;
+                const b = badgeOf(g.badge);
+                return (
+                  <button key={g.key} onClick={() => clickNav(g)} aria-label={g.label}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = active ? 'rgba(255,255,255,0.16)' : 'transparent'; }}
+                    style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.72)', transition:'background .15s, color .15s', flexShrink:0 }}>
+                    <span style={{ display:'flex', position:'relative' }}>
+                      {g.icon}
+                      {b > 0 && <span style={{ position:'absolute', top:-5, right:-8, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1, border:'1.5px solid #0C4A37' }}>{b > 9 ? '9+' : b}</span>}
+                    </span>
+                    <span style={{ fontSize:9.5, fontWeight:600, letterSpacing:'0.1px', lineHeight:1.15, textAlign:'center' }}>{g.label}</span>
+                  </button>
+                );
+              })}
             </nav>
-            {/* Profile bubble (Doctolib-style, bottom of the rail) */}
-            <button onClick={() => goNav('dsettings')} title={docName} aria-label="Mon profil"
+            <button onClick={() => { setPopMore('settings'); goNav('dsettings'); }} title={docName} aria-label="Mon profil"
               style={{ width:42, height:42, borderRadius:'50%', margin:'0 auto 16px', border:'2px solid rgba(255,255,255,0.35)', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
               {docAvatar
                 ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 : <span style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:800, color:'#0C4A37' }}>{(docName || 'M').replace(/^Dr\.?\s*/i, '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>}
             </button>
-            {/* « Autres » panel */}
-            {popMore && (
-              <>
-                <div onClick={() => setPopMore(false)} style={{ position:'fixed', inset:0, zIndex:120 }} />
-                <div style={{ position:'fixed', left:RAIL_W + 10, bottom:24, width:250, background:'#fff', border:'1px solid #E5ECE9', borderRadius:14, boxShadow:'0 24px 60px rgba(6,32,23,0.35)', zIndex:130, overflow:'hidden', padding:6 }}>
-                  <div style={{ padding:'8px 12px 6px', fontSize:10.5, fontWeight:800, color:'#9AA8A2', textTransform:'uppercase', letterSpacing:0.5 }}>Autres fonctionnalités</div>
-                  {moreItems.map(({ screen:sc, icon, label }) => {
-                    const active = activeKey === sc;
-                    return (
-                      <button key={sc} onClick={() => { setPopMore(false); goNav(sc); }}
-                        style={{ display:'flex', alignItems:'center', gap:11, width:'100%', textAlign:'start', padding:'10px 12px', border:'none', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight: active ? 800 : 600, background: active ? '#E9F5F0' : 'transparent', color: active ? '#0C4A37' : DARK }}
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F7F4'; }}
-                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
-                        <span style={{ display:'flex', color: active ? '#0C4A37' : '#7E8F88' }}>{icon}</span>
-                        {label}
-                        {sc === 'dnotif' && unreadNotif > 0 && <span style={{ marginLeft:'auto', width:8, height:8, borderRadius:'50%', background:'#E2748A' }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
           </aside>
-        );
-      })()}
 
-      {/* Main column */}
-      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column' }}>
+          {/* Level 2 — group rail (lighter green, opens for grouped items) */}
+          {openGroupDef && (
+            <aside style={{ width:RAIL2_W, background:RAIL2_BG, position:'fixed', left:RAIL_W, top:0, bottom:0, zIndex:59, display:'flex', flexDirection:'column', boxShadow:'inset -1px 0 0 rgba(255,255,255,0.07), 8px 0 24px -14px rgba(6,32,23,0.5)', animation:'saRail2 .18s ease' }}>
+              <style>{`@keyframes saRail2{from{transform:translateX(-12px);opacity:0}to{transform:none;opacity:1}}`}</style>
+              <div style={{ padding:'22px 16px 12px', fontSize:12, fontWeight:800, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:0.7 }}>{openGroupDef.label}</div>
+              <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:2, padding:'0 8px', overflowY:'auto' }}>
+                {openGroupDef.items.map(({ screen:sc, icon, label }) => {
+                  const active = screen === sc;
+                  return (
+                    <button key={sc} onClick={() => goNav(sc)}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = active ? 'rgba(255,255,255,0.18)' : 'transparent'; }}
+                      style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 11px', border:'none', cursor:'pointer', borderRadius:10, fontSize:12.5, fontWeight: active ? 800 : 600, background: active ? 'rgba(255,255,255,0.18)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start', transition:'background .12s' }}>
+                      <span style={{ display:'flex', flexShrink:0 }}>{icon}</span>
+                      <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</span>
+                      {sc === 'dnotif' && unreadNotif > 0 && <span style={{ marginLeft:'auto', width:8, height:8, borderRadius:'50%', background:'#E2748A', flexShrink:0 }} />}
+                    </button>
+                  );
+                })}
+              </nav>
+            </aside>
+          )}
+        </>
+      )}
+
+      {/* Main column — offset by the fixed rails */}
+      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', marginLeft: railOffset, transition:'margin-left .18s ease' }}>
         {/* Topbar — same deep green surface as the rail */}
         <header style={{ background:TOP_BG, height:60, display:'flex', alignItems:'center', gap:isMobile?10:14, padding:isMobile?'0 12px':'0 22px', position:'sticky', top:0, zIndex:20, boxShadow:'0 1px 0 rgba(255,255,255,0.08), 0 6px 18px -8px rgba(6,32,23,0.5)' }}>
           {isMobile && (

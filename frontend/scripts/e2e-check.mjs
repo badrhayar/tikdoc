@@ -104,9 +104,9 @@ try {
     await page.waitForTimeout(500);
     if (await page.getByText('En consultation', { exact: false }).count() === 0) fail('demo: consultation strip missing after move');
   }
-  // congés conflict detection — "Disponibilités" lives in the rail's « Autres » panel
-  await page.getByRole('button', { name: 'Autres fonctionnalités' }).click();
-  await page.waitForTimeout(300);
+  // congés conflict detection — "Disponibilités" lives in the « Paramètres » group rail
+  await page.getByRole('button', { name: 'Paramètres' }).first().click();
+  await page.waitForTimeout(400);
   await page.getByText('Disponibilités', { exact: true }).first().click();
   await page.waitForTimeout(900);
   // The app reasons in Morocco time (demo appointments land on Morocco's today),
