@@ -93,6 +93,30 @@ function RowActionsMenu({ actions }) {
   );
 }
 
+// Wide screens: the actions as a horizontal strip of small tinted icon chips
+// (one glance, one click). Narrow screens keep the "⋯" menu so nothing clips.
+const CHIP_BG = { '#2563EB': '#E8F1FC', '#2C5BA6': '#E8F1FC', '#6B7280': '#F0F2F1', '#6B57A6': '#EFEAFB' };
+function RowActionsInline({ actions }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      {actions.filter((a) => !a.divider).map((a) => {
+        const [bg, fg] = a.active ? ['#0F6E56', '#fff']
+          : a.disabled ? ['#F4F6F5', '#C6D0CC']
+          : a.danger ? ['#FDE7EA', '#C2415C']
+          : [CHIP_BG[a.tone] || '#E9F5F0', a.tone || '#0E7C52'];
+        return (
+          <button key={a.key} title={a.label} aria-label={a.label} disabled={a.disabled} onClick={a.onClick}
+            onMouseEnter={(e) => { if (!a.disabled && !a.active) e.currentTarget.style.filter = 'brightness(0.95)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+            style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color: fg, border: a.active ? 'none' : '1px solid rgba(13,43,30,0.07)', borderRadius: 8, cursor: a.disabled ? 'default' : 'pointer' }}>
+            {a.icon}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Appointments({ state, setState, go, openNewAppt }) {
   // All filtering now lives in a single labelled row (same concept as the
   // Historique page). The dashboard's "à confirmer" card can still deep-link
@@ -105,7 +129,8 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
   const [filterPay, setFilterPay] = useState('');
   const [filterFrom, setFilterFrom] = useState('');   // YYYY-MM-DD
   const [filterTo, setFilterTo] = useState('');
-  const { isMobile } = useViewport();
+  const { isMobile, width } = useViewport();
+  const wideActions = width >= 1360;   // inline icon strip needs the room
 
   // Service filter options come from the services the doctor defined in
   // Paramètres (falls back to the common set if none are configured yet).
@@ -522,9 +547,9 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
                         color: PAYMENT_CONFIG[appt.paiement]?.color,
                       }}>{appt.paiement}</span>
                     </td>
-                    {/* Actions — a single "⋯" menu so nothing is ever clipped */}
+                    {/* Actions — inline icon strip on wide screens, "⋯" menu elsewhere */}
                     <td style={{ padding: '10px 16px' }}>
-                      <RowActionsMenu actions={buildActions(appt)} />
+                      {wideActions ? <RowActionsInline actions={buildActions(appt)} /> : <RowActionsMenu actions={buildActions(appt)} />}
                     </td>
                   </tr>
                 );

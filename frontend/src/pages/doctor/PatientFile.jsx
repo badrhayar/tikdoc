@@ -5,6 +5,8 @@ import {
   fetchPrescriptions, markAppointmentPaid, updateAppointmentStatus, patientKeyOf,
 } from '../../lib/api';
 import { moroccoNow } from '../../lib/time';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
+import { DEMO_PATIENTS, initials } from '../../shared.jsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dossier patient — Doctolib-grade patient file.
@@ -23,8 +25,8 @@ const BG = '#F4F8F5';
 
 const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, marginBottom: 16 };
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13.5, border: '1px solid #D8E2DD', borderRadius: 9, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
-const lbl = { display: 'block', fontSize: 12.5, fontWeight: 700, color: DARK, margin: '0 0 6px' };
-const h3s = { fontSize: 14.5, fontWeight: 800, color: DARK, margin: '0 0 12px' };
+const lbl = { display: 'block', fontSize: 12, fontWeight: 600, color: '#5A6B65', margin: '0 0 6px', letterSpacing: '0.1px' };
+const h3s = { fontSize: 14, fontWeight: 600, color: DARK, margin: '0 0 12px', letterSpacing: '-0.2px' };
 
 const I = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' };
 const IC = {
@@ -89,8 +91,8 @@ function AntecedentBlock({ title, items, none, onChange, placeholder }) {
   return (
     <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 13.5, fontWeight: 800, color: DARK }}>{title}</span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: none ? TEAL : MUTED, fontWeight: 700, cursor: 'pointer' }}>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px' }}>{title}</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: none ? TEAL : MUTED, fontWeight: 600, cursor: 'pointer' }}>
           <input type="checkbox" checked={none} onChange={(e) => onChange({ none: e.target.checked })} style={{ accentColor: TEAL }} />
           Pas d'antécédent
         </label>
@@ -107,7 +109,7 @@ function YesNo({ value, onChange }) {
   return (
     <div style={{ display: 'inline-flex', gap: 6 }}>
       {[['Non', false], ['Oui', true]].map(([t, v]) => (
-        <button key={t} onClick={() => onChange(v)} style={{ padding: '6px 16px', borderRadius: 18, border: `1.5px solid ${value === v ? TEAL : '#D8E2DD'}`, background: value === v ? '#E9F5F0' : '#fff', color: value === v ? TEAL : MUTED, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{t}</button>
+        <button key={t} onClick={() => onChange(v)} style={{ padding: '5px 14px', borderRadius: 18, border: `1px solid ${value === v ? TEAL : '#D8E2DD'}`, background: value === v ? '#E9F5F0' : '#fff', color: value === v ? TEAL : MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>{t}</button>
       ))}
     </div>
   );
@@ -151,6 +153,64 @@ function RichText({ value, onChange, placeholder, minHeight = 84 }) {
 const isLocalId = (id) => { const s = String(id); return s.startsWith('local_') || s.startsWith('demo_'); };
 const stripHtml = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
+// ── Patient picker — shown when no patient is selected ───────────────────────
+// A real selection surface (search + roster), not an empty page: pick a patient
+// here and their dossier opens in place.
+const AV_COLORS = ['#0F6E56', '#2563EB', '#9333EA', '#EA580C', '#DB2777', '#0891B2'];
+function PatientPicker({ state, setState, go, isMobile }) {
+  const [q, setQ] = useState('');
+  const roster = state.patients?.length ? state.patients : (isSupabaseConfigured ? [] : DEMO_PATIENTS);
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const list = roster.filter((p) => !q.trim()
+    || norm(p.name).includes(norm(q)) || norm(p.cin).includes(norm(q)) || String(p.phone || '').replace(/\s/g, '').includes(q.replace(/\s/g, '')));
+  const open = (p) => setState({ pfilePatient: p, pfileApptId: null });
+  return (
+    <div style={{ padding: isMobile ? '18px 14px' : '36px 32px', fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100%', boxSizing: 'border-box' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: DARK, letterSpacing: '-0.3px' }}>Dossier patient</h1>
+        <p style={{ margin: '4px 0 18px', fontSize: 13, color: MUTED }}>Sélectionnez un patient pour ouvrir son dossier médical.</p>
+
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: MUTED, display: 'flex' }}>{IC.search}</span>
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher par nom, CIN, téléphone…"
+            style={{ ...inp, padding: '11px 13px 11px 38px', fontSize: 13.5, borderRadius: 11 }} />
+        </div>
+
+        <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ maxHeight: 430, overflowY: 'auto' }}>
+            {list.map((p, i) => (
+              <button key={p.id} onClick={() => open(p)}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#F4FAF7'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box', padding: '11px 16px', background: 'transparent', border: 'none', borderBottom: i < list.length - 1 ? '1px solid #F1F5F3' : 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ width: 36, height: 36, borderRadius: '50%', background: p.color || AV_COLORS[i % AV_COLORS.length], color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 700, flexShrink: 0 }}>{p.initials || initials(p.name)}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                  <span style={{ display: 'block', fontSize: 12, color: MUTED, marginTop: 1 }}>
+                    {[p.age != null ? `${p.age} ans` : null, p.sex === 'M' ? 'Homme' : p.sex === 'F' ? 'Femme' : null, p.phone && p.phone !== '—' ? p.phone : null].filter(Boolean).join(' · ') || '—'}
+                  </span>
+                </span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            ))}
+            {list.length === 0 && (
+              <div style={{ padding: '34px 20px', textAlign: 'center', fontSize: 13, color: MUTED }}>
+                {roster.length === 0
+                  ? <>Aucun patient pour le moment. Ajoutez votre premier patient depuis la liste des patients.</>
+                  : <>Aucun patient ne correspond à « {q} ».</>}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 16px', borderTop: `1px solid ${BORDER}`, background: '#FAFCFB' }}>
+            <span style={{ fontSize: 12, color: MUTED }}>{roster.length} patient{roster.length > 1 ? 's' : ''}</span>
+            <button onClick={() => go('dpatients')} style={{ background: 'none', border: 'none', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0 }}>Gérer mes patients</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PatientFile({ state, setState, go }) {
   const { isMobile } = useViewport();
   const patient = state?.pfilePatient;
@@ -171,6 +231,11 @@ export default function PatientFile({ state, setState, go }) {
   const [suiviOpen, setSuiviOpen] = useState(false);
   const [iaOpen, setIaOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  // Facturation (declared with the other hooks — they must all run before the
+  // "no patient selected" early return, or the hook order breaks when a patient
+  // is picked in place).
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState('Espèces');
 
   // Consultation timer.
   const [timerOn, setTimerOn] = useState(false);
@@ -213,11 +278,7 @@ export default function PatientFile({ state, setState, go }) {
   }, [pkey, doctorId]);
 
   if (!patient) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: MUTED, fontFamily: 'Inter, sans-serif' }}>
-        Aucun patient sélectionné. <button onClick={() => go('dpatients')} style={{ color: TEAL, background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>Ouvrir la liste des patients</button>
-      </div>
-    );
+    return <PatientPicker state={state} setState={setState} go={go} isMobile={isMobile} />;
   }
 
   function seedFromRoster(p) {
@@ -285,8 +346,6 @@ export default function PatientFile({ state, setState, go }) {
 
   // FACTURER — record the payment of the linked appointment.
   const linkedAppt = [...(state?.manualAppts || []), ...(state?.myAppointments || [])].find((a) => a.id === state?.pfileApptId) || null;
-  const [payAmount, setPayAmount] = useState('');
-  const [payMethod, setPayMethod] = useState('Espèces');
   const doPay = async () => {
     const amount = Number(payAmount) || 0;
     const id = linkedAppt?.id;
@@ -383,14 +442,14 @@ export default function PatientFile({ state, setState, go }) {
         <label style={lbl}>Examen</label>
         <RichText value={obs.examen} onChange={(v) => setObs((o) => ({ ...o, examen: v }))} placeholder="Entrez les résultats de l'examen" />
         <div style={{ height: 14 }} />
-        <button onClick={() => setSuiviOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, color: DARK, padding: 0, marginBottom: suiviOpen ? 10 : 14 }}>
+        <button onClick={() => setSuiviOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK, padding: 0, marginBottom: suiviOpen ? 10 : 14 }}>
           <span style={{ transform: suiviOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', display: 'inline-block' }}>▸</span> Données de suivi
         </button>
         {suiviOpen && renderSuiviFields()}
         <label style={lbl}>Conclusion</label>
         <RichText value={obs.conclusion} onChange={(v) => setObs((o) => ({ ...o, conclusion: v }))} placeholder="Entrez votre conclusion" minHeight={64} />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-          {savedMsg && <span style={{ fontSize: 13, fontWeight: 700, color: TEAL, alignSelf: 'center' }}>{savedMsg}</span>}
+          {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL, alignSelf: 'center' }}>{savedMsg}</span>}
           <button onClick={saveObs} disabled={obsSaving} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: obsSaving ? 0.7 : 1 }}>
             {obsSaving ? 'Enregistrement…' : 'Enregistrer la consultation'}
           </button>
@@ -414,7 +473,7 @@ export default function PatientFile({ state, setState, go }) {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = '#F5FAF8'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.background = '#fff'; }}>
             <span style={{ color: TEAL, display: 'flex' }}>{b.icon}</span>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: DARK, textAlign: 'center', lineHeight: 1.3 }}>{b.label}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: DARK, textAlign: 'center', lineHeight: 1.3 }}>{b.label}</span>
           </button>
         ))}
       </div>
@@ -425,7 +484,7 @@ export default function PatientFile({ state, setState, go }) {
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
       <div><label style={lbl}>Taille (cm)</label><input type="number" min="0" value={mh.suivi?.taille || ''} onChange={(e) => patchMh({ suivi: { ...mh.suivi, taille: e.target.value } })} style={inp} /></div>
       <div><label style={lbl}>Poids (kg)</label><input type="number" min="0" value={mh.suivi?.poids || ''} onChange={(e) => patchMh({ suivi: { ...mh.suivi, poids: e.target.value } })} style={inp} /></div>
-      <div><label style={lbl}>IMC (kg/m²)</label><div style={{ ...inp, background: '#F6F9F7', fontWeight: 800, color: imc ? DARK : MUTED }}>{imc ?? '—'}</div></div>
+      <div><label style={lbl}>IMC (kg/m²)</label><div style={{ ...inp, background: '#F6F9F7', fontWeight: 600, color: imc ? DARK : MUTED }}>{imc ?? '—'}</div></div>
       <div><label style={lbl}>PA syst. (mmHg)</label><input type="number" min="0" value={mh.suivi?.tas || ''} onChange={(e) => patchMh({ suivi: { ...mh.suivi, tas: e.target.value } })} style={inp} /></div>
     </div>
   );
@@ -435,7 +494,7 @@ export default function PatientFile({ state, setState, go }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
         <h3 style={{ ...h3s, margin: 0 }}>Antécédents et mode de vie</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 700, color: TEAL }}>{savedMsg}</span>}
+          {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL }}>{savedMsg}</span>}
           <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer'}</button>
         </div>
       </div>
@@ -448,7 +507,7 @@ export default function PatientFile({ state, setState, go }) {
 
       {(patient.sex !== 'M') && (
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 12 }}>Antécédents gynécologiques</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', marginBottom: 12 }}>Antécédents gynécologiques</div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div><label style={lbl}>G (grossesses)</label><input type="number" min="0" value={mh.gyneco?.g ?? ''} onChange={(e) => patchMh({ gyneco: { ...mh.gyneco, g: e.target.value } })} style={{ ...inp, width: 82 }} /></div>
             <div><label style={lbl}>P (parités)</label><input type="number" min="0" value={mh.gyneco?.p ?? ''} onChange={(e) => patchMh({ gyneco: { ...mh.gyneco, p: e.target.value } })} style={{ ...inp, width: 82 }} /></div>
@@ -459,14 +518,14 @@ export default function PatientFile({ state, setState, go }) {
       )}
 
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 10 }}>Allergies</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', marginBottom: 10 }}>Allergies</div>
         <ItemList items={mh.allergies} placeholder="Ex. Pénicilline"
           onAdd={(v) => patchMh({ allergies: [...mh.allergies, v] })}
           onRemove={(i) => patchMh({ allergies: mh.allergies.filter((_, k) => k !== i) })} />
       </div>
 
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 12 }}>Mode de vie</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', marginBottom: 12 }}>Mode de vie</div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
           <div><label style={lbl}>Alcool</label>
             <select value={mh.vie?.alcool || ''} onChange={(e) => patchMh({ vie: { ...mh.vie, alcool: e.target.value } })} style={{ ...inp, cursor: 'pointer' }}>
@@ -492,12 +551,12 @@ export default function PatientFile({ state, setState, go }) {
         <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>{mhSaving ? '…' : 'Enregistrer'}</button>
       </div>
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 10 }}>Traitements de fond</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', marginBottom: 10 }}>Traitements de fond</div>
         <ItemList items={mh.tttFond} placeholder="Ex. METFORMINE 850 mg — 2/j"
           onAdd={(v) => patchMh({ tttFond: [...mh.tttFond, v] })} onRemove={(i) => patchMh({ tttFond: mh.tttFond.filter((_, k) => k !== i) })} />
       </div>
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 10 }}>Traitements ponctuels</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', marginBottom: 10 }}>Traitements ponctuels</div>
         <ItemList items={mh.tttPonctuels} placeholder="Ex. Paracétamol 1 g si douleur"
           onAdd={(v) => patchMh({ tttPonctuels: [...mh.tttPonctuels, v] })} onRemove={(i) => patchMh({ tttPonctuels: mh.tttPonctuels.filter((_, k) => k !== i) })} />
       </div>
@@ -517,14 +576,14 @@ export default function PatientFile({ state, setState, go }) {
       {feedGroups.length === 0 && <div style={{ fontSize: 13, color: MUTED, padding: '18px 0', textAlign: 'center' }}>{q ? 'Aucun résultat pour cette recherche.' : 'Aucun événement pour ce patient.'}</div>}
       {feedGroups.map((g) => (
         <div key={g.key} style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: MUTED, textTransform: 'capitalize', margin: '0 0 8px' }}>{g.key}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: MUTED, textTransform: 'capitalize', letterSpacing: '0.3px', margin: '0 0 8px' }}>{g.key}</div>
           {g.items.map((x) => (
             <div key={x.id} onClick={() => setExpanded(expanded === x.id ? null : x.id)}
               style={{ border: `1px solid ${BORDER}`, borderRadius: 11, padding: '11px 14px', marginBottom: 8, cursor: 'pointer', background: expanded === x.id ? '#F7FBF9' : '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                 <span style={{ width: 32, height: 32, borderRadius: '50%', background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK }}>{x.kind} — {x.title}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px' }}>{x.kind} — {x.title}</div>
                   <div style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.sub}</div>
                 </div>
                 <span style={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>{new Date(`${x.date}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
@@ -575,7 +634,7 @@ export default function PatientFile({ state, setState, go }) {
               <span style={{ color: MUTED, minWidth: 90 }}>{new Date(`${c.date}T12:00:00`).toLocaleDateString('fr-FR')}</span>
               <span style={{ flex: 1, fontWeight: 600, color: DARK }}>{c.service}</span>
               <span style={{ color: MUTED }}>{c.pay}</span>
-              <span style={{ fontWeight: 800, color: TEAL }}>{(c.amount || 0).toLocaleString('fr-FR')} MAD</span>
+              <span style={{ fontWeight: 700, color: TEAL }}>{(c.amount || 0).toLocaleString('fr-FR')} MAD</span>
             </div>
           ))}</div>;
     })()),
@@ -588,13 +647,13 @@ export default function PatientFile({ state, setState, go }) {
       <aside style={isMobile
         ? { background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '12px 14px' }
         : { width: 250, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, padding: '18px 14px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', boxSizing: 'border-box' }}>
-        <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 12 }}>← Retour à l'agenda</button>
+        <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12 }}>← Retour à l'agenda</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 10 : 18 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, flexShrink: 0 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
             {(patient.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: DARK, lineHeight: 1.25 }}>{civ} {patient.name}</div>
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: DARK, lineHeight: 1.3, letterSpacing: '-0.2px' }}>{civ} {patient.name}</div>
             <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>{dobLbl ? `Né(e) ${dobLbl}` : ''}{age != null ? ` (${age} ans)` : ''}</div>
           </div>
         </div>
@@ -603,7 +662,7 @@ export default function PatientFile({ state, setState, go }) {
             const active = section === s.id;
             return (
               <button key={s.id} onClick={() => setSection(s.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', background: active ? '#E9F5F0' : 'none', border: 'none', borderRadius: 9, padding: isMobile ? '7px 12px' : '9px 11px', fontSize: 12.5, fontWeight: active ? 800 : 600, color: active ? TEAL : DARK, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', background: active ? '#E9F5F0' : 'none', border: 'none', borderRadius: 9, padding: isMobile ? '7px 12px' : '8px 11px', fontSize: 12.5, fontWeight: active ? 600 : 500, color: active ? TEAL : '#3E4F49', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 {!isMobile && <span style={{ fontSize: 10, transform: active ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>▸</span>}
                 {s.label}
               </button>
@@ -628,7 +687,7 @@ export default function PatientFile({ state, setState, go }) {
 
       {/* ── Bottom action bar ── */}
       <div style={{ position: 'fixed', right: isMobile ? 0 : 18, left: isMobile ? 0 : 'auto', bottom: isMobile ? 0 : 14, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: isMobile ? 0 : 13, boxShadow: '0 14px 40px -12px rgba(13,43,30,0.35)', padding: isMobile ? '10px 12px' : '11px 16px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 50, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: MUTED, fontWeight: 700, display: isMobile ? 'none' : 'block' }}>
+        <span style={{ fontSize: 12, color: MUTED, fontWeight: 600, display: isMobile ? 'none' : 'block' }}>
           {civ} {patient.name}{linkedAppt ? ` · RDV ${new Date(linkedAppt.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' })}` : ''}
         </span>
         <div style={{ flex: 1 }} />
@@ -639,7 +698,7 @@ export default function PatientFile({ state, setState, go }) {
         <button onClick={() => { if (linkedAppt && !linkedAppt.paid) { setPayAmount(String(linkedAppt.fee || '')); setPayOpen(true); } }}
           disabled={!linkedAppt || linkedAppt.paid}
           title={!linkedAppt ? 'Aucun rendez-vous lié — ouvrez le dossier depuis un rendez-vous pour facturer' : linkedAppt.paid ? 'Déjà encaissé' : 'Encaisser la consultation'}
-          style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: (!linkedAppt || linkedAppt.paid) ? '#C9D6D1' : TEAL, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: (!linkedAppt || linkedAppt.paid) ? 'default' : 'pointer' }}>
+          style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: (!linkedAppt || linkedAppt.paid) ? '#C9D6D1' : TEAL, color: '#fff', fontSize: 12, fontWeight: 600, cursor: (!linkedAppt || linkedAppt.paid) ? 'default' : 'pointer' }}>
           {linkedAppt?.paid ? 'ENCAISSÉ ✓' : 'FACTURER'}
         </button>
       </div>
@@ -649,7 +708,7 @@ export default function PatientFile({ state, setState, go }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: 16 }} onClick={() => setIaOpen(false)}>
           <div style={{ background: '#fff', borderRadius: 14, padding: 26, width: '100%', maxWidth: 420, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>{IC.spark}</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 8 }}>Synthèse par IA</div>
+            <div style={{ fontSize: 15.5, fontWeight: 600, color: DARK, letterSpacing: '-0.2px', marginBottom: 8 }}>Synthèse par IA</div>
             <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.6, margin: '0 0 16px' }}>Fonctionnalité IA disponible prochainement — la synthèse automatique de vos consultations arrive dans une prochaine mise à jour.</p>
             <button onClick={() => setIaOpen(false)} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Compris</button>
           </div>
@@ -660,7 +719,7 @@ export default function PatientFile({ state, setState, go }) {
       {payOpen && linkedAppt && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: 16 }} onClick={() => setPayOpen(false)}>
           <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 14 }}>Facturer la consultation</div>
+            <div style={{ fontSize: 15.5, fontWeight: 600, color: DARK, letterSpacing: '-0.2px', marginBottom: 14 }}>Facturer la consultation</div>
             <label style={lbl}>Montant (MAD)</label>
             <input type="number" min="0" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} style={{ ...inp, marginBottom: 12 }} autoFocus />
             <label style={lbl}>Mode de paiement</label>

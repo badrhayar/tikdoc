@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../../hooks/useViewport';
-import { fetchTimeOff, addTimeOff } from '../../lib/api';
-import { moroccoNow } from '../../lib/time';
+import { fetchTimeOff, addTimeOff, updateAppointment, sendApptWhatsApp, notifyApptEmail } from '../../lib/api';
+import { moroccoNow, moroccoToUTCISO } from '../../lib/time';
 import ApptPanel from '../../components/ApptPanel';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +57,7 @@ const SI = { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 
 const VideoIcon  = () => <svg {...SI}><rect x="2" y="6" width="13" height="12" rx="2"/><path d="M15 11l6-4v10l-6-4z"/></svg>;
 const PersonIcon = () => <svg {...SI}><circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3.5-6 7-6s7 2 7 6"/></svg>;
 const isTele = (svc) => /t[ée]l[ée]/i.test(svc || '');
+const isLocalId = (id) => { const s = String(id); return s.startsWith('local_') || s.startsWith('demo_'); };
 
 export default function Calendar({ state, setState, go, openNewAppt }) {
   const { isMobile } = useViewport();
@@ -98,6 +99,79 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
   const selISO = isoOf(selDate);
 
   const openPanel = (id) => setState({ apptPanel: id });
+
+  // ── Move mode (« Déplacer le RDV ») ────────────────────────────────────────
+  // A ghost of the appointment follows the cursor over the grid; clicking a
+  // free slot re-schedules it there. Entered from the appointment panel.
+  const moveId = state?.moveAppt || null;
+  const movingConsult = moveId ? consultations.find((c) => c.id === moveId) || null : null;
+  const durMove = movingConsult ? Math.max(15, Number(movingConsult.durationMin) || 30) : 30;
+  const [ghost, setGhost] = useState(null);              // { dateISO, min }
+  const cancelMove = () => { setGhost(null); setState({ moveAppt: null }); };
+
+  // Entering move mode: land on the appointment's week/day; leaving the page cancels.
+  useEffect(() => {
+    if (moveId && movingConsult) {
+      jumpTo(movingConsult.date);
+      if (view === 'Liste') setView(isMobile ? 'Journée' : 'Semaine');
+    }
+    if (moveId && !movingConsult) setState({ moveAppt: null });
+    return () => { if (moveId) setState({ moveAppt: null }); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveId]);
+  useEffect(() => {
+    if (!moveId) return undefined;
+    const esc = (e) => { if (e.key === 'Escape') cancelMove(); };
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveId]);
+
+  const conflictAt = (dateISO, startMin) => {
+    const end = startMin + durMove;
+    return consultations.some((c) => c.id !== moveId && c.date === dateISO && c.status !== 'Annulé'
+      && startMin < hm(c.time) + Math.max(15, Number(c.durationMin) || 30) && end > hm(c.time));
+  };
+  const freeFor = (dateISO, startMin) => !offFor(dateISO) && !conflictAt(dateISO, startMin);
+  const snapMin = (e, hourH) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const raw = startH * 60 + ((e.clientY - rect.top) / hourH) * 60;
+    return Math.max(startH * 60, Math.min(endH * 60 - durMove, Math.floor(raw / 15) * 15));
+  };
+  const trackGhost = (dateISO, min) =>
+    setGhost((g) => (g && g.dateISO === dateISO && g.min === min ? g : { dateISO, min }));
+
+  const placeMove = async (dateISO, min) => {
+    if (!movingConsult) return;
+    if (!freeFor(dateISO, min)) { setState({ toast: 'Créneau indisponible — choisissez un créneau libre.', toastShow: true }); return; }
+    const time = fmtMin(min);
+    const dt = moroccoToUTCISO(dateISO, time);
+    setGhost(null);
+    setState({
+      manualConsults: (state.manualConsults || []).map((c) => c.id === moveId ? { ...c, date: dateISO, time } : c),
+      consultations: (state.consultations || []).map((c) => c.id === moveId ? { ...c, date: dateISO, time } : c),
+      manualAppts: (state.manualAppts || []).map((a) => a.id === moveId ? { ...a, datetime: dt } : a),
+      myAppointments: (state.myAppointments || []).map((a) => a.id === moveId ? { ...a, datetime: dt } : a),
+      moveAppt: null, toast: 'Rendez-vous déplacé ✓ — le patient est notifié', toastShow: true,
+    });
+    if (!isLocalId(moveId)) {
+      try { await updateAppointment(moveId, { datetime: dt }); sendApptWhatsApp(moveId, 'rescheduled'); notifyApptEmail(moveId, 'rescheduled'); }
+      catch (e) { setState({ toast: 'Déplacement non synchronisé : ' + (e?.message || 'erreur'), toastShow: true }); }
+    }
+  };
+
+  // Ghost block that follows the cursor (rendered inside a day column).
+  const GhostBlock = ({ iso, hourH }) => {
+    if (!moveId || !ghost || ghost.dateISO !== iso) return null;
+    const ok = freeFor(iso, ghost.min);
+    return (
+      <div style={{ position: 'absolute', top: ((ghost.min / 60) - startH) * hourH + 1, left: 3, right: 3, height: Math.max(18, (durMove / 60) * hourH - 2), background: ok ? 'rgba(15,110,86,0.16)' : 'rgba(226,59,85,0.13)', border: `1.5px dashed ${ok ? TEAL : RED}`, borderRadius: 6, zIndex: 7, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: ok ? TEAL : RED, background: 'rgba(255,255,255,0.92)', borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+          {fmtMin(ghost.min)} – {fmtMin(ghost.min + durMove)}{ok ? '' : ' · occupé'}
+        </span>
+      </div>
+    );
+  };
 
   // Pre-fill the global "Nouveau rendez-vous" modal on an empty slot.
   const newApptAt = (dateISO, time) => {
@@ -165,9 +239,10 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
     const dur = Math.max(15, Number(c.durationMin) || 30);
     const height = Math.max(20, (dur / 60) * hourH) - 2;
     const oneLine = height < 34;
+    const isMoving = c.id === moveId;
     return (
-      <div onClick={(e) => { e.stopPropagation(); openPanel(c.id); }} title={`${c.time} · ${c.patient} · ${c.service}`}
-        style={{ position: 'absolute', top: top + 1, left: 3, right: 3, height, background: col.bg, borderLeft: `3px solid ${col.color}`, border: `1px solid ${col.border}`, borderLeftWidth: 3, borderLeftColor: col.color, borderRadius: 5, padding: oneLine ? '1px 6px' : '3px 7px', cursor: 'pointer', overflow: 'hidden', zIndex: 2, transition: 'box-shadow .12s' }}
+      <div onClick={(e) => { e.stopPropagation(); if (!moveId) openPanel(c.id); }} title={isMoving ? 'Rendez-vous en cours de déplacement' : `${c.time} · ${c.patient} · ${c.service}`}
+        style={{ position: 'absolute', top: top + 1, left: 3, right: 3, height, background: col.bg, borderLeft: `3px solid ${col.color}`, border: `1px solid ${col.border}`, borderLeftWidth: 3, borderLeftColor: col.color, borderRadius: 5, padding: oneLine ? '1px 6px' : '3px 7px', cursor: moveId ? 'default' : 'pointer', overflow: 'hidden', zIndex: 2, transition: 'box-shadow .12s', opacity: isMoving ? 0.4 : 1, pointerEvents: moveId ? 'none' : 'auto' }}
         onMouseEnter={(e) => { e.currentTarget.style.zIndex = 10; e.currentTarget.style.boxShadow = '0 6px 18px -6px rgba(13,43,30,0.35)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.zIndex = 2; e.currentTarget.style.boxShadow = 'none'; }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
@@ -221,8 +296,11 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
             const off = offFor(iso);
             const appts = consultations.filter((c) => c.date === iso && c.status !== 'Annulé');
             return (
-              <div key={iso} onClick={() => !off && newApptAt(iso, fmtMin(Math.max(startH * 60, Math.min((endH - 1) * 60, 540))))}
-                style={{ flex: 1, minWidth: 0, borderRight: colIdx < 6 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? 'rgba(15,110,86,0.045)' : '#fff' }}>
+              <div key={iso}
+                onClick={(e) => { if (moveId) { placeMove(iso, snapMin(e, hourH)); } else if (!off) newApptAt(iso, fmtMin(Math.max(startH * 60, Math.min((endH - 1) * 60, 540)))); }}
+                onMouseMove={moveId ? (e) => trackGhost(iso, snapMin(e, hourH)) : undefined}
+                onMouseLeave={moveId ? () => setGhost((g) => (g?.dateISO === iso ? null : g)) : undefined}
+                style={{ flex: 1, minWidth: 0, borderRight: colIdx < 6 ? `1px solid ${GRID}` : 'none', position: 'relative', background: isToday ? 'rgba(15,110,86,0.045)' : '#fff', cursor: moveId ? 'crosshair' : 'default' }}>
                 {hours.map((h) => (
                   <div key={h} style={{ height: hourH, borderBottom: `1px solid ${GRID}`, position: 'relative' }}>
                     <div style={{ position: 'absolute', top: hourH / 2, left: 0, right: 0, borderBottom: `1px solid ${GRID_SOFT}` }} />
@@ -234,6 +312,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
                   </div>
                 )}
                 {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} tight />)}
+                <GhostBlock iso={iso} hourH={hourH} />
               </div>
             );
           })}
@@ -286,13 +365,14 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
               const isHour = m % 60 === 0;
               const isHalf = m % 30 === 0;
               const free = !covered(m) && !off;
+              const mMin = Math.min(m, endH * 60 - durMove);
               return (
-                <div key={m} onClick={() => free && newApptAt(iso, fmtMin(m))}
-                  className={free ? 'sa-freeslot' : undefined}
-                  style={{ height: slotH, borderBottom: `1px solid ${isHour ? GRID : isHalf ? GRID_SOFT : 'transparent'}`, boxSizing: 'border-box', cursor: free ? 'pointer' : 'default', position: 'relative' }}
-                  onMouseEnter={(e) => { if (free) { e.currentTarget.style.background = '#EAF6F1'; e.currentTarget.dataset.h = '1'; } }}
+                <div key={m} onClick={() => { if (moveId) placeMove(iso, mMin); else if (free) newApptAt(iso, fmtMin(m)); }}
+                  className={free && !moveId ? 'sa-freeslot' : undefined}
+                  style={{ height: slotH, borderBottom: `1px solid ${isHour ? GRID : isHalf ? GRID_SOFT : 'transparent'}`, boxSizing: 'border-box', cursor: moveId ? 'crosshair' : free ? 'pointer' : 'default', position: 'relative' }}
+                  onMouseEnter={(e) => { if (moveId) { trackGhost(iso, mMin); } else if (free) { e.currentTarget.style.background = '#EAF6F1'; e.currentTarget.dataset.h = '1'; } }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; delete e.currentTarget.dataset.h; }}>
-                  {free && <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10.5, fontWeight: 700, color: '#9DBBAF', opacity: 0, transition: 'opacity .1s', pointerEvents: 'none' }} className="sa-slotlbl">+ {fmtMin(m)}</span>}
+                  {free && !moveId && <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10.5, fontWeight: 700, color: '#9DBBAF', opacity: 0, transition: 'opacity .1s', pointerEvents: 'none' }} className="sa-slotlbl">+ {fmtMin(m)}</span>}
                 </div>
               );
             })}
@@ -303,6 +383,7 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
               </div>
             )}
             {appts.map((c) => <ApptBlock key={c.id} c={c} hourH={hourH} />)}
+            <GhostBlock iso={iso} hourH={hourH} />
             {showNow && (
               <div style={{ position: 'absolute', left: 0, right: 0, top: ((nowMin / 60) - startH) * hourH, zIndex: 5, pointerEvents: 'none', borderTop: `2px dashed ${RED}` }}>
                 <span style={{ position: 'absolute', left: -5, top: -5, width: 9, height: 9, borderRadius: '50%', background: RED }} />
@@ -367,6 +448,19 @@ export default function Calendar({ state, setState, go, openNewAppt }) {
 
   return (
     <div style={{ padding: isMobile ? 6 : 26, background: BG, minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+
+      {/* ── Move-mode banner ── */}
+      {moveId && movingConsult && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#E9F5F0', border: '1px solid #BFE0D4', borderRadius: 11, padding: '9px 14px', marginBottom: 14, flexWrap: 'wrap' }}>
+          <span style={{ color: TEAL, display: 'flex' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+          </span>
+          <span style={{ fontSize: 12.5, color: DARK }}>
+            <b>Déplacement de {movingConsult.patient}</b> ({durMove} min) — survolez l'agenda puis cliquez sur un créneau libre. <span style={{ color: MUTED }}>Échap pour annuler.</span>
+          </span>
+          <button onClick={cancelMove} style={{ marginLeft: 'auto', background: '#fff', color: DARK, border: '1px solid #D8E2DD', borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+        </div>
+      )}
 
       {/* ── Top bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>

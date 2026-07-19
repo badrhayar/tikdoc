@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useViewport } from '../hooks/useViewport';
 import {
   updateAppointment, updateAppointmentStatus, markArrived, markInConsultation,
-  sendApptWhatsApp, notifyApptEmail,
+  sendApptWhatsApp, notifyApptEmail, markAppointmentPaid, PAY_METHOD_FR,
 } from '../lib/api';
 import { moroccoToUTCISO, moPartsOf, moroccoNow } from '../lib/time';
 
@@ -37,6 +37,8 @@ const IC = {
   refer:    <svg {...I}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l5-5M21 11V6h-5"/></svg>,
   docs:     <svg {...I}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>,
   folder:   <svg {...I}><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>,
+  calOk:    <svg {...I}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M9 15.5l2 2 4-4"/></svg>,
+  pay:      <svg {...I}><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
 };
 
 const inp = { width: '100%', padding: '10px 12px', fontSize: 13.5, border: `1px solid #D8E2DD`, borderRadius: 9, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
@@ -66,6 +68,8 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [referOpen, setReferOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payDraft, setPayDraft] = useState({ amount: '', method: 'cash' });
   const notesRef = useRef(null);
   const horaireRef = useRef(null);
   useEffect(() => {
@@ -104,11 +108,14 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
   // ── Status handling ─────────────────────────────────────────────────────────
   const arrived = !!(appt?.arrivedAt || appt?.arrived_at);
   const inConsult = !!(appt?.inConsultAt || appt?.in_consultation_at);
+  const paid = consult.status === 'Payé' || !!appt?.paid;
   const activeStatus =
-    appt?.status === 'completed' ? 'vu'
+    paid ? 'pay'
+    : appt?.status === 'completed' ? 'vu'
     : appt?.status === 'no_show' ? (appt?.noShowExcused ? 'abs_exc' : 'abs_non')
     : inConsult ? 'consult'
     : arrived ? 'salle'
+    : appt?.status === 'confirmed' ? 'confirme'
     : null;
 
   const patchApptLists = (fn) => setState({
@@ -123,8 +130,17 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
   const setStatus = async (key) => {
     const local = isLocalId(id);
     const now = new Date().toISOString();
+    if (key === 'pay') { setPayDraft({ amount: String(consult.amount || (state?.services || []).find((s) => s.name === draft.motif)?.price || ''), method: 'cash' }); setPayOpen(true); return; }
     try {
-      if (key === 'salle') {
+      if (key === 'confirme') {
+        const wasPending = appt?.status === 'pending';
+        patchApptLists((a) => ({ ...a, status: 'confirmed', arrivedAt: null, inConsultAt: null }));
+        if (!local) {
+          await updateAppointment(id, { status: 'confirmed', arrived_at: null, in_consultation_at: null });
+          if (wasPending) { sendApptWhatsApp(id, 'confirmed'); notifyApptEmail(id, 'confirmed'); }
+        }
+        if (wasPending) setState({ toast: 'Rendez-vous confirmé — le patient est notifié ✓', toastShow: true });
+      } else if (key === 'salle') {
         patchApptLists((a) => ({ ...a, arrivedAt: now, inConsultAt: null, status: a.status === 'no_show' ? 'confirmed' : a.status }));
         if (!local) { await markArrived(id, true); await markInConsultation(id, false); }
       } else if (key === 'consult') {
@@ -142,6 +158,20 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
     } catch (e) {
       setState({ toast: 'Statut non enregistré : ' + (e?.message || 'erreur'), toastShow: true });
     }
+  };
+
+  // ── Terminer & encaisser — same flow as the Rendez-vous list ───────────────
+  const doPay = async () => {
+    const amount = Number(payDraft.amount) || 0;
+    const payFr = PAY_METHOD_FR[payDraft.method] || 'Espèces';
+    patchApptLists((a) => ({ ...a, status: 'completed', inConsultAt: null, paid: true, amountPaid: amount, payMethod: payDraft.method }));
+    patchConsultLists((c) => ({ ...c, status: 'Payé', amount, pay: payFr }));
+    if (!isLocalId(id)) {
+      try { await markAppointmentPaid(id, { amount, method: payDraft.method }); notifyApptEmail(id, 'completed'); }
+      catch (e) { setState({ toast: 'Paiement non synchronisé : ' + (e?.message || 'erreur'), toastShow: true }); setPayOpen(false); return; }
+    }
+    setPayOpen(false);
+    setState({ toast: 'Paiement enregistré ✓', toastShow: true });
   };
 
   // ── Save (MODIFIER LE RENDEZ-VOUS) ─────────────────────────────────────────
@@ -212,14 +242,18 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
   const past = mine.filter((c) => c.date < todayISO).slice(0, 6);
 
   const STATUTS = [
-    { key: 'salle',   label: "En salle d'attente", icon: IC.waiting },
-    { key: 'consult', label: 'En consultation',    icon: IC.steth },
-    { key: 'vu',      label: 'Vu',                 icon: IC.check },
-    { key: 'abs_exc', label: 'Absent excusé',      icon: IC.calQ },
-    { key: 'abs_non', label: 'Absent non excusé',  icon: IC.calX },
+    { key: 'confirme', label: 'Confirmé',           icon: IC.calOk },
+    { key: 'salle',    label: "En salle d'attente", icon: IC.waiting },
+    { key: 'consult',  label: 'En consultation',    icon: IC.steth },
+    { key: 'vu',       label: 'Vu',                 icon: IC.check },
+    { key: 'pay',      label: paid ? 'Payé' : 'Terminer & encaisser', icon: IC.pay },
+    { key: 'abs_exc',  label: 'Absent excusé',      icon: IC.calQ },
+    { key: 'abs_non',  label: 'Absent non excusé',  icon: IC.calX },
   ];
   const ACTIONS = [
-    { label: 'Déplacer le RDV', icon: IC.move, onClick: focusHoraire },
+    // Enters "move mode" on the agenda: a ghost of this appointment follows the
+    // cursor; clicking a free slot re-schedules it there.
+    { label: 'Déplacer le RDV', icon: IC.move, onClick: () => { setState({ apptPanel: null, moveAppt: id }); go('dcal'); } },
     { label: 'Copier le RDV', icon: IC.copy, onClick: copyAppt },
     { label: 'Imprimer le RDV', icon: IC.print, onClick: printAppt },
     { label: 'Écrire une note', icon: IC.note, onClick: focusNotes },
@@ -381,6 +415,29 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
           </button>
         </div>
       </div>
+
+      {/* ── Encaissement (Terminer & encaisser) ── */}
+      {payOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: 16 }} onClick={() => setPayOpen(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: DARK, marginBottom: 4 }}>Terminer &amp; encaisser</div>
+            <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16 }}>{consult.patient} — {draft.motif}</div>
+            <label style={lbl}>Montant encaissé (MAD)</label>
+            <input type="number" min="0" value={payDraft.amount} onChange={(e) => setPayDraft((p) => ({ ...p, amount: e.target.value }))} style={{ ...inp, marginBottom: 14 }} />
+            <label style={lbl}>Mode de paiement</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              {[['cash', 'Espèces'], ['card', 'Carte / CMI'], ['wallet', 'Wallet']].map(([val, label]) => (
+                <button key={val} onClick={() => setPayDraft((p) => ({ ...p, method: val }))}
+                  style={{ flex: 1, padding: '7px 6px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: payDraft.method === val ? TEAL : '#fff', color: payDraft.method === val ? '#fff' : MUTED, border: `1px solid ${payDraft.method === val ? TEAL : '#D8E2DD'}` }}>{label}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setPayOpen(false)} style={{ padding: '7px 13px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={doPay} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Encaisser</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Courrier d'adressage (confrère) ── */}
       {referOpen && (
