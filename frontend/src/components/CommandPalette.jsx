@@ -24,7 +24,7 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-
  * Universal search for the doctor app (the topbar box + Ctrl/Cmd-K).
  * Finds patients (→ opens their dossier), appointments (→ agenda) and screens.
  */
-export default function CommandPalette({ state, setState, go, isMobile }) {
+export default function CommandPalette({ state, setState, go, isMobile, dark = false }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const inputRef = useRef(null);
@@ -160,8 +160,14 @@ export default function CommandPalette({ state, setState, go, isMobile }) {
   return (
     <>
       {isMobile ? (
-        <button onClick={() => setOpen(true)} title="Rechercher" aria-label="Rechercher" style={{ width: 42, height: 42, borderRadius: 11, background: '#fff', border: `1px solid ${BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: DARK, flexShrink: 0 }}>
+        <button onClick={() => setOpen(true)} title="Rechercher" aria-label="Rechercher" style={{ width: 42, height: 42, borderRadius: 11, background: dark ? 'rgba(255,255,255,0.12)' : '#fff', border: `1px solid ${dark ? 'rgba(255,255,255,0.22)' : BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: dark ? '#fff' : DARK, flexShrink: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        </button>
+      ) : dark ? (
+        <button onClick={() => setOpen(true)} style={{ flex: 1, maxWidth: 440, display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.22)', borderRadius: 11, padding: '10px 14px', cursor: 'text', textAlign: 'start' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <span style={{ flex: 1, fontSize: 13.5, color: 'rgba(255,255,255,0.75)' }}>Rechercher un patient, un rendez-vous…</span>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, padding: '2px 7px' }}>Ctrl K</span>
         </button>
       ) : (
         <button onClick={() => setOpen(true)} style={{ flex: 1, maxWidth: 440, display: 'flex', alignItems: 'center', gap: 9, background: '#F4F8F5', border: `1px solid #E4EEE9`, borderRadius: 11, padding: '10px 14px', cursor: 'text', textAlign: 'start' }}>

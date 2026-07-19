@@ -123,34 +123,32 @@ const IC = {
   dstaff:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 14.5c2.2.4 3.5 1.8 3.5 4"/></svg>,
 };
 
-// Grouped navigation — a divider is drawn between each group.
-const NAV_GROUPS = [
-  [
-    { screen:'doctor', icon:IC.doctor, label:'Tableau de bord' },
-    { screen:'dcal',   icon:IC.dcal,   label:'Calendrier' },
-    { screen:'dappts', icon:IC.dappts, label:'Rendez-vous' },
-    { screen:'davail', icon:IC.davail, label:'Disponibilités' },
-  ],
-  [
-    { screen:'dpatients',  icon:IC.dpatients,  label:'Patients' },
-    { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
-    { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
-    { screen:'dhist',      icon:IC.dhist,      label:'Historique consultations' },
-    { screen:'dshare',     icon:IC.dshare,     label:'Inviter mes patients' },
-  ],
-  [
-    { screen:'dchat',  icon:IC.dchat,  label:'Messages' },
-    { screen:'dnotif', icon:IC.dnotif, label:'Rappels & Notifications' },
-  ],
-  [
-    { screen:'dstats', icon:IC.dstats, label:'Statistiques' },
-    { screen:'dabo',   icon:IC.dabo,   label:'Abonnement' },
-  ],
-  [
-    { screen:'dstaff',    icon:IC.dstaff,    label:'Équipe', ownerOnly:true },
-    { screen:'dsettings', icon:IC.dsettings, label:'Paramètres' },
-  ],
+// ── Doctolib-style icon rail (deep green) ────────────────────────────────────
+// Primary destinations live on the rail: icon with a small label beneath.
+// Everything else is one click away in the « Autres » panel.
+const RAIL = [
+  { screen:'doctor',     icon:IC.doctor,     label:'Accueil' },
+  { screen:'dcal',       icon:IC.dcal,       label:'Agenda' },
+  { screen:'dappts',     icon:IC.dappts,     label:'Rendez-vous' },
+  { screen:'dpatients',  icon:IC.dpatients,  label:'Patients' },
+  { screen:'dchat',      icon:IC.dchat,      label:'Messagerie', badge:'chat' },
+  { screen:'dprescribe', icon:IC.dprescribe, label:'Ordonnances' },
+  { screen:'ddocs',      icon:IC.ddocs,      label:'Documents' },
+  { screen:'dstats',     icon:IC.dstats,     label:'Mon activité' },
 ];
+const RAIL_MORE = [
+  { screen:'davail',    icon:IC.davail,    label:'Disponibilités' },
+  { screen:'dhist',     icon:IC.dhist,     label:'Historique consultations' },
+  { screen:'dshare',    icon:IC.dshare,    label:'Inviter mes patients' },
+  { screen:'dnotif',    icon:IC.dnotif,    label:'Rappels & Notifications' },
+  { screen:'dabo',      icon:IC.dabo,      label:'Abonnement' },
+  { screen:'dstaff',    icon:IC.dstaff,    label:'Équipe' },
+  { screen:'dsettings', icon:IC.dsettings, label:'Paramètres' },
+];
+// Deep, luxurious green — the rail + top bar share one continuous surface.
+const RAIL_BG  = 'linear-gradient(180deg, #0C4A37 0%, #093226 100%)';
+const TOP_BG   = 'linear-gradient(90deg, #0C4A37 0%, #0A3D2D 100%)';
+const RAIL_W   = 92;
 
 // Items a secretary/assistant must not see (billing, team management, and
 // prescribing — an ordonnance is a medical act signed by the doctor only).
@@ -161,6 +159,7 @@ export default function DoctorApp() {
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
 
   const [popAvatar, setPopAvatar] = useState(false);
+  const [popMore, setPopMore] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [unreadChat, setUnreadChat] = useState(0);
   const [unreadNotif, setUnreadNotif] = useState(0);
@@ -193,7 +192,7 @@ export default function DoctorApp() {
     if (screen === 'dnotif') setUnreadNotif(0);
   }, [screen]);
 
-  const closePops = () => { setPopAvatar(false); };
+  const closePops = () => { setPopAvatar(false); setPopMore(false); };
 
   // Signed-in doctor identity (falls back gracefully when not yet loaded).
   const docSpec  = state.myDoctor?.specialty || state.myDoctor?.spec;
@@ -363,80 +362,143 @@ export default function DoctorApp() {
       {isMobile && navOpen && (
         <div onClick={() => setNavOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(13,43,30,0.45)', zIndex:99 }} />
       )}
-      {/* Sidebar */}
-      <aside style={{ width:252, flexShrink:0, background:'#fff', borderRight:`1px solid #E8EFEB`, display:'flex', flexDirection:'column', overflowY:'auto',
-        ...(isMobile
-          ? { position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(13,43,30,0.3)' : 'none' }
-          : { position:'sticky', top:0, height:'100vh' }) }}>
-        <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap: 5, padding:'22px 22px 18px', cursor:'pointer' }}>
-          <BrandMark size={31} shadow />
-          <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:19, color:DARK, letterSpacing:'-0.5px' }}>Tabib<span style={{ color:G }}>o</span></span>
-        </div>
-        <nav style={{ flex:1, padding:'4px 14px 14px', display:'flex', flexDirection:'column', gap:3 }}>
-          {NAV_GROUPS.map((g, gi) => (state.isStaff ? g.filter(it => !STAFF_HIDDEN.has(it.screen)) : g)).map((group, gi) => (
-            <div key={gi} style={{ display:'flex', flexDirection:'column', gap:3 }}>
-              {gi > 0 && group.length > 0 && <div style={{ height:1, background:'#EDF2EF', margin:'7px 8px' }} />}
-              {group.map(({ screen:sc, icon, label }) => {
-                const active = screen === sc;
+      {/* ── Icon rail (Doctolib-style, deep green) ── */}
+      {(() => {
+        const staffFilter = (l) => state.isStaff ? l.filter(it => !STAFF_HIDDEN.has(it.screen)) : l;
+        const railItems = staffFilter(RAIL);
+        const moreItems = staffFilter(RAIL_MORE);
+        const activeKey = screen === 'dpfile' ? 'dcal' : screen;
+        const moreActive = moreItems.some(it => it.screen === activeKey);
+        const badgeOf = (b) => b === 'chat' ? unreadChat : 0;
+
+        const RailItem = ({ icon, label, active, onClick, badge = 0, aria }) => (
+          <button onClick={onClick} aria-label={aria || label}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = active ? 'rgba(255,255,255,0.16)' : 'transparent'; }}
+            style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.72)', transition:'background .15s, color .15s' }}>
+            <span style={{ display:'flex', position:'relative' }}>
+              {icon}
+              {badge > 0 && (
+                <span style={{ position:'absolute', top:-5, right:-8, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1, border:'1.5px solid #0C4A37' }}>{badge > 9 ? '9+' : badge}</span>
+              )}
+            </span>
+            <span style={{ fontSize:9.5, fontWeight:600, letterSpacing:'0.1px', lineHeight:1.15, textAlign:'center' }}>{label}</span>
+          </button>
+        );
+
+        if (isMobile) return (
+          <aside style={{ width:246, flexShrink:0, background:RAIL_BG, display:'flex', flexDirection:'column', overflowY:'auto', position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(6,32,23,0.5)' : 'none' }}>
+            <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 18px 14px', cursor:'pointer' }}>
+              <BrandMark size={30} shadow />
+              <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:800, fontSize:18, color:'#fff', letterSpacing:'-0.5px' }}>Tabib<span style={{ color:'#6FE0AE' }}>o</span></span>
+            </div>
+            <nav style={{ flex:1, padding:'2px 10px 14px', display:'flex', flexDirection:'column', gap:2 }}>
+              {[...railItems, ...moreItems].map(({ screen:sc, icon, label, badge }) => {
+                const active = activeKey === sc;
+                const b = badgeOf(badge);
                 return (
-                  <button
-                    key={sc}
-                    onClick={() => goNav(sc)}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F8F5'; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                    style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 14px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'linear-gradient(135deg,#E9F8F0,#DBF1E6)' : 'transparent', color: active ? '#0E7C52' : MUT, textAlign:'start', boxShadow: active ? 'inset 0 1px 1px rgba(255,255,255,0.6), 0 4px 12px -6px rgba(22,160,106,0.4)' : 'none' }}
-                  >
-                    {active && <span style={{ position:'absolute', left:0, top:9, bottom:9, width:3, borderRadius:99, background:G }} />}
-                    <span style={{ display:'flex', color: active ? G : '#94A39C' }}>{icon}</span> {label}
+                  <button key={sc} onClick={() => goNav(sc)}
+                    style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
+                    <span style={{ display:'flex', position:'relative' }}>{icon}
+                      {b > 0 && <span style={{ position:'absolute', top:-4, right:-7, minWidth:14, height:14, padding:'0 3px', borderRadius:7, background:'#E2748A', color:'#fff', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{b > 9 ? '9+' : b}</span>}
+                    </span>
+                    {label}
                   </button>
                 );
               })}
+            </nav>
+            <button onClick={() => { setNavOpen(false); authSignOut(); }} style={{ display:'flex', alignItems:'center', gap:11, margin:'0 10px 16px', padding:'11px 12px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:11, background:'rgba(255,255,255,0.08)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Déconnexion
+            </button>
+          </aside>
+        );
+
+        return (
+          <aside style={{ width:RAIL_W, flexShrink:0, background:RAIL_BG, display:'flex', flexDirection:'column', position:'sticky', top:0, height:'100vh', boxShadow:'inset -1px 0 0 rgba(255,255,255,0.06)', zIndex:60 }}>
+            <div onClick={() => goNav('doctor')} title="Tabibo" style={{ display:'flex', justifyContent:'center', padding:'16px 0 14px', cursor:'pointer' }}>
+              <BrandMark size={34} shadow />
             </div>
-          ))}
-        </nav>
-        <div style={{ margin:14, padding:'12px 13px', borderRadius:14, border:'1px solid #E8EFEB', background:'linear-gradient(140deg,#F6FBF8,#EEF6F1)', display:'flex', alignItems:'center', gap:11 }}>
-          <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
-            {docAvatar
-              ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : <svg width="28" height="32" viewBox="0 0 26 30" fill="#16A06A" opacity=".4"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:DARK, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{docName}</div>
-            <div style={{ fontSize:11.5, color:MUT, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', direction:'ltr' }}>{docEmail || 'Médecin'}</div>
-          </div>
-          <button onClick={() => authSignOut()} title="Déconnexion" style={{ background:'#fff', border:'1px solid #E2EBE6', borderRadius:9, cursor:'pointer', color:'#9AA8A2', padding:7, display:'flex' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-          </button>
-        </div>
-      </aside>
+            <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:3, overflowY:'auto', paddingBottom:8 }}>
+              {railItems.map(({ screen:sc, icon, label, badge }) => (
+                <RailItem key={sc} icon={icon} label={label} active={activeKey === sc} badge={badgeOf(badge)} onClick={() => goNav(sc)} />
+              ))}
+              {/* Autres — everything else, one click away */}
+              {moreItems.length > 0 && (
+                <RailItem
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
+                  label="Autres" active={moreActive || popMore} aria="Autres fonctionnalités"
+                  onClick={() => setPopMore(v => !v)} />
+              )}
+            </nav>
+            {/* Profile bubble (Doctolib-style, bottom of the rail) */}
+            <button onClick={() => goNav('dsettings')} title={docName} aria-label="Mon profil"
+              style={{ width:42, height:42, borderRadius:'50%', margin:'0 auto 16px', border:'2px solid rgba(255,255,255,0.35)', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
+              {docAvatar
+                ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : <span style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:800, color:'#0C4A37' }}>{(docName || 'M').replace(/^Dr\.?\s*/i, '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>}
+            </button>
+            {/* « Autres » panel */}
+            {popMore && (
+              <>
+                <div onClick={() => setPopMore(false)} style={{ position:'fixed', inset:0, zIndex:120 }} />
+                <div style={{ position:'fixed', left:RAIL_W + 10, bottom:24, width:250, background:'#fff', border:'1px solid #E5ECE9', borderRadius:14, boxShadow:'0 24px 60px rgba(6,32,23,0.35)', zIndex:130, overflow:'hidden', padding:6 }}>
+                  <div style={{ padding:'8px 12px 6px', fontSize:10.5, fontWeight:800, color:'#9AA8A2', textTransform:'uppercase', letterSpacing:0.5 }}>Autres fonctionnalités</div>
+                  {moreItems.map(({ screen:sc, icon, label }) => {
+                    const active = activeKey === sc;
+                    return (
+                      <button key={sc} onClick={() => { setPopMore(false); goNav(sc); }}
+                        style={{ display:'flex', alignItems:'center', gap:11, width:'100%', textAlign:'start', padding:'10px 12px', border:'none', borderRadius:9, cursor:'pointer', fontSize:13, fontWeight: active ? 800 : 600, background: active ? '#E9F5F0' : 'transparent', color: active ? '#0C4A37' : DARK }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F2F7F4'; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+                        <span style={{ display:'flex', color: active ? '#0C4A37' : '#7E8F88' }}>{icon}</span>
+                        {label}
+                        {sc === 'dnotif' && unreadNotif > 0 && <span style={{ marginLeft:'auto', width:8, height:8, borderRadius:'50%', background:'#E2748A' }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </aside>
+        );
+      })()}
 
       {/* Main column */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column' }}>
-        {/* Topbar */}
-        <header style={{ background:'rgba(255,255,255,0.85)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', borderBottom:`1px solid #E8EFEB`, height:64, display:'flex', alignItems:'center', gap:isMobile?10:16, padding:isMobile?'0 14px':'0 26px', position:'sticky', top:0, zIndex:20 }}>
+        {/* Topbar — same deep green surface as the rail */}
+        <header style={{ background:TOP_BG, height:60, display:'flex', alignItems:'center', gap:isMobile?10:14, padding:isMobile?'0 12px':'0 22px', position:'sticky', top:0, zIndex:20, boxShadow:'0 1px 0 rgba(255,255,255,0.08), 0 6px 18px -8px rgba(6,32,23,0.5)' }}>
           {isMobile && (
-            <button onClick={() => setNavOpen(true)} aria-label="Menu" style={{ width:42, height:42, borderRadius:11, background:'#fff', border:`1px solid ${BORDER}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:DARK, flexShrink:0 }}>
+            <button onClick={() => setNavOpen(true)} aria-label="Menu" style={{ width:42, height:42, borderRadius:11, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.22)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', flexShrink:0 }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
           )}
           {/* Universal search (patients · rendez-vous · pages) — Ctrl/Cmd+K */}
-          <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} />
+          <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} dark />
           <div style={{ flex:1 }} />
-          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ ...greenBtn, padding:isMobile?0:'7px 15px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':10 }}>
+          {/* Nouveau rendez-vous — white on the dark bar so it pops */}
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:7, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:800, fontSize:isMobile?20:13.5, padding:isMobile?0:'9px 16px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':10, justifyContent:'center', boxShadow:'0 4px 14px -4px rgba(0,0,0,0.35)', flexShrink:0 }}>
             <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
+          {/* Aide → page Contact */}
+          {!isMobile && (
+            <button onClick={() => goNav('contact')} title="Aide & contact" aria-label="Aide" style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
+            </button>
+          )}
+
           {/* Bell → full Notifications page */}
-          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dnotif' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dnotif' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            {unreadNotif > 0 && <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#E2748A', border:'1.5px solid #fff' }} />}
+            {unreadNotif > 0 && <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#FF8FA5', border:'1.5px solid #0C4A37' }} />}
           </button>
 
           {/* Chat → full Messages page */}
-          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? '#E7F6EE' : BG, border:`1px solid ${screen==='dchat' ? '#CDE7DA' : BORDER}`, cursor:'pointer', width:38, height:38, borderRadius:10, color: screen==='dchat' ? G : '#5A6B65', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             {unreadChat > 0 && (
-              <span style={{ position:'absolute', top:2, right:2, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', border:'1.5px solid #fff', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
+              <span style={{ position:'absolute', top:2, right:2, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#FF8FA5', border:'1.5px solid #0C4A37', color:'#0C2A1F', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
                 {unreadChat > 9 ? '9+' : unreadChat}
               </span>
             )}
@@ -444,7 +506,7 @@ export default function DoctorApp() {
 
           {/* Avatar */}
           <div style={{ position:'relative', zIndex:40 }}>
-            <button onClick={() => setPopAvatar(a=>!a)} style={{ width:38, height:38, borderRadius:'50%', border:'none', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
+            <button onClick={() => setPopAvatar(a=>!a)} style={{ width:38, height:38, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
               {docAvatar
                 ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 : <svg width="26" height="30" viewBox="0 0 26 30" fill="#16A06A" opacity=".35"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>}
