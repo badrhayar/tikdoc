@@ -286,11 +286,11 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
                 border: 'none',
                 borderRadius: 10,
                 padding: '13px',
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: 700,
                 cursor: busy ? 'default' : 'pointer',
                 opacity: busy ? 0.7 : 1,
-                letterSpacing: 0.2,
+                letterSpacing: '0.1px', fontFamily: 'Inter, sans-serif',
               }}
             >
               {busy ? 'Envoi…' : 'Téléverser le document'}

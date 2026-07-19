@@ -454,20 +454,20 @@ export default function Prescriptions() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button
                 onClick={generatePDF}
-                style={{ ...greenBtn, flex: isMobile ? '1 1 100%' : '1 1 auto' }}
+                style={{ ...greenBtn, flex: isMobile ? '1 1 100%' : '0 1 auto', padding: '10px 22px' }}
               >
                 Générer le PDF
               </button>
               <button
                 onClick={downloadPDF}
-                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: DARK, border: `1.5px solid ${BORDER}`, borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: DARK, border: `1px solid #D8E2DD`, borderRadius: 10, padding: '9px 18px', minHeight: 36, fontSize: 13, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}
               >
                 Télécharger
               </button>
               <button
                 onClick={savePrescription}
                 disabled={busy}
-                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: DARK, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 600, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}
+                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: '#0F6E56', border: '1px solid #BFE0D4', borderRadius: 10, padding: '9px 18px', minHeight: 36, fontSize: 13, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}
               >
                 {busy ? 'Enregistrement…' : 'Enregistrer'}
               </button>

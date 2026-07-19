@@ -76,8 +76,8 @@ export default function Pager({ pager, lang = 'fr', compact = false, style }) {
   const btn = (on, primary) => ({
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '7px 15px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-    border: `1.5px solid ${primary && on ? '#16A06A' : '#D5E5DD'}`,
-    background: primary && on ? '#16A06A' : '#fff',
+    border: `1.5px solid ${primary && on ? '#0F6E56' : '#D5E5DD'}`,
+    background: primary && on ? 'linear-gradient(135deg, #148662 0%, #0F6E56 48%, #0C4A37 100%)' : '#fff',
     color: primary && on ? '#fff' : on ? '#15314A' : '#B9C6C0',
     cursor: on ? 'pointer' : 'default',
   });

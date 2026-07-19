@@ -154,7 +154,7 @@ const NAV = [
 ];
 // Deep, luxurious green — the rails + top bar share one continuous surface.
 const RAIL_BG  = 'linear-gradient(180deg, #0C4A37 0%, #093226 100%)';
-const RAIL2_BG = 'linear-gradient(180deg, #14634B 0%, #0F4E3A 100%)';
+const RAIL2_BG = '#14634B';   // flat — the demo/trial bars share it exactly
 const TOP_BG   = 'linear-gradient(90deg, #0C4A37 0%, #0A3D2D 100%)';
 const RAIL_W   = 92;
 const RAIL2_W  = 196;
@@ -477,7 +477,6 @@ export default function DoctorApp() {
                 const anchor = Math.max(150, Math.min(r ? r.top + r.height / 2 : 150, vh - 190));
                 return { position:'absolute', left:0, right:0, top:anchor, transform:'translateY(-50%)', maxHeight:'82vh', display:'flex', flexDirection:'column' };
               })()}>
-              <div style={{ padding:'0 16px 10px', fontSize:12, fontWeight:800, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:0.7 }}>{openGroupDef.label}</div>
               <nav style={{ display:'flex', flexDirection:'column', gap:2, padding:'0 8px', overflowY:'auto' }}>
                 {openGroupDef.items.map(({ screen:sc, icon, label }) => {
                   const active = screen === sc;
