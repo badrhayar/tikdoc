@@ -530,7 +530,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: '#9A6510' }}>⚠ {cf.length} rendez-vous à venir pendant cette période</span>
                             <button onClick={() => cancelConflicts(r)} disabled={cancellingOffId === r.id}
-                              style={{ background: '#FEF4DD', color: '#9A6510', border: '1px solid #F6E0AE', borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer', opacity: cancellingOffId === r.id ? 0.6 : 1 }}>
+                              style={{ background: '#FEF4DD', color: '#9A6510', border: '1px solid #F6E0AE', borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', opacity: cancellingOffId === r.id ? 0.6 : 1 }}>
                               {cancellingOffId === r.id ? 'Annulation…' : 'Annuler & prévenir les patients'}
                             </button>
                           </div>
@@ -586,7 +586,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             {SLOT_DURATIONS.map((d) => {
               const active = slotDuration === d;
               return (
-                <button key={d} onClick={() => setSlotDuration(d)} style={{ padding: '9px 20px', borderRadius: 22, minHeight: 44, border: `1.5px solid ${active ? PRIMARY : BORDER}`, background: active ? PRIMARY : '#fff', color: active ? '#fff' : MUTED, fontWeight: active ? 700 : 500, fontSize: 14, cursor: 'pointer' }}>{d} min</button>
+                <button key={d} onClick={() => setSlotDuration(d)} style={{ padding: '6px 15px', borderRadius: 20, minHeight: 32, border: `1px solid ${active ? '#0F6E56' : BORDER}`, background: active ? '#0F6E56' : '#fff', color: active ? '#fff' : MUTED, fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{d} min</button>
               );
             })}
           </div>

@@ -454,20 +454,20 @@ export default function Prescriptions() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button
                 onClick={generatePDF}
-                style={{ ...greenBtn, flex: isMobile ? '1 1 100%' : '0 1 auto', padding: '10px 22px' }}
+                style={{ ...greenBtn, flex: isMobile ? '1 1 100%' : '0 1 auto' }}
               >
                 Générer le PDF
               </button>
               <button
                 onClick={downloadPDF}
-                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: DARK, border: `1px solid #D8E2DD`, borderRadius: 10, padding: '9px 18px', minHeight: 36, fontSize: 13, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}
+                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: DARK, border: `1px solid #D8E2DD`, borderRadius: 8, padding: '6px 14px', minHeight: 30, fontSize: 12.5, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}
               >
                 Télécharger
               </button>
               <button
                 onClick={savePrescription}
                 disabled={busy}
-                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: '#0F6E56', border: '1px solid #BFE0D4', borderRadius: 10, padding: '9px 18px', minHeight: 36, fontSize: 13, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}
+                style={{ flex: isMobile ? '1 1 100%' : '0 1 auto', background: '#fff', color: '#0F6E56', border: '1px solid #BFE0D4', borderRadius: 8, padding: '6px 14px', minHeight: 30, fontSize: 12.5, fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1 }}
               >
                 {busy ? 'Enregistrement…' : 'Enregistrer'}
               </button>
@@ -525,7 +525,7 @@ export default function Prescriptions() {
                       onClick={() => sendToPatient(p)}
                       disabled={sendBusyId === p.id || !!p.sent_at}
                       title={p.patient_id ? 'Envoyer au patient' : 'Patient non lié à un compte'}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, borderRadius: 8, border: 'none', background: p.sent_at ? '#EDF3F0' : GREEN_GRAD, color: p.sent_at ? MUTED : '#fff', fontSize: 12.5, fontWeight: 700, cursor: (sendBusyId === p.id || p.sent_at) ? 'default' : 'pointer', opacity: sendBusyId === p.id ? 0.7 : 1 }}
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 30, borderRadius: 8, border: 'none', background: p.sent_at ? '#EDF3F0' : '#0F6E56', color: p.sent_at ? MUTED : '#fff', fontSize: 12.5, fontWeight: 600, cursor: (sendBusyId === p.id || p.sent_at) ? 'default' : 'pointer', opacity: sendBusyId === p.id ? 0.7 : 1 }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                       {p.sent_at ? 'Envoyée' : (sendBusyId === p.id ? 'Envoi…' : 'Envoyer au patient')}

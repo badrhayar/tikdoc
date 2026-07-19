@@ -336,15 +336,16 @@ export const kmOf = (d) => {
 // layout tweaks (width, flex, margins). Use greenBtnDisabled(busy) for the
 // pending state.
 // Premium deep-green family — the same surface as the app's rails/top bar, so
-// every primary button across the app reads as one system.
+// every primary button across the app reads as one system. Buttons are FLAT
+// and compact (Doctolib-like): small, thin, semibold — never big or heavy.
 export const GREEN_GRAD = 'linear-gradient(135deg, #148662 0%, #0F6E56 48%, #0C4A37 100%)';
 export const greenBtn = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-  background: GREEN_GRAD, color: '#fff', border: 'none', borderRadius: 10,
-  padding: '9px 16px', minHeight: 36, fontSize: 13, fontWeight: 700, lineHeight: 1.3,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+  background: '#0F6E56', color: '#fff', border: 'none', borderRadius: 8,
+  padding: '6px 13px', minHeight: 30, fontSize: 12.5, fontWeight: 600, lineHeight: 1.3,
   letterSpacing: '0.1px', fontFamily: 'Inter, sans-serif',
   cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box', width: 'auto',
-  boxShadow: '0 6px 16px -7px rgba(12,74,55,0.55)',
+  boxShadow: '0 1px 2px rgba(12,74,55,0.16)',
 };
 export const greenBtnBusy = (busy) => (busy ? { opacity: 0.7, cursor: 'default' } : null);
 

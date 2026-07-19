@@ -214,7 +214,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                           <span style={{ fontWeight: 700, color: '#0E7C52' }}>en cours depuis {min} min</span>
                         </div>
                       </div>
-                      <button onClick={() => moveConsult(a, false)} title="Renvoyer en salle d'attente" style={{ background: '#fff', color: '#6B7B76', border: '1px solid #DCE7E2', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>↩ Salle</button>
+                      <button onClick={() => moveConsult(a, false)} title="Renvoyer en salle d'attente" style={{ background: '#fff', color: '#6B7B76', border: '1px solid #DCE7E2', borderRadius: 8, padding: '5px 11px', minHeight: 30, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>↩ Salle</button>
                       <button onClick={() => go('dappts')} style={{ ...greenBtn, flexShrink: 0 }}>Gérer</button>
                     </div>
                   );
@@ -230,8 +230,8 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                 <span style={{ fontSize: 11, fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>Salle d'attente</span>
                 {/* One click: take the longest-waiting patient into the consultation. */}
                 {inConsultation.length === 0 && (
-                  <button onClick={() => moveConsult(waiting[0], true)} style={{ background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
-                    Faire entrer le suivant →
+                  <button onClick={() => moveConsult(waiting[0], true)} style={{ background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 8, padding: '4px 11px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                    Faire entrer le suivant
                   </button>
                 )}
               </div>
@@ -250,10 +250,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
                           <span style={{ fontWeight: 700, color: waitColor }}>attend depuis {min} min</span>
                         </div>
                       </div>
-                      <button onClick={() => moveConsult(a, true)} title="Faire entrer en consultation" style={{ ...greenBtn, flexShrink: 0 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                        Consultation
-                      </button>
+                      <button onClick={() => moveConsult(a, true)} title="Faire entrer en consultation" style={{ ...greenBtn, flexShrink: 0 }}>Consultation</button>
                     </div>
                   );
                 })}
@@ -282,10 +279,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               </div>
             </div>
             <button onClick={() => { setState({ apptTab: 'En attente' }); go('dappts'); }}
-              style={{ ...greenBtn, flexShrink: 0 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              Confirmer les rendez-vous
-            </button>
+              style={{ ...greenBtn, flexShrink: 0 }}>Confirmer les rendez-vous</button>
           </div>
         </div>
       )}
@@ -316,7 +310,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               <div style={{ fontWeight: 800, fontSize: 15.5, color: DARK, letterSpacing: '-0.3px' }}>Agenda du jour</div>
               <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{apptCount === 0 ? 'Aucun rendez-vous aujourd’hui' : `${apptCount} rendez-vous aujourd’hui`}</div>
             </div>
-            <button onClick={() => go('dcal')} style={{ background: '#fff', color: PRIMARY, border: `1px solid ${BORDER_STRONG}`, borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={() => go('dcal')} style={{ background: '#fff', color: PRIMARY, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8, padding: '5px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
               Voir le calendrier
             </button>
           </div>
@@ -382,7 +376,7 @@ export default function Dashboard({ state, setState, go, openNewAppt, openAddPat
               );
             })}
           </div>
-          <button onClick={() => go('dchat')} style={{ padding: '13px 20px', borderTop: `1px solid ${BORDER_STRONG}`, textAlign: 'center', background: '#fff', border: 'none', borderBottomLeftRadius: 18, borderBottomRightRadius: 18, color: PRIMARY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => go('dchat')} style={{ padding: '13px 20px', borderTop: `1px solid ${BORDER_STRONG}`, textAlign: 'center', background: '#fff', border: 'none', borderBottomLeftRadius: 18, borderBottomRightRadius: 18, color: PRIMARY, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
             Voir tous les messages →
           </button>
         </div>

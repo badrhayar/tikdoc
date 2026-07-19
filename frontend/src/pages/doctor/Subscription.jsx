@@ -167,7 +167,7 @@ export default function Subscription({ state, setState, go }) {
         <button
           onClick={() => choosePlan(p.key)}
           disabled={locked}
-          style={{ marginTop: 'auto', width: '100%', background: locked ? '#EAF6F0' : (recommended ? PRIMARY : 'transparent'), color: locked ? '#0E7C52' : (recommended ? '#fff' : PRIMARY), border: locked ? `1px solid #C3E8D8` : `2px solid ${PRIMARY}`, borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: locked ? 'default' : 'pointer' }}
+          style={{ marginTop: 'auto', width: '100%', background: locked ? '#EAF6F0' : (recommended ? '#0F6E56' : 'transparent'), color: locked ? '#0E7C52' : (recommended ? '#fff' : '#0F6E56'), border: locked ? `1px solid #C3E8D8` : `1px solid #0F6E56`, borderRadius: 9, padding: '9px 0', fontWeight: 600, fontSize: 13, cursor: locked ? 'default' : 'pointer' }}
         >
           {label}
         </button>
@@ -246,7 +246,7 @@ export default function Subscription({ state, setState, go }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 26 }}>
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 50, padding: 4, display: 'flex' }}>
           {[['Mensuel', false], ['Annuel −20%', true]].map(([label, val]) => (
-            <button key={label} onClick={() => setState({ aboAnnual: val })} style={{ background: annual === val ? PRIMARY : 'transparent', color: annual === val ? '#fff' : MUTED, border: 'none', borderRadius: 50, padding: '8px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>{label}</button>
+            <button key={label} onClick={() => setState({ aboAnnual: val })} style={{ background: annual === val ? '#0F6E56' : 'transparent', color: annual === val ? '#fff' : MUTED, border: 'none', borderRadius: 50, padding: '6px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{label}</button>
           ))}
         </div>
       </div>

@@ -257,7 +257,7 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
                 {!dobLbl && age == null ? 'Dossier sans date de naissance' : ''}
               </div>
             </div>
-            <button onClick={openDossier} style={{ display: 'flex', alignItems: 'center', gap: 8, background: TEAL, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px -6px rgba(15,110,86,0.5)' }}>
+            <button onClick={openDossier} style={{ display: 'flex', alignItems: 'center', gap: 7, background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)' }}>
               {IC.folder} Ouvrir le dossier patient
             </button>
           </div>
@@ -277,7 +277,7 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
                 catch (e) { setState({ toast: 'Confirmation impossible : ' + (e?.message || 'erreur'), toastShow: true }); return; }
               }
               setState({ toast: 'Rendez-vous confirmé — le patient est notifié ✓', toastShow: true });
-            }} style={{ background: TEAL, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+            }} style={{ background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
               Confirmer le rendez-vous
             </button>
           </div>
@@ -375,8 +375,8 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
 
         {/* ── Footer ── */}
         <div style={{ padding: isMobile ? '12px 16px' : '14px 24px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0, background: '#fff' }}>
-          <button onClick={close} style={{ padding: '11px 22px', borderRadius: 10, border: `1px solid #D8E2DD`, background: '#fff', color: DARK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>ANNULER</button>
-          <button onClick={save} disabled={saving} style={{ padding: '11px 22px', borderRadius: 10, border: 'none', background: TEAL, color: '#fff', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.7 : 1, boxShadow: '0 6px 16px -6px rgba(15,110,86,0.5)' }}>
+          <button onClick={close} style={{ padding: '7px 16px', borderRadius: 8, border: `1px solid #D8E2DD`, background: '#fff', color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>ANNULER</button>
+          <button onClick={save} disabled={saving} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1, boxShadow: '0 1px 2px rgba(12,74,55,0.16)' }}>
             {saving ? 'ENREGISTREMENT…' : 'MODIFIER LE RENDEZ-VOUS'}
           </button>
         </div>
@@ -391,7 +391,7 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
               Un courrier d'adressage imprimable est généré avec les informations du patient et le motif — remettez-le au patient ou envoyez-le au confrère.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setReferOpen(false)} style={{ padding: '10px 16px', borderRadius: 9, border: `1px solid #D8E2DD`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Fermer</button>
+              <button onClick={() => setReferOpen(false)} style={{ padding: '7px 13px', borderRadius: 8, border: `1px solid #D8E2DD`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Fermer</button>
               <button onClick={() => {
                 setReferOpen(false);
                 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -408,7 +408,7 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
                   <p style="margin-top:36px"><strong>${esc(docName)}</strong></p>
                   <script>window.onload=()=>window.print()</` + `script></body></html>`);
                 w.document.close();
-              }} style={{ padding: '10px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Imprimer le courrier</button>
+              }} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Imprimer le courrier</button>
             </div>
           </div>
         </div>

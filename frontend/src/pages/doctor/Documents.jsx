@@ -281,13 +281,13 @@ export default function Documents({ state, setState, go, openNewAppt, openAddPat
               disabled={busy}
               style={{
                 width: '100%',
-                background: GREEN_GRAD,
+                background: '#0F6E56',
                 color: '#fff',
                 border: 'none',
-                borderRadius: 10,
-                padding: '13px',
-                fontSize: 13,
-                fontWeight: 700,
+                borderRadius: 9,
+                padding: '9px 13px',
+                fontSize: 12.5,
+                fontWeight: 600,
                 cursor: busy ? 'default' : 'pointer',
                 opacity: busy ? 0.7 : 1,
                 letterSpacing: '0.1px', fontFamily: 'Inter, sans-serif',

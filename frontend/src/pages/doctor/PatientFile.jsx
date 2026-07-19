@@ -79,7 +79,7 @@ function ItemList({ items, onAdd, onRemove, placeholder }) {
       ))}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <input value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={placeholder} style={{ ...inp, flex: 1 }} />
-        <button onClick={add} style={{ padding: '8px 14px', borderRadius: 9, border: `1px solid #CFE4DB`, background: '#E9F5F0', color: TEAL, fontSize: 12.5, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Ajouter</button>
+        <button onClick={add} style={{ padding: '6px 13px', borderRadius: 8, border: `1px solid #CFE4DB`, background: '#E9F5F0', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Ajouter</button>
       </div>
     </div>
   );
@@ -357,11 +357,11 @@ export default function PatientFile({ state, setState, go }) {
             <span title="Paramètres" style={{ color: MUTED, display: 'flex' }}>{IC.gear}</span>
             <span title="Dictée" style={{ color: MUTED, display: 'flex' }}>{IC.mic}</span>
             <button onClick={() => setTimerOn((v) => !v)} title={timerOn ? 'Mettre en pause' : 'Démarrer le chronomètre'}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1px solid ${timerOn ? '#BFE0D4' : '#D8E2DD'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 18, padding: '6px 13px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1px solid ${timerOn ? '#BFE0D4' : '#D8E2DD'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 18, padding: '5px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: timerOn ? TEAL : '#C9D6D1' }} />
               {timerLbl}
             </button>
-            <button onClick={() => setIaOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, background: TEAL, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+            <button onClick={() => setIaOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
               {IC.spark} GÉNÉRER LA SYNTHÈSE
             </button>
           </div>
@@ -391,7 +391,7 @@ export default function PatientFile({ state, setState, go }) {
         <RichText value={obs.conclusion} onChange={(v) => setObs((o) => ({ ...o, conclusion: v }))} placeholder="Entrez votre conclusion" minHeight={64} />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
           {savedMsg && <span style={{ fontSize: 13, fontWeight: 700, color: TEAL, alignSelf: 'center' }}>{savedMsg}</span>}
-          <button onClick={saveObs} disabled={obsSaving} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', opacity: obsSaving ? 0.7 : 1 }}>
+          <button onClick={saveObs} disabled={obsSaving} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: obsSaving ? 0.7 : 1 }}>
             {obsSaving ? 'Enregistrement…' : 'Enregistrer la consultation'}
           </button>
         </div>
@@ -436,7 +436,7 @@ export default function PatientFile({ state, setState, go }) {
         <h3 style={{ ...h3s, margin: 0 }}>Antécédents et mode de vie</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 700, color: TEAL }}>{savedMsg}</span>}
-          <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '9px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer'}</button>
+          <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer'}</button>
         </div>
       </div>
       <AntecedentBlock title="Antécédents médicaux" items={mh.medicaux} none={mh.noMedicaux} placeholder="Ex. Diabète de type 2"
@@ -489,7 +489,7 @@ export default function PatientFile({ state, setState, go }) {
     <div style={card}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <h3 style={{ ...h3s, margin: 0 }}>Traitements en cours</h3>
-        <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '9px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>{mhSaving ? '…' : 'Enregistrer'}</button>
+        <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>{mhSaving ? '…' : 'Enregistrer'}</button>
       </div>
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
         <div style={{ fontSize: 13.5, fontWeight: 800, color: DARK, marginBottom: 10 }}>Traitements de fond</div>
@@ -560,9 +560,9 @@ export default function PatientFile({ state, setState, go }) {
     histo: renderHisto,
     antec: renderAntec,
     ttt: renderTtt,
-    suivi: () => renderSimple('Données de suivi', <>{renderSuiviFields()}<div style={{ display: 'flex', justifyContent: 'flex-end' }}><button onClick={() => saveMh()} style={{ padding: '9px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>Enregistrer</button></div></>),
+    suivi: () => renderSimple('Données de suivi', <>{renderSuiviFields()}<div style={{ display: 'flex', justifyContent: 'flex-end' }}><button onClick={() => saveMh()} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Enregistrer</button></div></>),
     bio: () => renderSimple('Biologie et biométrie', <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Les résultats biologiques transmis par le patient sont dans <button onClick={() => go('ddocs')} style={{ color: TEAL, background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, padding: 0 }}>Documents</button>. Les mesures biométriques (taille, poids, IMC, PA) se saisissent dans « Données de suivi ».</div>),
-    prev: () => renderSimple('Prévention', <><label style={lbl}>Notes de prévention (dépistages, rappels…)</label><textarea value={mh.prevention || ''} onChange={(e) => patchMh({ prevention: e.target.value })} rows={4} style={{ ...inp, resize: 'vertical' }} /><div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}><button onClick={() => saveMh()} style={{ padding: '9px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>Enregistrer</button></div></>),
+    prev: () => renderSimple('Prévention', <><label style={lbl}>Notes de prévention (dépistages, rappels…)</label><textarea value={mh.prevention || ''} onChange={(e) => patchMh({ prevention: e.target.value })} rows={4} style={{ ...inp, resize: 'vertical' }} /><div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}><button onClick={() => saveMh()} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Enregistrer</button></div></>),
     vaccin: () => renderSimple('Carnet de vaccination', <><ItemList items={mh.vaccins || []} placeholder="Ex. Tétanos — rappel 03/2024"
       onAdd={(v) => { const next = { ...mh, vaccins: [...(mh.vaccins || []), v] }; setMh(next); saveMh(next); }}
       onRemove={(i) => { const next = { ...mh, vaccins: (mh.vaccins || []).filter((_, k) => k !== i) }; setMh(next); saveMh(next); }} /></>),
@@ -632,8 +632,8 @@ export default function PatientFile({ state, setState, go }) {
           {civ} {patient.name}{linkedAppt ? ` · RDV ${new Date(linkedAppt.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' })}` : ''}
         </span>
         <div style={{ flex: 1 }} />
-        <button onClick={back} style={{ padding: '10px 18px', borderRadius: 9, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>ANNULER</button>
-        <button onClick={finishConsult} style={{ padding: '10px 18px', borderRadius: 9, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+        <button onClick={back} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>ANNULER</button>
+        <button onClick={finishConsult} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           TERMINER LA CONSULTATION
         </button>
         <button onClick={() => { if (linkedAppt && !linkedAppt.paid) { setPayAmount(String(linkedAppt.fee || '')); setPayOpen(true); } }}
@@ -651,7 +651,7 @@ export default function PatientFile({ state, setState, go }) {
             <div style={{ width: 52, height: 52, borderRadius: 14, background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>{IC.spark}</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 8 }}>Synthèse par IA</div>
             <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.6, margin: '0 0 16px' }}>Fonctionnalité IA disponible prochainement — la synthèse automatique de vos consultations arrive dans une prochaine mise à jour.</p>
-            <button onClick={() => setIaOpen(false)} style={{ padding: '10px 22px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Compris</button>
+            <button onClick={() => setIaOpen(false)} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Compris</button>
           </div>
         </div>
       )}
@@ -668,8 +668,8 @@ export default function PatientFile({ state, setState, go }) {
               <option>Espèces</option><option>CMI</option><option>M-Wallet</option>
             </select>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setPayOpen(false)} style={{ padding: '10px 16px', borderRadius: 9, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
-              <button onClick={doPay} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Encaisser</button>
+              <button onClick={() => setPayOpen(false)} style={{ padding: '7px 13px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={doPay} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Encaisser</button>
             </div>
           </div>
         </div>

@@ -371,7 +371,7 @@ export default function Chat({ state, setState }) {
 
                 <input value={inputVal} onChange={(e) => setInputVal(e.target.value)} onKeyDown={handleKeyDown} placeholder="Écrire un message…" style={{ flex: 1, background: BG, border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '10px 16px', fontSize: 14, outline: 'none', color: DARK }} />
 
-                <button onClick={doSend} disabled={!inputVal.trim()} style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: inputVal.trim() ? PRIMARY : BORDER_STRONG, border: 'none', cursor: inputVal.trim() ? 'pointer' : 'default', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}>
+                <button onClick={doSend} disabled={!inputVal.trim()} style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: inputVal.trim() ? '#0F6E56' : BORDER_STRONG, border: 'none', cursor: inputVal.trim() ? 'pointer' : 'default', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>
                 </button>
               </div>

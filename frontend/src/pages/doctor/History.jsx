@@ -271,7 +271,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setEditOpen(false)}
-                style={{ padding: '10px 22px', border: `1.5px solid ${BORDER_STRONG}`, borderRadius: 10, background: '#fff', color: DARK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '6px 15px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 8, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
               >
                 Annuler
               </button>
@@ -292,7 +292,7 @@ export default function History({ state, setState, go, openNewAppt, openAddPatie
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: DARK }}>Historique des consultations</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13.5, color: MUTED }}>Consultez et exportez l'ensemble de vos consultations</p>
         </div>
-        <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 18px', border: `1.5px solid ${BORDER_STRONG}`, borderRadius: 10, background: '#fff', color: DARK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+        <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 14px', minHeight: 30, border: `1px solid ${BORDER_STRONG}`, borderRadius: 8, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           Exporter CSV
         </button>

@@ -567,10 +567,10 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
               <div style={{ display: 'flex', gap: 8 }}>
                 {[['cash', 'Espèces'], ['card', 'Carte / CMI'], ['wallet', 'Wallet']].map(([val, label]) => (
                   <button key={val} onClick={() => setPayModal({ ...payModal, method: val })} style={{
-                    flex: 1, padding: '9px 6px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
-                    background: payModal.method === val ? PRIMARY : '#fff',
+                    flex: 1, padding: '7px 6px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                    background: payModal.method === val ? '#0F6E56' : '#fff',
                     color: payModal.method === val ? '#fff' : MUTED,
-                    border: `1.5px solid ${payModal.method === val ? PRIMARY : BORDER_STRONG}`,
+                    border: `1px solid ${payModal.method === val ? '#0F6E56' : BORDER_STRONG}`,
                   }}>{label}</button>
                 ))}
               </div>
@@ -600,7 +600,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
               )}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => setPayModal(null)} style={{ flex: 1, padding: '8px 11px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
               <button onClick={recordPayment} style={{ ...greenBtn, flex: 1 }}>Encaisser</button>
             </div>
           </div>
@@ -624,7 +624,7 @@ export default function Appointments({ state, setState, go, openNewAppt }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setResched(null)} style={{ flex: 1, padding: 11, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => setResched(null)} style={{ flex: 1, padding: '8px 11px', borderRadius: 9, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
               <button onClick={saveResched} style={{ ...greenBtn, flex: 1 }}>Reporter</button>
             </div>
           </div>

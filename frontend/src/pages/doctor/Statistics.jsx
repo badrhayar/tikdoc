@@ -615,7 +615,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
                     </div>
                   ) : (
                     <button onClick={() => setReplyDraft((d) => ({ ...d, [r.id]: r.reply || '' }))}
-                      style={{ marginTop: 10, background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 9, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                      style={{ marginTop: 10, background: '#E7F6EE', color: '#0E7C52', border: '1px solid #CDE7DA', borderRadius: 8, padding: '5px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                       {r.reply ? 'Modifier ma réponse' : 'Répondre'}
                     </button>
                   )}

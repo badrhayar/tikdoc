@@ -484,7 +484,7 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             border: `1px solid ${on ? PRIMARY : BORDER}`, borderRadius: 9,
-                            padding: '7px 13px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                            padding: '6px 12px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
                             background: on ? '#E7F6EE' : '#fff', color: on ? '#0E7C52' : MUTED,
                             fontFamily: l.code === 'ar' ? "'Noto Sans Arabic','Inter',sans-serif" : 'inherit',
                           }}>

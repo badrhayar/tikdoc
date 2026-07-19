@@ -511,8 +511,8 @@ export default function DoctorApp() {
           <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} dark />
           <div style={{ flex:1 }} />
           {/* Nouveau rendez-vous — white on the dark bar so it pops */}
-          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:6, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:800, fontSize:isMobile?20:12.5, padding:isMobile?0:'7px 14px', width:isMobile?42:'auto', height:isMobile?42:32, borderRadius:isMobile?'50%':9, justifyContent:'center', boxShadow:'0 4px 12px -4px rgba(0,0,0,0.35)', flexShrink:0, marginRight:6 }}>
-            <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:5, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:600, fontSize:isMobile?20:12.5, padding:isMobile?0:'5px 12px', width:isMobile?42:'auto', height:isMobile?42:30, borderRadius:isMobile?'50%':8, justifyContent:'center', boxShadow:'0 2px 6px -2px rgba(0,0,0,0.3)', flexShrink:0, marginRight:6 }}>
+            <span style={{ fontSize:isMobile?20:14, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
           {/* Aide → page Contact */}
@@ -592,7 +592,7 @@ export default function DoctorApp() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z"/></svg>
               Mode démonstration — données fictives
             </span>
-            <button onClick={() => go('docregister')} style={{ background:'#0C4A37', color:'#fff', border:'1px solid rgba(255,255,255,0.25)', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 12px -4px rgba(6,32,23,0.6)' }}>
+            <button onClick={() => go('docregister')} style={{ background:'#0C4A37', color:'#fff', border:'1px solid rgba(255,255,255,0.25)', borderRadius:99, padding:'5px 14px', fontSize:12.5, fontWeight:600, cursor:'pointer', boxShadow:'0 2px 6px -2px rgba(6,32,23,0.5)' }}>
               Créer mon compte gratuit (14 j)
             </button>
             <span onClick={() => go('fordoctors')} style={{ textDecoration:'underline', cursor:'pointer', fontWeight:700 }}>Quitter la démo</span>
@@ -622,7 +622,7 @@ export default function DoctorApp() {
                 {PAY_T[lang].review}
               </span>
             ) : (
-              <button onClick={declarePay} disabled={payBusy} style={{ background: GREEN_GRAD, color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>
+              <button onClick={declarePay} disabled={payBusy} style={{ background:'#0F6E56', color:'#fff', border:'none', borderRadius:99, padding:'5px 14px', fontSize:12.5, fontWeight:600, cursor: payBusy ? 'default' : 'pointer', opacity: payBusy ? 0.7 : 1 }}>
                 {PAY_T[lang].pay}
               </button>
             )}
@@ -733,8 +733,8 @@ export default function DoctorApp() {
                 <textarea value={newAppt.notes || ''} onChange={e => setNA('notes', e.target.value)} placeholder="Symptômes, remarques…" style={{ width:'100%', minHeight:62, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', resize:'vertical', boxSizing:'border-box' }} />
               </div>
               <div style={{ padding: isMobile ? '0 16px 18px' : '0 26px 22px', display:'flex', gap:10 }}>
-                <button onClick={closeNewAppt} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700, whiteSpace:'nowrap' }}>Annuler</button>
-                <button onClick={submitNewAppt} style={{ flex: isMobile ? 1.4 : 1.5, background:GREEN_GRAD, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize: isMobile ? 13.5 : 14, fontWeight:700, whiteSpace:'nowrap' }}>{isMobile ? 'Enregistrer' : 'Enregistrer le rendez-vous'}</button>
+                <button onClick={closeNewAppt} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:600, whiteSpace:'nowrap' }}>Annuler</button>
+                <button onClick={submitNewAppt} style={{ flex: isMobile ? 1.4 : 1.5, background:'#0F6E56', color:'#fff', border:'none', cursor:'pointer', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:600, whiteSpace:'nowrap' }}>{isMobile ? 'Enregistrer' : 'Enregistrer le rendez-vous'}</button>
               </div>
             </div>
           </div>
@@ -836,8 +836,8 @@ export default function DoctorApp() {
                 <textarea value={newPatient.notes || ''} onChange={e => setNP('notes', e.target.value)} placeholder="Antécédents, remarques…" style={{ width:'100%', minHeight:60, padding:'11px 13px', border:'1px solid #DCE5E0', borderRadius:9, fontSize:13.5, background:'#F8FBF9', outline:'none', resize:'vertical', boxSizing:'border-box' }} />
               </div>
               <div style={{ padding:'18px 26px 22px', display:'flex', gap:10, borderTop:'1px solid #F0F3F2' }}>
-                <button onClick={closeAddPatient} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Annuler</button>
-                <button onClick={submitAddPatient} style={{ flex:1.5, background:GREEN_GRAD, color:'#fff', border:'none', cursor:'pointer', padding:12, borderRadius:11, fontSize:14, fontWeight:700 }}>Enregistrer le patient</button>
+                <button onClick={closeAddPatient} style={{ flex:1, background:BG, color:'#5A6B65', border:`1px solid ${BORDER}`, cursor:'pointer', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:600 }}>Annuler</button>
+                <button onClick={submitAddPatient} style={{ flex:1.5, background:'#0F6E56', color:'#fff', border:'none', cursor:'pointer', padding:'9px 12px', borderRadius:9, fontSize:13, fontWeight:600 }}>Enregistrer le patient</button>
               </div>
             </div>
           </div>

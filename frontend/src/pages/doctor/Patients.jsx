@@ -194,7 +194,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
           <p style={{ margin: '4px 0 0', fontSize: 14, color: MUTED }}>Annuaire complet de vos patients</p>
         </div>
         <button onClick={openAddPatient} style={{ ...greenBtn }}>
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Ajouter un patient
+          <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> Ajouter un patient
         </button>
       </div>
 
@@ -246,11 +246,11 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
               key={f}
               onClick={() => setActiveFilter(f)}
               style={{
-                padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 500,
+                padding: '5px 14px', borderRadius: 20, fontSize: 12.5, fontWeight: 600,
                 cursor: 'pointer', transition: 'all 0.15s',
-                background: activeFilter === f ? PRIMARY : '#fff',
+                background: activeFilter === f ? '#0F6E56' : '#fff',
                 color: activeFilter === f ? '#fff' : MUTED,
-                border: activeFilter === f ? `1.5px solid ${PRIMARY}` : `1.5px solid ${BORDER}`,
+                border: activeFilter === f ? `1px solid #0F6E56` : `1px solid ${BORDER}`,
               }}
             >
               {f}
@@ -489,7 +489,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
               })()}
             </div>
             <div style={{ padding: '14px 22px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditForm(null)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+              <button onClick={() => setEditForm(null)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
               <button onClick={saveEditForm} disabled={editBusy} style={{ ...greenBtn, ...greenBtnBusy(editBusy) }}>{editBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
             </div>
           </div>
@@ -522,11 +522,11 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
             {/* Quick actions — the daily loop, one tap away */}
             <div style={{ padding: '14px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={() => newApptFor(viewPatient)} style={{ ...greenBtn }}>+ Rendez-vous</button>
-              <button onClick={() => { const p = viewPatient; setViewPatient(null); setState({ pfilePatient: p, pfileApptId: null }); go('dpfile'); }} style={{ background: '#E9F5F0', color: '#0F6E56', border: '1px solid #CFE4DB', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Dossier médical</button>
-              <button onClick={() => openEdit(viewPatient)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Modifier</button>
-              <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Ordonnance</button>
+              <button onClick={() => { const p = viewPatient; setViewPatient(null); setState({ pfilePatient: p, pfileApptId: null }); go('dpfile'); }} style={{ background: '#E9F5F0', color: '#0F6E56', border: '1px solid #CFE4DB', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Dossier médical</button>
+              <button onClick={() => openEdit(viewPatient)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Modifier</button>
+              <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Ordonnance</button>
               {viewPatient.userId && (
-                <button onClick={() => { const uid = viewPatient.userId; setViewPatient(null); setState({ chatOpenPeer: uid }); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Message</button>
+                <button onClick={() => { const uid = viewPatient.userId; setViewPatient(null); setState({ chatOpenPeer: uid }); go('dchat'); }} style={{ background: '#E8F1FC', color: '#3B6FB0', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Message</button>
               )}
               {viewPatient.phone && viewPatient.phone !== '—' && (
                 <a href={`tel:${String(viewPatient.phone).replace(/\s/g, '')}`} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 15px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>Appeler</a>

@@ -69,7 +69,7 @@ export default function BookingShare() {
   };
 
   const card = { background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 16, padding: 22 };
-  const btn = (bg, color, border) => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 16px', borderRadius: 11, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: border || 'none', textDecoration: 'none' });
+  const btn = (bg, color, border) => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: bg, color, border: border || 'none', textDecoration: 'none' });
 
   if (!doctorId) {
     return (

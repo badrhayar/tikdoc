@@ -58,7 +58,7 @@ export default function Tasks({ state, setState, go }) {
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
                   <div style={{ fontSize: 12, color: MUTED }}>{t.sub}</div>
                 </div>
-                <button onClick={() => openAuto(t)} style={{ background: TEAL, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>{t.cta} →</button>
+                <button onClick={() => openAuto(t)} style={{ background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 13px', minHeight: 30, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>{t.cta}</button>
               </div>
             );
           })}
@@ -73,7 +73,7 @@ export default function Tasks({ state, setState, go }) {
           <div style={{ display: 'flex', gap: 8, padding: '12px 18px', borderBottom: '1px solid #F2F6F4' }}>
             <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addManual()} placeholder="Ajouter une tâche… (ex. Rappeler le laboratoire)"
               style={{ flex: 1, padding: '10px 13px', fontSize: 13.5, border: '1px solid #D8E2DD', borderRadius: 9, outline: 'none', color: DARK }} />
-            <button onClick={addManual} style={{ background: '#E9F5F0', color: TEAL, border: '1px solid #CFE4DB', borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>+ Ajouter</button>
+            <button onClick={addManual} style={{ background: '#E9F5F0', color: TEAL, border: '1px solid #CFE4DB', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>+ Ajouter</button>
           </div>
           {manual.length === 0 && <div style={{ padding: '18px', fontSize: 13, color: MUTED }}>Aucune tâche personnelle.</div>}
           {manual.map((m, i) => (
