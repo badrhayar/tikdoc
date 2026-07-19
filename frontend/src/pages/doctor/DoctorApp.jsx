@@ -168,6 +168,7 @@ export default function DoctorApp() {
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
 
   const [popAvatar, setPopAvatar] = useState(false);
+  const groupBtnRefs = useRef({});
   const [popMore, setPopMore] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [unreadChat, setUnreadChat] = useState(0);
@@ -442,7 +443,7 @@ export default function DoctorApp() {
                 const active = g.items ? openKey === g.key || groupOfScreen === g.key : screen === g.screen;
                 const b = badgeOf(g.badge);
                 return (
-                  <button key={g.key} onClick={() => clickNav(g)} aria-label={g.label}
+                  <button key={g.key} ref={el => { if (g.items) groupBtnRefs.current[g.key] = el; }} onClick={() => clickNav(g)} aria-label={g.label}
                     onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = active ? 'rgba(255,255,255,0.16)' : 'transparent'; }}
                     style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.72)', transition:'background .15s, color .15s', flexShrink:0 }}>
@@ -465,10 +466,19 @@ export default function DoctorApp() {
 
           {/* Level 2 — group rail (lighter green, opens for grouped items) */}
           {openGroupDef && (
-            <aside style={{ width:RAIL2_W, background:RAIL2_BG, position:'fixed', left:RAIL_W, top:0, bottom:0, zIndex:59, display:'flex', flexDirection:'column', boxShadow:'inset -1px 0 0 rgba(255,255,255,0.07), 8px 0 24px -14px rgba(6,32,23,0.5)', animation:'saRail2 .18s ease' }}>
+            <aside style={{ width:RAIL2_W, background:RAIL2_BG, position:'fixed', left:RAIL_W, top:0, bottom:0, zIndex:59, boxShadow:'inset -1px 0 0 rgba(255,255,255,0.07), 8px 0 24px -14px rgba(6,32,23,0.5)', animation:'saRail2 .18s ease' }}>
               <style>{`@keyframes saRail2{from{transform:translateX(-12px);opacity:0}to{transform:none;opacity:1}}`}</style>
-              <div style={{ padding:'22px 16px 12px', fontSize:12, fontWeight:800, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:0.7 }}>{openGroupDef.label}</div>
-              <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:2, padding:'0 8px', overflowY:'auto' }}>
+              {/* The group's list is vertically centred on the rail-1 button that
+                  opened it, so both levels read as one connected control. */}
+              <div style={(() => {
+                const btn = groupBtnRefs.current[openGroupDef.key];
+                const r = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+                const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+                const anchor = Math.max(150, Math.min(r ? r.top + r.height / 2 : 150, vh - 190));
+                return { position:'absolute', left:0, right:0, top:anchor, transform:'translateY(-50%)', maxHeight:'82vh', display:'flex', flexDirection:'column' };
+              })()}>
+              <div style={{ padding:'0 16px 10px', fontSize:12, fontWeight:800, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:0.7 }}>{openGroupDef.label}</div>
+              <nav style={{ display:'flex', flexDirection:'column', gap:2, padding:'0 8px', overflowY:'auto' }}>
                 {openGroupDef.items.map(({ screen:sc, icon, label }) => {
                   const active = screen === sc;
                   return (
@@ -483,6 +493,7 @@ export default function DoctorApp() {
                   );
                 })}
               </nav>
+              </div>
             </aside>
           )}
         </>
@@ -491,7 +502,7 @@ export default function DoctorApp() {
       {/* Main column — offset by the fixed rails */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', marginLeft: railOffset, transition:'margin-left .18s ease' }}>
         {/* Topbar — same deep green surface as the rail */}
-        <header style={{ background:TOP_BG, height:60, display:'flex', alignItems:'center', gap:isMobile?10:14, padding:isMobile?'0 12px':'0 22px', position:'sticky', top:0, zIndex:20, boxShadow:'0 1px 0 rgba(255,255,255,0.08), 0 6px 18px -8px rgba(6,32,23,0.5)' }}>
+        <header style={{ background:TOP_BG, height:54, display:'flex', alignItems:'center', gap:isMobile?10:8, padding:isMobile?'0 12px':'0 18px', position:'sticky', top:0, zIndex:20, boxShadow:'0 1px 0 rgba(255,255,255,0.08), 0 6px 18px -8px rgba(6,32,23,0.5)' }}>
           {isMobile && (
             <button onClick={() => setNavOpen(true)} aria-label="Menu" style={{ width:42, height:42, borderRadius:11, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.22)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', flexShrink:0 }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -501,26 +512,33 @@ export default function DoctorApp() {
           <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} dark />
           <div style={{ flex:1 }} />
           {/* Nouveau rendez-vous — white on the dark bar so it pops */}
-          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:7, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:800, fontSize:isMobile?20:13.5, padding:isMobile?0:'9px 16px', width:isMobile?42:'auto', height:isMobile?42:'auto', borderRadius:isMobile?'50%':10, justifyContent:'center', boxShadow:'0 4px 14px -4px rgba(0,0,0,0.35)', flexShrink:0 }}>
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:6, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:800, fontSize:isMobile?20:12.5, padding:isMobile?0:'7px 14px', width:isMobile?42:'auto', height:isMobile?42:32, borderRadius:isMobile?'50%':9, justifyContent:'center', boxShadow:'0 4px 12px -4px rgba(0,0,0,0.35)', flexShrink:0, marginRight:6 }}>
             <span style={{ fontSize:isMobile?20:16, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
           {/* Aide → page Contact */}
           {!isMobile && (
-            <button onClick={() => goNav('contact')} title="Aide & contact" aria-label="Aide" style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
+            <button onClick={() => goNav('contact')} title="Aide & contact" aria-label="Aide" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
+            </button>
+          )}
+
+          {/* Œil → ma page publique de réservation (lien + QR) */}
+          {!isMobile && (
+            <button onClick={() => goNav('dshare')} title="Ma page publique" aria-label="Ma page publique" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           )}
 
           {/* Bell → full Notifications page */}
-          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? 'rgba(255,255,255,0.18)' : 'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.88)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>{ if (screen!=='dnotif') e.currentTarget.style.background='transparent'; }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
             {unreadNotif > 0 && <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#FF8FA5', border:'1.5px solid #0C4A37' }} />}
           </button>
 
           {/* Chat → full Messages page */}
-          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer', width:38, height:38, borderRadius:10, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? 'rgba(255,255,255,0.18)' : 'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.88)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>{ if (screen!=='dchat') e.currentTarget.style.background='transparent'; }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             {unreadChat > 0 && (
               <span style={{ position:'absolute', top:2, right:2, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#FF8FA5', border:'1.5px solid #0C4A37', color:'#0C2A1F', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
                 {unreadChat > 9 ? '9+' : unreadChat}
@@ -528,9 +546,16 @@ export default function DoctorApp() {
             )}
           </button>
 
+          {/* Cadenas → verrouiller la session (déconnexion) */}
+          {!isMobile && state.appUser && (
+            <button onClick={() => authSignOut()} title="Verrouiller la session" aria-label="Se déconnecter" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </button>
+          )}
+
           {/* Avatar */}
           <div style={{ position:'relative', zIndex:40 }}>
-            <button onClick={() => setPopAvatar(a=>!a)} style={{ width:38, height:38, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)', padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
+            <button onClick={() => setPopAvatar(a=>!a)} style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)', marginLeft:4, padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
               {docAvatar
                 ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 : <svg width="26" height="30" viewBox="0 0 26 30" fill="#16A06A" opacity=".35"><circle cx="13" cy="10" r="7"/><path d="M2 30c0-7 5-11 11-11s11 4 11 11z"/></svg>}
@@ -563,12 +588,12 @@ export default function DoctorApp() {
 
         {/* Demo mode banner — shown when browsing the dashboard without an account */}
         {!state.appUser && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', padding:'9px 16px', fontSize:13, fontWeight:600, color:'#3B6FB0', background:'#E8F1FC', borderBottom:'1px solid #CDDEF2' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', padding:'9px 16px', fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.92)', background:RAIL2_BG, boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
             <span style={{ display:'inline-flex', alignItems:'center', gap:7 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z"/></svg>
               Mode démonstration — données fictives
             </span>
-            <button onClick={() => go('docregister')} style={{ background:'#3B6FB0', color:'#fff', border:'none', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor:'pointer' }}>
+            <button onClick={() => go('docregister')} style={{ background:'#0C4A37', color:'#fff', border:'1px solid rgba(255,255,255,0.25)', borderRadius:99, padding:'6px 16px', fontSize:12.5, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 12px -4px rgba(6,32,23,0.6)' }}>
               Créer mon compte gratuit (14 j)
             </button>
             <span onClick={() => go('fordoctors')} style={{ textDecoration:'underline', cursor:'pointer', fontWeight:700 }}>Quitter la démo</span>
@@ -577,7 +602,7 @@ export default function DoctorApp() {
 
         {/* Free-trial / subscription status bar */}
         {sub.trial && (
-          <div onClick={() => goNav('dabo')} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', padding:'7px 14px', fontSize:12.5, fontWeight:600, color: sub.daysLeft <= 3 ? '#9A6510' : '#0E7C52', background: sub.daysLeft <= 3 ? '#FEF6E7' : '#E7F6EE', borderBottom:`1px solid ${sub.daysLeft <= 3 ? '#F6E0AE' : '#CDE7DA'}` }}>
+          <div onClick={() => goNav('dabo')} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer', padding:'7px 14px', fontSize:12.5, fontWeight:600, color: sub.daysLeft <= 3 ? '#FFE9B8' : 'rgba(255,255,255,0.92)', background:RAIL2_BG, boxShadow:'inset 0 1px 0 rgba(255,255,255,0.1)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             Essai gratuit — {sub.daysLeft} jour{sub.daysLeft > 1 ? 's' : ''} restant{sub.daysLeft > 1 ? 's' : ''}
             <span style={{ textDecoration:'underline', fontWeight:700 }}>Gérer mon abonnement</span>

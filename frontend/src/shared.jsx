@@ -335,13 +335,16 @@ export const kmOf = (d) => {
 // weight) so nothing looks oversized or off-colour. Spread it and add only
 // layout tweaks (width, flex, margins). Use greenBtnDisabled(busy) for the
 // pending state.
-export const GREEN_GRAD = 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)';
+// Premium deep-green family — the same surface as the app's rails/top bar, so
+// every primary button across the app reads as one system.
+export const GREEN_GRAD = 'linear-gradient(135deg, #148662 0%, #0F6E56 48%, #0C4A37 100%)';
 export const greenBtn = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
   background: GREEN_GRAD, color: '#fff', border: 'none', borderRadius: 10,
-  padding: '7px 15px', fontSize: 13, fontWeight: 700, lineHeight: 1.3,
-  cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box',
-  boxShadow: '0 6px 16px -6px rgba(22,160,106,0.55)',
+  padding: '9px 16px', minHeight: 36, fontSize: 13, fontWeight: 700, lineHeight: 1.3,
+  letterSpacing: '0.1px', fontFamily: 'Inter, sans-serif',
+  cursor: 'pointer', whiteSpace: 'nowrap', boxSizing: 'border-box', width: 'auto',
+  boxShadow: '0 6px 16px -7px rgba(12,74,55,0.55)',
 };
 export const greenBtnBusy = (busy) => (busy ? { opacity: 0.7, cursor: 'default' } : null);
 
