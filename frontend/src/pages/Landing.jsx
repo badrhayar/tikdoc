@@ -6,7 +6,7 @@ import { I18N, initials, SPEC_OPTS, SPEC_INFO, CITY_OPTS, DOCTORS } from '../sha
 import Icon from '../components/Icon';
 import AuthChoice from '../components/AuthChoice';
 import SecurityTrust from '../components/SecurityTrust';
-import BrandMark from '../components/BrandMark';
+import BrandMark, { Wordmark } from '../components/BrandMark';
 import MarketingFooter from '../components/MarketingFooter';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -115,9 +115,7 @@ export default function Landing() {
           {/* Logo */}
           <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <BrandMark plain size={34} />
-            <span style={{ fontFamily: "'Quicksand', 'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px' }}>
-              Tabibo
-            </span>
+            <Wordmark size={22} />
           </button>
 
           {/* Desktop nav */}

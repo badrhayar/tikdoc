@@ -1,5 +1,5 @@
 import { useApp } from '../context/AppContext';
-import BrandMark from './BrandMark';
+import BrandMark, { Wordmark } from './BrandMark';
 import { useViewport } from '../hooks/useViewport';
 import { I18N } from '../shared.jsx';
 
@@ -26,8 +26,8 @@ export default function MarketingFooter() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.4fr 1fr 1fr 1fr', gap: isPhone ? 24 : 40, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
-              <BrandMark size={26} />
-              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', fontWeight: 800, fontSize: 18 }}>Tabib<span style={{ color: PRIMARY }}>o</span></span>
+              <BrandMark plain size={28} />
+              <Wordmark size={19} />
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.65, margin: 0, maxWidth: 280 }}>
               {tr('La façon la plus simple de prendre rendez-vous avec un médecin au Maroc.', 'The simplest way to book a doctor in Morocco.', 'أسهل طريقة لحجز موعد مع طبيب في المغرب.')}

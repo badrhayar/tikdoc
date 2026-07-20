@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import BrandMark from './BrandMark';
+import BrandMark, { Wordmark } from './BrandMark';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { I18N, initials } from '../shared.jsx';
@@ -97,9 +97,7 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
           style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
         >
           <BrandMark plain size={34} />
-          <span style={{ fontFamily: "'Quicksand', 'Plus Jakarta Sans', sans-serif", fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
-            Tabibo
-          </span>
+          <Wordmark size={22} />
         </button>
 
         {/* Desktop nav */}

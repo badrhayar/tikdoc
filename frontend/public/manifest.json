@@ -8,7 +8,7 @@
   "orientation": "portrait",
   "launch_handler": { "client_mode": "navigate-existing" },
   "handle_links": "preferred",
-  "theme_color": "#0F6E56",
+  "theme_color": "#0C4A37",
   "background_color": "#ffffff",
   "lang": "ar",
   "dir": "rtl",
