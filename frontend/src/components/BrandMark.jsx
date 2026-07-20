@@ -13,27 +13,27 @@
 // Single source of truth: use this everywhere the brand name is written out.
 export function Wordmark({ size = 21, color = '#fff', style }) {
   const h = Math.round(size * 1.3);
-  const w = Math.round(h * 2.25);
+  const w = Math.round(h * 2.3);
   return (
-    <svg width={w} height={h} viewBox="0 0 90 40" role="img" aria-label="Tabibo" style={{ display: 'block', flexShrink: 0, ...style }}>
-      <g transform="translate(2.6 0) skewX(-6)" fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-        {/* T — swash crossbar, stem with a curled foot */}
-        <path d="M3 9.6 Q11.5 7.4 19.5 9.2" />
-        <path d="M11.2 8.6 V26.5 Q11.2 31.2 16.3 30.8" />
-        {/* a */}
+    <svg width={w} height={h} viewBox="0 0 92 40" role="img" aria-label="Tabibo" style={{ display: 'block', flexShrink: 0, ...style }}>
+      <g transform="translate(1.2 0) skewX(-6)" fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+        {/* T — entry-hook swash crossbar + gently curved stem with a foot curl */}
+        <path d="M3.4 12.4 Q2.6 8.4 7.6 8 Q13.2 7.6 19 8.9" />
+        <path d="M11.3 8.4 Q10.7 17 10.9 25.6 Q11 31.2 16.5 30.7" />
+        {/* a — uniform 5.2u ink rhythm from here on */}
         <circle cx="27.5" cy="25.4" r="5.6" />
         <path d="M33.1 19.8 V31" />
         {/* b */}
-        <path d="M39.5 9 V31" />
-        <circle cx="45.1" cy="25.4" r="5.6" />
+        <path d="M38.3 9 V31" />
+        <circle cx="43.9" cy="25.4" r="5.6" />
         {/* i — tilted oval dot */}
-        <path d="M56 19.8 V31" />
-        <ellipse cx="56.2" cy="14" rx="2" ry="1.5" fill={color} stroke="none" transform="rotate(-14 56.2 14)" />
+        <path d="M54.7 19.8 V31" />
+        <ellipse cx="54.9" cy="14" rx="2" ry="1.5" fill={color} stroke="none" transform="rotate(-14 54.9 14)" />
         {/* b */}
-        <path d="M61.5 9 V31" />
-        <circle cx="67.1" cy="25.4" r="5.6" />
+        <path d="M59.9 9 V31" />
+        <circle cx="65.5" cy="25.4" r="5.6" />
         {/* o */}
-        <circle cx="80.3" cy="25.4" r="5.6" />
+        <circle cx="81.9" cy="25.4" r="5.6" />
       </g>
     </svg>
   );

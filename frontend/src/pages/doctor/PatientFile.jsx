@@ -40,6 +40,16 @@ const IC = {
   steth: <svg {...I}><path d="M6 3v6a6 6 0 0 0 12 0V3"/><path d="M4 3h4M16 3h4"/><path d="M18 15a3 3 0 0 1-3 3H9"/><circle cx="6" cy="20" r="2"/></svg>,
   file:  <svg {...I}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>,
   search:<svg {...I}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>,
+  admin: <svg {...I}><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 17c.5-2 1.7-3 3.2-3s2.7 1 3.2 3"/><path d="M15 10h4M15 14h4"/></svg>,
+  clock: <svg {...I}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>,
+  heart: <svg {...I}><path d="M12 20s-7.5-4.7-7.5-10A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10z"/></svg>,
+  pill:  <svg {...I}><rect x="2.6" y="8.8" width="18.8" height="6.4" rx="3.2" transform="rotate(-38 12 12)"/><path d="M8.9 8.2l6.2 7.6"/></svg>,
+  chart: <svg {...I}><path d="M4 4v16h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg>,
+  shield:<svg {...I}><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6z"/><path d="M9.5 12l1.8 1.8 3.4-3.4"/></svg>,
+  vaccin:<svg {...I}><path d="M18 2l4 4M19.5 5.5l-2-2M5.5 18.5L2.5 21.5M14.5 4.5l5 5-8.5 8.5a2 2 0 0 1-1.4.6H6.5v-3.1a2 2 0 0 1 .6-1.4z"/><path d="M9.5 11.5l2 2"/></svg>,
+  receipt:<svg {...I}><path d="M6 2.5h12v19l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 7.5h5M9.5 11h5M9.5 14.5h3"/></svg>,
+  star:  <svg {...I}><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.2 6.3 20.2l1.2-6.3L2.8 9.5l6.4-.8z"/></svg>,
+  play:  <svg {...I}><path d="M7 4.5l12 7.5-12 7.5z"/></svg>,
 };
 
 // Premium card header: tinted icon chip + title + optional subtitle + right slot.
@@ -57,16 +67,16 @@ function CardHead({ icon, title, sub, right }) {
 }
 
 const SECTIONS = [
-  { id: 'consult',  label: 'Consultation en cours' },
-  { id: 'admin',    label: 'Infos administratives' },
-  { id: 'histo',    label: 'Historique' },
-  { id: 'antec',    label: 'Antécédents et mode de vie' },
-  { id: 'ttt',      label: 'Traitement en cours' },
-  { id: 'suivi',    label: 'Données de suivi' },
-  { id: 'bio',      label: 'Biologie et biométrie' },
-  { id: 'prev',     label: 'Prévention' },
-  { id: 'vaccin',   label: 'Carnet de vaccination' },
-  { id: 'factures', label: 'Factures' },
+  { id: 'consult',  label: 'Consultation en cours',      icon: 'steth' },
+  { id: 'admin',    label: 'Infos administratives',      icon: 'admin' },
+  { id: 'histo',    label: 'Historique',                 icon: 'clock' },
+  { id: 'antec',    label: 'Antécédents et mode de vie', icon: 'heart' },
+  { id: 'ttt',      label: 'Traitement en cours',        icon: 'pill' },
+  { id: 'suivi',    label: 'Données de suivi',           icon: 'chart' },
+  { id: 'bio',      label: 'Biologie et biométrie',      icon: 'bio' },
+  { id: 'prev',     label: 'Prévention',                 icon: 'shield' },
+  { id: 'vaccin',   label: 'Carnet de vaccination',      icon: 'vaccin' },
+  { id: 'factures', label: 'Factures',                   icon: 'receipt' },
 ];
 
 // Empty medical-history record.
@@ -78,7 +88,56 @@ const EMPTY_MH = {
   tttFond: [], tttPonctuels: [],
   suivi: { taille: '', poids: '', tas: '' },
   vaccins: [], prevention: '',
+  bio: { fav: [], res: {} },   // biologie: favorites (suivis) + résultats {param: {date: value}}
 };
+
+// ── Biologie — parameter catalog (categories, units, adult reference ranges).
+// Out-of-range numeric values are highlighted like on the lab report.
+const BIO_CATALOG = [
+  { key: 'hemato', label: 'Hématologie', params: [
+    { k: 'hematies',    label: 'Hématies [Sang]',          unit: 'T/L',    min: 4.0,  max: 5.9 },
+    { k: 'hb',          label: 'Hémoglobine',              unit: 'g/dL',   min: 12,   max: 17 },
+    { k: 'hba1c',       label: 'Hémoglobine A1c (HbA1C)',  unit: '%',      min: 4,    max: 6 },
+    { k: 'hematocrite', label: 'Hématocrite',              unit: '%',      min: 36,   max: 52 },
+    { k: 'vgm',         label: 'VGM',                      unit: 'fL',     min: 80,   max: 100 },
+    { k: 'tcmh',        label: 'TCMH',                     unit: 'pg',     min: 27,   max: 33 },
+    { k: 'ccmh',        label: 'CCMH',                     unit: 'g/dL',   min: 31,   max: 36 },
+    { k: 'leuco',       label: 'Leucocytes',               unit: 'G/L',    min: 4,    max: 10 },
+    { k: 'plaq',        label: 'Plaquettes',               unit: 'G/L',    min: 150,  max: 400 },
+  ] },
+  { key: 'biochimie', label: 'Biochimie', params: [
+    { k: 'glycemie', label: 'Glycémie à jeun',    unit: 'g/L',   min: 0.70, max: 1.10 },
+    { k: 'creat',    label: 'Créatinine',         unit: 'mg/L',  min: 6,    max: 13 },
+    { k: 'uree',     label: 'Urée',               unit: 'g/L',   min: 0.15, max: 0.45 },
+    { k: 'asat',     label: 'ASAT',               unit: 'UI/L',  min: 5,    max: 40 },
+    { k: 'alat',     label: 'ALAT',               unit: 'UI/L',  min: 5,    max: 45 },
+    { k: 'chol',     label: 'Cholestérol total',  unit: 'g/L',   min: 0,    max: 2.0 },
+    { k: 'hdl',      label: 'HDL',                unit: 'g/L',   min: 0.40, max: 99 },
+    { k: 'ldl',      label: 'LDL',                unit: 'g/L',   min: 0,    max: 1.6 },
+    { k: 'tg',       label: 'Triglycérides',      unit: 'g/L',   min: 0,    max: 1.5 },
+    { k: 'crp',      label: 'CRP',                unit: 'mg/L',  min: 0,    max: 5 },
+  ] },
+  { key: 'endocrino', label: 'Endocrinologie', params: [
+    { k: 'tsh',      label: 'TSH',           unit: 'mUI/L',  min: 0.4, max: 4.0 },
+    { k: 't4l',      label: 'T4 libre',      unit: 'pmol/L', min: 12,  max: 22 },
+    { k: 'cortisol', label: 'Cortisol (8h)', unit: 'µg/dL',  min: 5,   max: 25 },
+  ] },
+  { key: 'urines', label: 'Analyses urinaires', params: [
+    { k: 'proteinurie',  label: 'Protéinurie',   unit: 'g/24h', min: 0, max: 0.15 },
+    { k: 'glycosurie',   label: 'Glycosurie',    unit: 'g/L',   min: 0, max: 0 },
+    { k: 'leucocyturie', label: 'Leucocyturie',  unit: '/mL',   min: 0, max: 10000 },
+  ] },
+  { key: 'autres', label: 'Autres', params: [
+    { k: 'vitd',      label: 'Vitamine D (25-OH)', unit: 'ng/mL', min: 30, max: 100 },
+    { k: 'ferritine', label: 'Ferritine',          unit: 'µg/L',  min: 20, max: 300 },
+    { k: 'fer',       label: 'Fer sérique',        unit: 'µg/dL', min: 60, max: 170 },
+  ] },
+];
+const BIO_ALL = BIO_CATALOG.flatMap((c) => c.params);
+const bioParam = (k) => BIO_ALL.find((p) => p.k === k) || null;
+const bioNum = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+const bioAbnormal = (p, v) => { const n = bioNum(v); return p && n != null && (n < p.min || n > p.max); };
+const bioDateLbl = (iso) => { const [y, m, d] = String(iso).split('-'); return `${d}/${m}/${y}`; };
 
 // ── Small building blocks ────────────────────────────────────────────────────
 function ItemList({ items, onAdd, onRemove, placeholder }) {
@@ -177,7 +236,7 @@ function PatientPicker({ state, setState, go, isMobile }) {
   const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const list = roster.filter((p) => !q.trim()
     || norm(p.name).includes(norm(q)) || norm(p.cin).includes(norm(q)) || String(p.phone || '').replace(/\s/g, '').includes(q.replace(/\s/g, '')));
-  const open = (p) => setState({ pfilePatient: p, pfileApptId: null });
+  const open = (p) => setState({ pfilePatient: p, pfileApptId: null, pfileFrom: null });
   return (
     <div style={{ padding: isMobile ? '18px 14px' : '36px 32px', fontFamily: 'Inter, sans-serif', background: BG, minHeight: '100%', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -250,6 +309,9 @@ export default function PatientFile({ state, setState, go }) {
   // is picked in place).
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('Espèces');
+  // Biologie tool.
+  const [bioTab, setBioTab] = useState('hemato');
+  const [bioAdd, setBioAdd] = useState(null);   // { date, cat, param, value } | null
 
   // Consultation timer.
   const [timerOn, setTimerOn] = useState(false);
@@ -299,6 +361,22 @@ export default function PatientFile({ state, setState, go }) {
     const seed = { ...EMPTY_MH };
     if (p.allergies && p.allergies !== '—') seed.allergies = String(p.allergies).split(/,\s*/).filter(Boolean);
     if (p.chronic && p.chronic !== '—') seed.medicaux = String(p.chronic).split(/,\s*/).filter(Boolean);
+    if (isDemo) {
+      // Sales demo only: a small realistic lab history so the biology tool shows life.
+      seed.bio = {
+        fav: ['hba1c'],
+        res: {
+          hba1c: { '2026-03-21': '8,0', '2025-10-28': '10,7' },
+          hematies: { '2026-03-21': '5,22' },
+          hb: { '2026-03-21': '14,6' },
+          hematocrite: { '2026-03-21': '44,8' },
+          vgm: { '2026-03-21': '85,8' },
+          tcmh: { '2026-03-21': '28,0' },
+          ccmh: { '2026-03-21': '32,6' },
+          glycemie: { '2026-03-21': '1,26', '2025-10-28': '1,65' },
+        },
+      };
+    }
     return seed;
   }
 
@@ -417,11 +495,17 @@ export default function PatientFile({ state, setState, go }) {
     return Math.round((p / (t * t)) * 10) / 10;
   })();
 
-  // Back goes where the dossier was opened from: an appointment → the agenda;
-  // the patient picker → back to the list (clear the selection, stay here).
-  const fromAgenda = !!state?.pfileApptId;
-  const back = () => { if (fromAgenda) go('dcal'); else setState({ pfilePatient: null, pfileApptId: null }); };
-  const backLbl = fromAgenda ? "← Retour à l'agenda" : '← Retour aux patients';
+  // Back goes exactly where the dossier was opened from (pfileFrom): the
+  // agenda, the rendez-vous list, the patients page, or the in-place picker.
+  const from = state?.pfileFrom || (state?.pfileApptId ? 'dcal' : null);
+  const back = () => {
+    if (from === 'dpatients' || from === 'dcal' || from === 'dappts') go(from);
+    else setState({ pfilePatient: null, pfileApptId: null, pfileFrom: null });
+  };
+  const backLbl = from === 'dcal' ? "Retour à l'agenda"
+    : from === 'dappts' ? 'Retour aux rendez-vous'
+    : from === 'dpatients' ? 'Retour aux patients'
+    : 'Retour à la liste';
 
   // ── Section contents ───────────────────────────────────────────────────────
   const renderConsult = () => (
@@ -632,6 +716,97 @@ export default function PatientFile({ state, setState, go }) {
 
   const renderSimple = (title, body) => <div style={card}><h3 style={h3s}>{title}</h3>{body}</div>;
 
+  // ── Biologie et biométrie — Doctolib-style lab-results tool ─────────────────
+  const bioData = mh.bio || { fav: [], res: {} };
+  const bioSave = (nextBio) => { const next = { ...mh, bio: nextBio }; setMh(next); saveMh(next); };
+  const bioToggleFav = (k) => bioSave({ ...bioData, fav: bioData.fav.includes(k) ? bioData.fav.filter((x) => x !== k) : [...bioData.fav, k] });
+  const bioDates = [...new Set(Object.values(bioData.res || {}).flatMap((o) => Object.keys(o)))].sort().reverse().slice(0, 3);
+  const bioCols = bioDates.length ? bioDates : [todayISO];
+
+  const BioStar = ({ k }) => {
+    const on = bioData.fav.includes(k);
+    return (
+      <button onClick={() => bioToggleFav(k)} title={on ? 'Retirer des suivis' : 'Ajouter aux suivis'}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: on ? TEAL : '#B9C6C0' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill={on ? TEAL : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.2 6.3 20.2l1.2-6.3L2.8 9.5l6.4-.8z"/></svg>
+      </button>
+    );
+  };
+  const BioVal = ({ p, v }) => {
+    if (v == null || v === '') return <span style={{ color: '#B9C6C0' }}>–</span>;
+    return bioAbnormal(p, v)
+      ? <span title={`Hors norme (${p.min}–${p.max} ${p.unit})`} style={{ background: '#FCE7EE', color: '#C2466A', borderRadius: 6, padding: '2px 8px', fontWeight: 600 }}>{v}</span>
+      : <span style={{ color: DARK }}>{v}</span>;
+  };
+  const bioTable = (params, withStars = true) => (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr>
+            {[withStars ? '' : null, 'Paramètres', 'Unités', ...bioCols.map(bioDateLbl)].filter((x) => x !== null).map((h, i) => (
+              <th key={i} style={{ textAlign: 'left', padding: '9px 10px', fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #EEF3F0', whiteSpace: 'nowrap' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {params.map((p) => (
+            <tr key={p.k}>
+              {withStars && <td style={{ padding: '8px 4px 8px 10px', width: 28, borderBottom: '1px solid #F4F7F5' }}><BioStar k={p.k} /></td>}
+              <td style={{ padding: '9px 10px', fontWeight: 600, color: DARK, borderBottom: '1px solid #F4F7F5', whiteSpace: 'nowrap', letterSpacing: '-0.1px' }}>{p.label}</td>
+              <td style={{ padding: '9px 10px', color: MUTED, borderBottom: '1px solid #F4F7F5', whiteSpace: 'nowrap' }}>{p.unit}</td>
+              {bioCols.map((d) => (
+                <td key={d} style={{ padding: '9px 10px', borderBottom: '1px solid #F4F7F5', fontVariantNumeric: 'tabular-nums' }}>
+                  <BioVal p={p} v={(bioData.res?.[p.k] || {})[d]} />
+                </td>
+              ))}
+            </tr>
+          ))}
+          {params.length === 0 && (
+            <tr><td colSpan={3 + bioCols.length} style={{ padding: '18px 10px', color: MUTED, fontSize: 12.5 }}>Aucun paramètre suivi — cliquez sur l'étoile d'un paramètre pour l'épingler ici.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderBioTool = () => {
+    const favParams = bioData.fav.map(bioParam).filter(Boolean);
+    const cat = BIO_CATALOG.find((c) => c.key === bioTab) || BIO_CATALOG[0];
+    return (
+      <>
+        {/* Suivis (favorites) */}
+        <div style={card}>
+          <CardHead icon={IC.bio} title="Suivis" sub="Vos paramètres épinglés, en un coup d'œil."
+            right={
+              <button onClick={() => setBioAdd({ date: todayISO, cat: bioTab, param: cat.params[0]?.k || '', value: '' })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Ajouter des résultats d'analyses
+              </button>
+            } />
+          {bioTable(favParams, true)}
+        </div>
+
+        {/* Category tabs + table */}
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', margin: '2px 0 12px' }}>
+          {BIO_CATALOG.map((c) => (
+            <button key={c.key} onClick={() => setBioTab(c.key)}
+              style={{ padding: '5px 13px', borderRadius: 18, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${bioTab === c.key ? TEAL : '#DCE6E1'}`, background: bioTab === c.key ? TEAL : '#fff', color: bioTab === c.key ? '#fff' : MUTED, transition: 'all .12s', fontFamily: 'inherit' }}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div style={card}>
+          <h3 style={h3s}>{cat.label}</h3>
+          {bioTable(cat.params, true)}
+          <div style={{ marginTop: 10, fontSize: 11.5, color: MUTED }}>
+            Les valeurs hors normes de référence apparaissent <span style={{ background: '#FCE7EE', color: '#C2466A', borderRadius: 5, padding: '1px 7px', fontWeight: 600 }}>surlignées</span>. Biométrie (taille, poids, IMC, PA) : section « Données de suivi ».
+          </div>
+        </div>
+      </>
+    );
+  };
+
   const sectionBody = {
     consult: renderConsult,
     admin: renderAdmin,
@@ -639,7 +814,7 @@ export default function PatientFile({ state, setState, go }) {
     antec: renderAntec,
     ttt: renderTtt,
     suivi: () => renderSimple('Données de suivi', <>{renderSuiviFields()}<div style={{ display: 'flex', justifyContent: 'flex-end' }}><button onClick={() => saveMh()} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Enregistrer</button></div></>),
-    bio: () => renderSimple('Biologie et biométrie', <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Les résultats biologiques transmis par le patient sont dans <button onClick={() => go('ddocs')} style={{ color: TEAL, background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, padding: 0 }}>Documents</button>. Les mesures biométriques (taille, poids, IMC, PA) se saisissent dans « Données de suivi ».</div>),
+    bio: renderBioTool,
     prev: () => renderSimple('Prévention', <><label style={lbl}>Notes de prévention (dépistages, rappels…)</label><textarea value={mh.prevention || ''} onChange={(e) => patchMh({ prevention: e.target.value })} rows={4} style={{ ...inp, resize: 'vertical' }} /><div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}><button onClick={() => saveMh()} style={{ padding: '6px 13px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Enregistrer</button></div></>),
     vaccin: () => renderSimple('Carnet de vaccination', <><ItemList items={mh.vaccins || []} placeholder="Ex. Tétanos — rappel 03/2024"
       onAdd={(v) => { const next = { ...mh, vaccins: [...(mh.vaccins || []), v] }; setMh(next); saveMh(next); }}
@@ -662,13 +837,20 @@ export default function PatientFile({ state, setState, go }) {
   return (
     <div className="pfile" style={{ display: 'flex', minHeight: '100vh', background: BG, fontFamily: 'Inter, sans-serif', flexDirection: isMobile ? 'column' : 'row' }}>
       {/* Premium focus ring on every field of the dossier. */}
-      <style>{`.pfile input:focus,.pfile textarea:focus,.pfile select:focus{border-color:#0F6E56 !important;box-shadow:0 0 0 3px rgba(15,110,86,0.07)}`}</style>
+      <style>{`.pfile input:focus,.pfile textarea:focus,.pfile select:focus{border-color:#0F6E56 !important;box-shadow:0 0 0 3px rgba(15,110,86,0.07)}
+@keyframes pfPulse{0%{box-shadow:0 0 0 0 rgba(22,160,106,0.45)}70%{box-shadow:0 0 0 6px rgba(22,160,106,0)}100%{box-shadow:0 0 0 0 rgba(22,160,106,0)}}`}</style>
 
       {/* ── Left sidebar ── */}
       <aside style={isMobile
         ? { background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '12px 14px' }
         : { width: 250, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, padding: '18px 14px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', boxSizing: 'border-box' }}>
-        <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', color: MUTED, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12 }}>{backLbl}</button>
+        <button onClick={back}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F4FAF7'; e.currentTarget.style.borderColor = '#BFE0D4'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#DCE6E1'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid #DCE6E1', borderRadius: 9, color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '5px 12px 5px 9px', marginBottom: 14, fontFamily: 'inherit', transition: 'all .12s' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          {backLbl}
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 10 : 18 }}>
           <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
             {(patient.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
@@ -683,9 +865,14 @@ export default function PatientFile({ state, setState, go }) {
             const active = section === s.id;
             return (
               <button key={s.id} onClick={() => setSection(s.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', background: active ? '#E9F5F0' : 'none', border: 'none', borderRadius: 9, padding: isMobile ? '7px 12px' : '8px 11px', fontSize: 12.5, fontWeight: active ? 600 : 500, color: active ? TEAL : '#3E4F49', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {!isMobile && <span style={{ fontSize: 10, transform: active ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>▸</span>}
-                {s.label}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#F2F7F4'; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: active ? '#E9F5F0' : 'transparent', border: 'none', borderRadius: 10, padding: isMobile ? '7px 12px' : '8px 11px', fontSize: 12.5, fontWeight: active ? 600 : 500, color: active ? TEAL : '#3E4F49', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background .12s', fontFamily: 'inherit' }}>
+                <span style={{ display: 'flex', color: active ? TEAL : '#8FA69D', flexShrink: 0 }}>{IC[s.icon]}</span>
+                <span style={{ flex: isMobile ? 'none' : 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                {s.id === 'consult' && timerOn && (
+                  <span title="Consultation en cours" style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A06A', flexShrink: 0, animation: 'pfPulse 1.6s infinite' }} />
+                )}
               </button>
             );
           })}
@@ -706,23 +893,93 @@ export default function PatientFile({ state, setState, go }) {
         ) : (sectionBody[section] || renderConsult)()}
       </main>
 
-      {/* ── Bottom action bar ── */}
-      <div style={{ position: 'fixed', right: isMobile ? 0 : 18, left: isMobile ? 0 : 'auto', bottom: isMobile ? 0 : 14, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: isMobile ? 0 : 13, boxShadow: '0 14px 40px -12px rgba(13,43,30,0.35)', padding: isMobile ? '10px 12px' : '11px 16px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 50, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: MUTED, fontWeight: 600, display: isMobile ? 'none' : 'block' }}>
-          {civ} {patient.name}{linkedAppt ? ` · RDV ${new Date(linkedAppt.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' })}` : ''}
-        </span>
+      {/* ── Bottom action bar — the consultation cockpit.
+           Idle: patient identity + « Commencer la consultation ».
+           Running: identity + live chrono + Annuler / Terminer / Facturer. ── */}
+      <div style={{ position: 'fixed', right: isMobile ? 0 : 18, left: isMobile ? 0 : 'auto', bottom: isMobile ? 0 : 14, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: isMobile ? 0 : 14, boxShadow: '0 14px 40px -12px rgba(13,43,30,0.35)', padding: isMobile ? '10px 12px' : '10px 14px', display: 'flex', alignItems: 'center', gap: 11, zIndex: 50, flexWrap: 'wrap' }}>
+        {/* Patient identity — premium chip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, fontWeight: 700, flexShrink: 0 }}>
+            {(patient.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+          </span>
+          <span style={{ display: isMobile ? 'none' : 'block' }}>
+            <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: DARK, lineHeight: 1.2, letterSpacing: '-0.1px' }}>{civ} {patient.name}</span>
+            <span style={{ display: 'block', fontSize: 11, color: MUTED }}>
+              {linkedAppt ? `RDV ${new Date(linkedAppt.datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' })}` : age != null ? `${age} ans` : 'Dossier patient'}
+            </span>
+          </span>
+        </div>
+        {timerOn && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#E9F5F0', border: '1px solid #BFE0D4', color: TEAL, borderRadius: 15, padding: '4px 12px', fontSize: 12.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16A06A', animation: 'pfPulse 1.6s infinite' }} />
+            {timerLbl}
+          </span>
+        )}
         <div style={{ flex: 1 }} />
-        <button onClick={back} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>ANNULER</button>
-        <button onClick={finishConsult} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          TERMINER LA CONSULTATION
-        </button>
-        <button onClick={() => { if (linkedAppt && !linkedAppt.paid) { setPayAmount(String(linkedAppt.fee || '')); setPayOpen(true); } }}
-          disabled={!linkedAppt || linkedAppt.paid}
-          title={!linkedAppt ? 'Aucun rendez-vous lié — ouvrez le dossier depuis un rendez-vous pour facturer' : linkedAppt.paid ? 'Déjà encaissé' : 'Encaisser la consultation'}
-          style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: (!linkedAppt || linkedAppt.paid) ? '#C9D6D1' : TEAL, color: '#fff', fontSize: 12, fontWeight: 600, cursor: (!linkedAppt || linkedAppt.paid) ? 'default' : 'pointer' }}>
-          {linkedAppt?.paid ? 'ENCAISSÉ ✓' : 'FACTURER'}
-        </button>
+        {!timerOn ? (
+          <button onClick={() => { setTimerOn(true); setSection('consult'); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)', fontFamily: 'inherit' }}>
+            {IC.play} Commencer la consultation
+          </button>
+        ) : (
+          <>
+            <button onClick={() => { if (window.confirm('Annuler la consultation en cours ? Le chronomètre sera remis à zéro.')) { setTimerOn(false); setElapsed(0); } }}
+              style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+            <button onClick={finishConsult} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Terminer la consultation
+            </button>
+            <button onClick={() => { if (linkedAppt && !linkedAppt.paid) { setPayAmount(String(linkedAppt.fee || '')); setPayOpen(true); } }}
+              disabled={!linkedAppt || linkedAppt.paid}
+              title={!linkedAppt ? 'Aucun rendez-vous lié — ouvrez le dossier depuis un rendez-vous pour facturer' : linkedAppt.paid ? 'Déjà encaissé' : 'Encaisser la consultation'}
+              style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: (!linkedAppt || linkedAppt.paid) ? '#C9D6D1' : TEAL, color: '#fff', fontSize: 12, fontWeight: 600, cursor: (!linkedAppt || linkedAppt.paid) ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+              {linkedAppt?.paid ? 'Encaissé ✓' : 'Facturer'}
+            </button>
+          </>
+        )}
       </div>
+
+      {/* ── Ajouter un résultat d'analyse ── */}
+      {bioAdd && (() => {
+        const cat = BIO_CATALOG.find((c) => c.key === bioAdd.cat) || BIO_CATALOG[0];
+        const p = bioParam(bioAdd.param) || cat.params[0];
+        const save = () => {
+          if (!p || !String(bioAdd.value).trim()) return;
+          bioSave({ ...bioData, res: { ...bioData.res, [p.k]: { ...(bioData.res?.[p.k] || {}), [bioAdd.date]: String(bioAdd.value).trim() } } });
+          setBioAdd(null);
+          setState({ toast: 'Résultat enregistré ✓', toastShow: true });
+        };
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(21,49,74,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: 16 }} onClick={() => setBioAdd(null)}>
+            <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 15.5, fontWeight: 600, color: DARK, letterSpacing: '-0.2px', marginBottom: 4 }}>Ajouter un résultat d'analyse</div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 16 }}>{civ} {patient.name}</div>
+              <label style={lbl}>Date du prélèvement</label>
+              <input type="date" value={bioAdd.date} max={todayISO} onChange={(e) => setBioAdd((b) => ({ ...b, date: e.target.value }))} style={{ ...inp, marginBottom: 13 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 10, marginBottom: 13 }}>
+                <div>
+                  <label style={lbl}>Catégorie</label>
+                  <select value={bioAdd.cat} onChange={(e) => { const c = BIO_CATALOG.find((x) => x.key === e.target.value); setBioAdd((b) => ({ ...b, cat: e.target.value, param: c?.params[0]?.k || '' })); }} style={{ ...inp, cursor: 'pointer' }}>
+                    {BIO_CATALOG.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Paramètre</label>
+                  <select value={bioAdd.param} onChange={(e) => setBioAdd((b) => ({ ...b, param: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
+                    {cat.params.map((x) => <option key={x.k} value={x.k}>{x.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <label style={lbl}>Valeur {p ? `(${p.unit} — norme ${p.min}–${p.max})` : ''}</label>
+              <input value={bioAdd.value} onChange={(e) => setBioAdd((b) => ({ ...b, value: e.target.value }))} placeholder={p ? `Ex. ${p.min}` : ''} autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && save()} style={{ ...inp, marginBottom: 18 }} />
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setBioAdd(null)} style={{ padding: '7px 13px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+                <button onClick={save} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── IA synthèse (placeholder honnête) ── */}
       {iaOpen && (

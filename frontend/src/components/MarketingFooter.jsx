@@ -25,7 +25,7 @@ export default function MarketingFooter() {
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.4fr 1fr 1fr 1fr', gap: isPhone ? 24 : 40, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 14 }}>
               <BrandMark plain size={28} />
               <Wordmark size={19} />
             </div>

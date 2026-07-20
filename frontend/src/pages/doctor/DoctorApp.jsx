@@ -394,7 +394,7 @@ export default function DoctorApp() {
              breaks while scrolling) ── */}
       {isMobile ? (
         <aside style={{ width:246, background:RAIL_BG, display:'flex', flexDirection:'column', overflowY:'auto', position:'fixed', top:0, bottom:0, left:0, height:'100vh', zIndex:100, transform: navOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .25s ease', boxShadow: navOpen ? '0 0 40px rgba(6,32,23,0.5)' : 'none' }}>
-          <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 18px 12px', cursor:'pointer' }}>
+          <div onClick={() => goNav('doctor')} style={{ display:'flex', alignItems:'center', gap:3, padding:'20px 18px 12px', cursor:'pointer' }}>
             <BrandMark plain size={30} />
             <Wordmark size={20} />
           </div>

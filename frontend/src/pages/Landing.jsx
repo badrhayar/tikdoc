@@ -113,7 +113,7 @@ export default function Landing() {
       }}>
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: `0 ${padX}px`, height: isPhone ? 60 : 70, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 28 }}>
           {/* Logo */}
-          <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+          <button onClick={() => go('home')} style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <BrandMark plain size={34} />
             <Wordmark size={22} />
           </button>

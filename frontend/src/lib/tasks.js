@@ -14,7 +14,7 @@ export function autoTasks(state) {
   appts
     .filter((a) => a.status === 'pending' && moDateKeyOf(a.datetime) >= todayKey)
     .forEach((a) => tasks.push({
-      id: `confirm_${a.id}`, kind: 'confirm', screen: 'dappts',
+      id: `confirm_${a.id}`, apptId: a.id, kind: 'confirm', screen: 'dappts',
       title: `Confirmer le rendez-vous de ${a.patientName || 'Patient'}`,
       sub: `${moDateKeyOf(a.datetime) === todayKey ? "Aujourd'hui" : moDateKeyOf(a.datetime)} · ${moTime(a.datetime)}`,
       cta: 'Confirmer',
@@ -23,7 +23,7 @@ export function autoTasks(state) {
   appts
     .filter((a) => moDateKeyOf(a.datetime) === todayKey && (a.arrivedAt || a.arrived_at) && !(a.inConsultAt || a.in_consultation_at) && a.status !== 'completed' && a.status !== 'no_show' && a.status !== 'cancelled')
     .forEach((a) => tasks.push({
-      id: `waiting_${a.id}`, kind: 'waiting', screen: 'doctor',
+      id: `waiting_${a.id}`, apptId: a.id, kind: 'waiting', screen: 'doctor',
       title: `${a.patientName || 'Patient'} attend en salle`,
       sub: `Arrivé à ${moTime(a.arrivedAt || a.arrived_at)}`,
       cta: 'Faire entrer',
@@ -32,7 +32,7 @@ export function autoTasks(state) {
   appts
     .filter((a) => moDateKeyOf(a.datetime) === todayKey && a.status === 'completed' && !a.paid)
     .forEach((a) => tasks.push({
-      id: `pay_${a.id}`, kind: 'pay', screen: 'dappts',
+      id: `pay_${a.id}`, apptId: a.id, kind: 'pay', screen: 'dappts',
       title: `Encaisser la consultation de ${a.patientName || 'Patient'}`,
       sub: `${moTime(a.datetime)} · ${(a.fee || 0).toLocaleString('fr-FR')} MAD attendus`,
       cta: 'Encaisser',

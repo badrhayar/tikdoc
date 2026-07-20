@@ -94,7 +94,7 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
         {/* Logo */}
         <button
           onClick={() => go('home')}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
         >
           <BrandMark plain size={34} />
           <Wordmark size={22} />

@@ -230,6 +230,7 @@ export default function ApptPanel({ state, setState, go, openNewAppt }) {
       apptPanel: null,
       pfilePatient: roster || { id: null, name: consult.patient, sex: consult.sex, age: consult.age },
       pfileApptId: id,
+      pfileFrom: state?.screen === 'dappts' ? 'dappts' : 'dcal',   // where "back" returns to
     });
     go('dpfile');
   };

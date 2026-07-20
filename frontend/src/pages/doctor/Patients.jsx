@@ -522,7 +522,7 @@ export default function Patients({ state, setState, go, openNewAppt, openAddPati
             {/* Quick actions — the daily loop, one tap away */}
             <div style={{ padding: '14px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={() => newApptFor(viewPatient)} style={{ ...greenBtn }}>+ Rendez-vous</button>
-              <button onClick={() => { const p = viewPatient; setViewPatient(null); setState({ pfilePatient: p, pfileApptId: null }); go('dpfile'); }} style={{ background: '#E9F5F0', color: '#0F6E56', border: '1px solid #CFE4DB', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Dossier médical</button>
+              <button onClick={() => { const p = viewPatient; setViewPatient(null); setState({ pfilePatient: p, pfileApptId: null, pfileFrom: 'dpatients' }); go('dpfile'); }} style={{ background: '#E9F5F0', color: '#0F6E56', border: '1px solid #CFE4DB', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Dossier médical</button>
               <button onClick={() => openEdit(viewPatient)} style={{ background: BG, color: DARK, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Modifier</button>
               <button onClick={() => newRxFor(viewPatient)} style={{ background: '#EFEAFB', color: '#6B57A6', border: 'none', borderRadius: 8, padding: '6px 13px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Ordonnance</button>
               {viewPatient.userId && (
