@@ -131,7 +131,7 @@ const initialState = {
   // preview and the Messages page so they tell one coherent story.
   demoChats: [],
   // Demo-only dossier patient data + calendar absences (sales demo).
-  demoMedical: {}, demoNotes: [], demoTimeOff: [],
+  demoMedical: {}, demoNotes: [], demoRx: [], demoTimeOff: [],
   // Appointment detail panel (Doctolib-style slide-in) — consultation id.
   apptPanel: null,
   // "Déplacer le RDV" — appointment id being moved on the agenda (ghost mode).
@@ -463,7 +463,7 @@ export function AppProvider({ children }) {
       newAppt: { name: '', phone: '', cin: '', motif: 'Consultation générale', date: '2024-05-16', time: '09:00', notes: '' },
       naMatch: null,
       manualAppts: [], manualConsults: [], patients: [], chats: [], demoChats: [],
-      demoMedical: {}, demoNotes: [], demoTimeOff: [], apptPanel: null, moveAppt: null, pfilePatient: null, pfileApptId: null,
+      demoMedical: {}, demoNotes: [], demoRx: [], demoTimeOff: [], apptPanel: null, moveAppt: null, pfilePatient: null, pfileApptId: null, pfileFrom: null,
       bookForRel: null,
     });
   };

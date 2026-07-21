@@ -92,6 +92,21 @@ export default function ForDoctors() {
       ['Échographie', 30, 400],           ['Contraception', 20, 250],
       ['Suivi de grossesse', 30, 350],
     ];
+
+    // Realistic consultation write-ups per service — so every past consultation
+    // in the patient's Historique opens onto a genuine observation (demo data,
+    // clearly labelled « données fictives »).
+    const NOTE_BANK = {
+      'Consultation générale': "Motif : asthénie et céphalées depuis 5 jours. Examen clinique sans particularité, apyrétique, TA 12/8, auscultation cardio-pulmonaire normale. Conclusion : syndrome viral bénin — traitement symptomatique, repos, contrôle si persistance au-delà de 5 jours.",
+      'Téléconsultation': "Téléconsultation. Toux sèche et rhinorrhée, pas de fièvre ni de dyspnée. Conclusion : virose ORL banale. Traitement symptomatique, consignes de surveillance données ; reconsulter en présentiel si aggravation.",
+      'Bilan complet': "Bilan de santé annuel. Examen complet sans anomalie, IMC normal, TA 12/7. Bilan biologique prescrit (NFS, glycémie à jeun, bilan lipidique, TSH). Résultats à revoir en consultation.",
+      'Suivi': "Consultation de suivi. Bonne évolution clinique, patient asymptomatique. Bonne observance thérapeutique. Poursuite du traitement à l'identique, prochain contrôle dans 3 mois.",
+      'Échographie': "Échographie de contrôle. Aspect dans les limites de la normale, pas d'épanchement, structures explorées sans particularité. Prochain contrôle programmé selon protocole.",
+      'Contraception': "Consultation de contraception. Bonne tolérance du contraceptif en cours, TA et poids stables. Renouvellement de l'ordonnance pour 6 mois, frottis à jour.",
+      'Suivi de grossesse': "Suivi de grossesse. Vitalité fœtale présente, biométrie conforme au terme, TA normale, absence d'œdèmes. Bilan du trimestre à jour. Prochain rendez-vous dans 4 semaines.",
+      'Suivi hypertension': "Suivi d'hypertension artérielle. TA 13/8 sous traitement, bonne observance, pas de retentissement. Poursuite du traitement, automesures conseillées, contrôle dans 3 mois.",
+    };
+    const noteFor = (service) => NOTE_BANK[service] || NOTE_BANK['Consultation générale'];
     const TIMES = ['09:00', '09:40', '10:20', '11:00', '11:40', '14:00', '14:40', '15:20', '16:00', '16:40'];
     const PER_DAY = [7, 8, 6, 7, 8, 5];              // Mon…Sat — busy but not overloaded
     const PAY_OPTS = ['Espèces', 'CMI', 'M-Wallet'];
@@ -122,6 +137,7 @@ export default function ForDoctors() {
           patient: person.name, age: person.age, sex: person.sex,
           service, date, time: TIMES[k], durationMin, amount,
           pay, status, booking, notes: '',
+          consultNote: booking === 'completed' ? noteFor(service) : '',
         });
       }
     }
@@ -147,7 +163,7 @@ export default function ForDoctors() {
       extraAppts.push(done
         ? { id: `demo_${nid}`, datetime: at(start), durationMin, status: 'completed', paid: true, fee: amount, amountPaid: amount, payMethod: 'cash', patientName: person.name, patientPhone: person.phone, reason: service, notes: '' }
         : { id: `demo_${nid}`, datetime: at(start), durationMin, status: 'confirmed', fee: amount, patientName: person.name, patientPhone: person.phone, reason: service, notes: '' });
-      extraConsults.push({ id: `demo_${nid}`, patient: person.name, age: person.age, sex: person.sex, service, date: t0, time, durationMin, amount, pay: done ? 'Espèces' : '—', status: done ? 'Payé' : 'En attente', notes: '' });
+      extraConsults.push({ id: `demo_${nid}`, patient: person.name, age: person.age, sex: person.sex, service, date: t0, time, durationMin, amount, pay: done ? 'Espèces' : '—', status: done ? 'Payé' : 'En attente', notes: '', consultNote: done ? noteFor(service) : '' });
       nid++;
     };
     [['09:00', 'Consultation générale'], ['09:40', 'Suivi'], ['10:20', 'Échographie'], ['11:00', 'Bilan complet']].forEach(([t, s]) => addToday(t, s, true));
@@ -160,7 +176,7 @@ export default function ForDoctors() {
       { id: 'local_h3', patient: 'Karim Bensouda',  age: 29, sex: 'M', service: 'Suivi',                 date: daysAgo(12), time: '15:00', durationMin: 30, amount: 200, pay: 'M-Wallet', status: 'Payé', booking: 'completed', notes: '' },
       { id: 'local_h4', patient: 'Layla Cherkaoui', age: 35, sex: 'F', service: 'Suivi de grossesse',    date: daysAgo(13), time: '10:00', durationMin: 30, amount: 350, pay: 'Espèces',  status: 'Payé', booking: 'completed', notes: '' },
       { id: 'local_h5', patient: 'Driss El Fassi',  age: 58, sex: 'M', service: 'Téléconsultation',      date: daysAgo(15), time: '16:30', durationMin: 20, amount: 250, pay: 'M-Wallet', status: 'Payé', booking: 'completed', notes: '' },
-    ];
+    ].map((c) => ({ ...c, consultNote: noteFor(c.service) }));
 
     // ── LAST MONTH — a full previous calendar month of activity, so every
     //    "ce mois vs mois dernier" comparison (Tableau de bord + Statistiques)
@@ -192,6 +208,7 @@ export default function ForDoctors() {
           patient: person.name, age: person.age, sex: person.sex,
           service, date: dISO, time: TIMES[k % TIMES.length], durationMin, amount,
           pay, status, booking, notes: '',
+          consultNote: booking === 'completed' ? noteFor(service) : '',
         });
       }
     }
@@ -220,12 +237,33 @@ export default function ForDoctors() {
       ] },
     ];
 
+    // ── Structured observations + ordonnances, so the Historique du patient
+    //    shows real, varied entries (consultation notes AND prescriptions) that
+    //    open onto genuine content — not empty rows. Keyed by patient name
+    //    (local patients use the lowercased name as their dossier key). ──
+    const demoNotes = [
+      { id: 'demo_n1', patient_key: 'layla cherkaoui', created_at: `${daysAgo(13)}T09:20:00Z`,
+        data: { motif: 'Suivi de grossesse — 2ᵉ trimestre', interrogatoire: 'Grossesse bien tolérée, mouvements fœtaux perçus, pas de contractions.', examen: 'Hauteur utérine conforme au terme, BDC fœtaux réguliers, TA 11/7, absence d’œdèmes.', conclusion: 'Grossesse d’évolution normale. Bilan du trimestre à jour. Prochain contrôle dans 4 semaines.' } },
+      { id: 'demo_n2', patient_key: 'mohamed rachid alami', created_at: `${daysAgo(20)}T15:40:00Z`,
+        data: { motif: 'Suivi d’hypertension artérielle', interrogatoire: 'Bonne observance, pas de céphalées ni de palpitations. Automesures autour de 13/8.', examen: 'TA au cabinet 13/8, FC 72, auscultation normale, pas de retentissement.', conclusion: 'HTA équilibrée sous traitement. Poursuite à l’identique, contrôle dans 3 mois.' } },
+      { id: 'demo_n3', patient_key: 'fatima zahra benali', created_at: `${daysAgo(6)}T09:10:00Z`,
+        data: { motif: 'Consultation générale — asthénie', interrogatoire: 'Fatigue depuis 10 jours, sommeil correct, pas de perte de poids.', examen: 'Examen clinique normal, apyrétique, conjonctives légèrement pâles.', conclusion: 'Suspicion d’anémie ferriprive. Bilan biologique demandé (NFS, ferritine). Reconsulter avec les résultats.' } },
+    ];
+    const demoRx = [
+      { id: 'demo_rx1', patient_name: 'Fatima Zahra Benali', created_at: `${daysAgo(6)}T09:15:00Z`,
+        items: [{ drug: 'Tardyferon 80 mg', dosage: '1 cp/jour', duration: '3 mois' }, { drug: 'Acide folique 5 mg', dosage: '1 cp/jour', duration: '1 mois' }] },
+      { id: 'demo_rx2', patient_name: 'Mohamed Rachid Alami', created_at: `${daysAgo(20)}T15:45:00Z`,
+        items: [{ drug: 'Amlodipine 5 mg', dosage: '1 cp le matin', duration: '3 mois' }, { drug: 'Kardégic 75 mg', dosage: '1 sachet/jour', duration: '3 mois' }] },
+      { id: 'demo_rx3', patient_name: 'Layla Cherkaoui', created_at: `${daysAgo(13)}T09:25:00Z`,
+        items: [{ drug: 'Acide folique 0,4 mg', dosage: '1 cp/jour', duration: 'Toute la grossesse' }, { drug: 'Gynéfam', dosage: '1 cp/jour', duration: '1 mois' }] },
+    ];
+
     setState({
       demoDoctor: true,
       patients: DEMO_PATIENTS,
       manualAppts: [...todayAppts, ...extraAppts],
       manualConsults: [...todayConsults, ...extraConsults, ...weekConsults, ...history, ...lastMonthConsults],
-      demoChats,
+      demoChats, demoNotes, demoRx,
       // Working hours behind the demo agenda (Mon–Sat 09:00–18:00, Sun closed),
       // so the calendar sizes its grid exactly like a real doctor's would.
       weekEndMin: [WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, WORK_END, 0],

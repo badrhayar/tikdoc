@@ -336,6 +336,8 @@ export default function PatientFile({ state, setState, go }) {
           const rec = (state?.demoMedical || {})[pkey];
           if (on) setMh({ ...EMPTY_MH, ...(rec || seedFromRoster(patient)) });
           if (on) setNotes(((state?.demoNotes || [])).filter((n) => n.patient_key === pkey));
+          const nm = (patient.name || '').trim().toLowerCase();
+          if (on) setRx(((state?.demoRx || [])).filter((r) => (r.patient_name || '').trim().toLowerCase() === nm));
         } else {
           const row = await fetchMedicalHistory(doctorId, pkey);
           if (on) setMh({ ...EMPTY_MH, ...(row?.data || seedFromRoster(patient)) });
@@ -680,20 +682,33 @@ export default function PatientFile({ state, setState, go }) {
       {feedGroups.map((g) => (
         <div key={g.key} style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: MUTED, textTransform: 'capitalize', letterSpacing: '0.3px', margin: '0 0 8px' }}>{g.key}</div>
-          {g.items.map((x) => (
-            <div key={x.id} onClick={() => setExpanded(expanded === x.id ? null : x.id)}
-              style={{ border: `1px solid ${BORDER}`, borderRadius: 11, padding: '11px 14px', marginBottom: 8, cursor: 'pointer', background: expanded === x.id ? '#F7FBF9' : '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                <span style={{ width: 32, height: 32, borderRadius: '50%', background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px' }}>{x.kind} — {x.title}</div>
-                  <div style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.sub}</div>
+          {g.items.map((x) => {
+            const open = expanded === x.id;
+            const hasDetail = !!x.detail;
+            const KIND_C = { Consultation: ['#0E7C52', '#E7F6EE'], Note: ['#3B6FB0', '#E8F1FC'], Ordonnance: ['#6B57A6', '#EFEAFB'] }[x.kind] || ['#0E7C52', '#E7F6EE'];
+            return (
+              <div key={x.id} onClick={() => hasDetail && setExpanded(open ? null : x.id)}
+                onMouseEnter={(e) => { if (hasDetail && !open) e.currentTarget.style.borderColor = '#CFE4DB'; }}
+                onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = BORDER; }}
+                style={{ border: `1px solid ${open ? '#BFE0D4' : BORDER}`, borderRadius: 12, padding: '11px 14px', marginBottom: 8, cursor: hasDetail ? 'pointer' : 'default', background: open ? '#F7FBF9' : '#fff', transition: 'border-color .12s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: KIND_C[1], color: KIND_C[0], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 600, color: KIND_C[0], background: KIND_C[1], borderRadius: 20, padding: '2px 8px', flexShrink: 0, letterSpacing: '0.1px' }}>{x.kind}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.title}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{x.sub}</div>
+                  </div>
+                  <span style={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>{new Date(`${x.date}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  {hasDetail && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="M6 9l6 6 6-6"/></svg>
+                  )}
                 </div>
-                <span style={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>{new Date(`${x.date}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                {open && hasDetail && <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.65, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>{x.detail}</div>}
               </div>
-              {expanded === x.id && x.detail && <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.6, marginTop: 9, paddingTop: 9, borderTop: `1px solid ${BORDER}` }}>{x.detail}</div>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ))}
     </div>

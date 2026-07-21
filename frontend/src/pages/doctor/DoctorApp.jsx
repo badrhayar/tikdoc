@@ -174,7 +174,15 @@ export default function DoctorApp() {
   const [unreadChat, setUnreadChat] = useState(0);
   const [unreadNotif, setUnreadNotif] = useState(0);
   const { isMobile } = useViewport();
-  const goNav = (sc) => { setNavOpen(false); go(sc); };
+  // Rail navigation. Opening "Dossier patient" from the rail always lands on the
+  // selectable patient list — never a leftover patient — so we clear any dossier
+  // selection here. Deep-links (patient fiche, agenda panel) use the raw `go`
+  // prop instead and keep the patient they just set.
+  const goNav = (sc) => {
+    setNavOpen(false);
+    if (sc === 'dpfile') setState({ pfilePatient: null, pfileApptId: null, pfileFrom: null });
+    go(sc);
+  };
 
   // ── Realtime inbox: live message + booking alerts ──────────────────────────
   const appUserId = state.appUser?.id;
