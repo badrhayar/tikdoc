@@ -63,10 +63,12 @@ export default function AuthChoice() {
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setOpen((v) => (v === 'login' ? null : 'login'))}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: DARK }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff', transition: 'background .12s' }}
         >
           {tr('Se connecter', 'Sign in', 'تسجيل الدخول')}
-          <span style={{ fontSize: 9, color: '#9AA8A2', transform: open === 'login' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', transform: open === 'login' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
         </button>
         {open === 'login' && <Menu patientTo="plogin" doctorTo="login" />}
       </div>
@@ -75,10 +77,10 @@ export default function AuthChoice() {
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setOpen((v) => (v === 'register' ? null : 'register'))}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: GRAD, border: 'none', borderRadius: 10, padding: '7px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff', boxShadow: '0 6px 16px -5px rgba(22,160,106,0.6)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: 'none', borderRadius: 8, padding: '7px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#0C4A37', boxShadow: '0 2px 6px -2px rgba(0,0,0,0.3)' }}
         >
           {tr('Créer un compte', 'Create an account', 'إنشاء حساب')}
-          <span style={{ fontSize: 9, opacity: 0.85, transform: open === 'register' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+          <span style={{ fontSize: 9, opacity: 0.7, transform: open === 'register' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
         </button>
         {open === 'register' && <Menu patientTo="pregister" doctorTo="docregister" />}
       </div>

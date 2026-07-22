@@ -4,7 +4,7 @@ import { SPEC_INFO, subscriptionState, renewalInfo, paymentRef, greenBtn, greenB
 import { moroccoNow } from '../../lib/time.js';
 import { fetchDoctorPayments, declarePayment, doctorRequestActivation, notifyVerification } from '../../lib/api';
 
-const PRIMARY = '#16A06A';
+const PRIMARY = '#0F6E56';
 const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
@@ -206,7 +206,7 @@ export default function Subscription({ state, setState, go }) {
       {/* Status banner — trial countdown / pending / active / expired */}
       {(() => {
         const amber = pendingPay || sub.expired || sub.blocked;
-        const grad = amber ? 'linear-gradient(135deg,#E9A23B,#C28A1B)' : `linear-gradient(135deg, ${PRIMARY} 0%, #0d7a50 100%)`;
+        const grad = amber ? 'linear-gradient(135deg,#E9A23B,#C28A1B)' : 'linear-gradient(135deg, #0F6E56 0%, #0C4A37 100%)';
         const title = pendingPay ? 'Activation en attente'
           : sub.blocked ? 'Compte suspendu'
           : sub.expired ? 'Abonnement expiré'

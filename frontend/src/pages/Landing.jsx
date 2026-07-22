@@ -118,11 +118,13 @@ export default function Landing() {
             <Wordmark size={22} />
           </button>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — Doctolib-style: clean white text, no pills; hover /
+              active turn the text the brand's light green (map mint). */}
           {!isMobile && (
-            <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+            <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flex: 1, minWidth: 0 }}>
               {navItems.map((item) => {
                 const active = state.screen === item.key;
+                const lit = active || hoveredNav === item.key;
                 return (
                   <button
                     key={item.key}
@@ -130,14 +132,14 @@ export default function Landing() {
                     onMouseEnter={() => setHoveredNav(item.key)}
                     onMouseLeave={() => setHoveredNav(null)}
                     style={{
-                      background: active ? 'rgba(255,255,255,0.16)' : (hoveredNav === item.key ? 'rgba(255,255,255,0.09)' : 'none'),
-                      border: 'none', cursor: 'pointer', padding: '8px 14px', fontSize: 14,
+                      position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 8px', fontSize: 14,
                       fontWeight: active ? 700 : 600,
-                      color: active ? '#fff' : 'rgba(255,255,255,0.78)',
-                      borderRadius: 10, transition: 'all 0.15s', whiteSpace: 'nowrap',
+                      color: lit ? '#5AD6A0' : '#fff',
+                      transition: 'color 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
                     }}
                   >
                     {item.label}
+                    <span style={{ position: 'absolute', left: 8, right: 8, bottom: 2, height: 2, borderRadius: 2, background: '#5AD6A0', opacity: active ? 1 : 0, transition: 'opacity .15s' }} />
                   </button>
                 );
               })}

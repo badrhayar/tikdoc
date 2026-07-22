@@ -4,6 +4,7 @@ import { useViewport } from '../hooks/useViewport';
 import { tint, initials, DOC_TYPE_OPTS, SPEC_INFO, docDisplayName, greenBtn, greenBtnBusy, GREEN_GRAD } from '../shared.jsx';
 import Icon from '../components/Icon';
 import LangPill from '../components/LangPill';
+import BrandMark, { Wordmark } from '../components/BrandMark';
 import { pushSupported, pushState, enablePush, disablePush } from '../lib/push';
 import QRCode from 'qrcode';
 import { fetchRelatives, addRelative, deleteRelative, downloadICS, createReview, getOrCreateConversation, findConversation, fetchMessages, sendMessage, subscribeToConversation, uploadAvatar, updateMyProfile, updateAppointmentStatus, sendApptWhatsApp, notifyApptEmail, uploadChatImage, isImageMessage, uploadDocument, listDocuments, downloadDocument, fetchMyPrescriptions } from '../lib/api';
@@ -409,25 +410,26 @@ export default function PatientAccount() {
 
   return (
     <div style={{ overflowX:'hidden', maxWidth:'100vw' }}>
-      <header style={{ background:'#fff', borderBottom:`1px solid ${BORDER}`, position:'sticky', top:0, zIndex:30 }}>
+      <header style={{ background:'linear-gradient(90deg, #0C4A37 0%, #0A3D2D 100%)', boxShadow:'0 1px 0 rgba(255,255,255,0.08), 0 8px 24px -12px rgba(6,32,23,0.55)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'0 12px':'0 24px', height:60, display:'flex', alignItems:'center', gap: isMobile?8:16 }}>
-          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 5, cursor:'pointer', flexShrink:0 }}>
-            <img loading="lazy" src="/icons/icon-192.png" alt="Tabibo" style={{ width:28, height:28, objectFit:'contain' }} />
-            <span style={{ fontWeight:800, fontSize:18, color:DARK }}>Tabib<span style={{ color:G }}>o</span></span>
+          <div onClick={() => go('home')} style={{ display:'flex', alignItems:'center', gap: 2, cursor:'pointer', flexShrink:0 }}>
+            <BrandMark plain size={32} />
+            <Wordmark size={21} />
           </div>
           <div style={{ flex:1, minWidth:8 }} />
-          <LangPill style={{ flexShrink: 0 }} />
+          <LangPill dark style={{ flexShrink: 0 }} />
           {/* Staff members hop back to the cabinet they work for. */}
           {(state.isStaff || state.appUser?.role === 'doctor') && (
-            <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'#E7F6EE', color:'#0E7C52', border:'1px solid #CDE7DA', cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:10, fontSize:13, fontWeight:700, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+            <button onClick={() => go('doctor')} title="Espace cabinet" style={{ background:'rgba(255,255,255,0.12)', color:'#fff', border:'1px solid rgba(255,255,255,0.24)', cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13, fontWeight:600, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 15a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/></svg>
               {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
             </button>
           )}
-          <button onClick={() => go('search')} style={{ ...greenBtn, flexShrink:0, minHeight: isMobile?44:undefined }}>
-            <span style={{ fontSize:16, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
+          <button onClick={() => go('search')} style={{ background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', padding: isMobile?0:'7px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13, fontWeight:600, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:5, boxShadow:'0 2px 6px -2px rgba(0,0,0,0.3)' }}>
+            <span style={{ fontSize:15, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
           </button>
-          <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:BG, color:MUT, border:`1px solid ${BORDER}`, cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:10, fontSize:13, fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:'transparent', color:'rgba(255,255,255,0.85)', border:'1px solid rgba(255,255,255,0.22)', cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13, fontWeight:600, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.12)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
             {isMobile ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
             ) : tr('Déconnexion', 'Sign out', 'تسجيل الخروج')}
@@ -438,7 +440,7 @@ export default function PatientAccount() {
       <main style={{ maxWidth:1040, margin:'0 auto', padding: isMobile?'20px 16px 44px':'28px 24px 50px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:24 }}>
           <div style={{ position:'relative', flexShrink:0 }}>
-            <div style={{ width:62, height:62, borderRadius:'50%', background:'linear-gradient(135deg,#1AAE74,#0E7E52)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:800, overflow:'hidden' }}>
+            <div style={{ width:62, height:62, borderRadius:'50%', background:'linear-gradient(135deg, #0F6E56 0%, #0C4A37 100%)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:800, overflow:'hidden' }}>
               {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : initials(patient?.name)}
             </div>
             <input ref={photoRef} type="file" accept="image/*" style={{ display:'none' }} onChange={onPickPhoto} />
@@ -453,7 +455,7 @@ export default function PatientAccount() {
         </div>
 
         {/* Countdown card */}
-        <div style={{ background:'linear-gradient(135deg,#16A06A,#0E7E52)', borderRadius:18, padding:'22px 24px', marginBottom:22, display:'flex', alignItems:'center', gap:22, flexWrap:'wrap', position:'relative', overflow:'hidden' }}>
+        <div style={{ background:'linear-gradient(135deg, #0F6E56 0%, #0C4A37 100%)', borderRadius:18, padding:'22px 24px', marginBottom:22, display:'flex', alignItems:'center', gap:22, flexWrap:'wrap', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px), repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 30px)' }} />
           <div style={{ position:'relative', flex:1, minWidth: isMobile?140:230 }}>
             <div style={{ fontSize:11.5, fontWeight:800, color:'#BFF0DA', textTransform:'uppercase', letterSpacing:.6, marginBottom:9 }}>⏱ {tr('Prochain rendez-vous', 'Next appointment', 'الموعد القادم')}</div>

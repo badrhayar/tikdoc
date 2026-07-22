@@ -130,17 +130,31 @@ export function deltaPct(cur, prev) {
   return { pct: Math.abs(pct), dir: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
 }
 
-/** Convenience: this month (to-date) + last month (to the same day) + labels. */
-export function monthComparison(state, todayISO) {
+/**
+ * Convenience: this month (to-date) + a comparison month (to the same day) + labels.
+ * @param {string|null} compareYm  the baseline month to compare against; defaults
+ *                                  to the month immediately before the current one.
+ */
+export function monthComparison(state, todayISO, compareYm = null) {
   const curYm = ymOf(todayISO);
-  const prev = prevYm(curYm);
+  const prev = compareYm || prevYm(curYm);
   const toDay = Number(String(todayISO).slice(8, 10)) || 31;
   return {
     curYm, prevYm: prev, toDay,
     curLabel: monthLabel(curYm), prevLabel: monthLabel(prev),
     current: monthlyReport(state, curYm, toDay),
+    // Compare the same portion of each month (to the same day-of-month) so the
+    // figures are apples-to-apples whichever baseline the doctor picks.
     previous: monthlyReport(state, prev, toDay),
     // Full current month (not capped) — for the dashboard "ce mois" totals.
     currentFull: monthlyReport(state, curYm, null),
   };
+}
+
+/** The N months strictly before `curYm`, newest first: [{ ym, label }]. */
+export function monthOptions(curYm, n = 12) {
+  const out = [];
+  let ym = prevYm(curYm);
+  for (let i = 0; i < n; i++) { out.push({ ym, label: monthLabel(ym) }); ym = prevYm(ym); }
+  return out;
 }

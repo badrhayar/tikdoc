@@ -4,9 +4,9 @@ import { fetchDoctorReviews, replyToReview } from '../../lib/api';
 import { greenBtn, greenBtnBusy } from '../../shared.jsx';
 import Pager, { usePager } from '../../components/Pager';
 import { moroccoNow } from '../../lib/time';
-import { monthComparison, deltaPct, monthLabel, ymOf, FR_WEEKDAYS } from '../../lib/metrics';
+import { monthComparison, deltaPct, monthLabel, monthOptions, ymOf, FR_WEEKDAYS } from '../../lib/metrics';
 
-const PRIMARY = '#16A06A';
+const PRIMARY = '#0F6E56';
 const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
@@ -50,13 +50,13 @@ function SectionTitle({ icon, title, borderColor }) {
 function Delta({ cur, prev, mode = 'pct', goodWhenDown = false }) {
   let dir, text;
   if (mode === 'points') {
-    if (!prev && !cur) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données le mois dernier</div>;
+    if (!prev && !cur) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données pour le mois comparé</div>;
     const diff = Math.round((cur - prev) * 10) / 10;
     dir = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
     text = `${diff > 0 ? '+' : diff < 0 ? '−' : ''}${Math.abs(diff)} pt${Math.abs(diff) >= 2 ? 's' : ''}`;
   } else {
     const d = deltaPct(cur, prev);
-    if (d == null) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données le mois dernier</div>;
+    if (d == null) return <div style={{ marginTop: 8, fontSize: 11.5, color: MUTED }}>Pas de données pour le mois comparé</div>;
     dir = d.dir;
     text = `${dir === 'up' ? '+' : dir === 'down' ? '−' : ''}${d.pct}%`;
   }
@@ -70,7 +70,7 @@ function Delta({ cur, prev, mode = 'pct', goodWhenDown = false }) {
         {!neutral && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: dir === 'down' ? 'rotate(180deg)' : 'none' }}><path d="M5 15l7-7 7 7" /></svg>}
         {text}
       </span>
-      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>vs mois dernier</span>
+      <span style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>vs mois comparé</span>
     </div>
   );
 }
@@ -143,8 +143,10 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   // One source of truth (lib/metrics) shared with the dashboard, so every figure
   // agrees — real accounts AND the sales demo.
   const todayISO = moroccoNow().dateISO;
-  const cmp = monthComparison(state, todayISO);
+  const [compareYm, setCompareYm] = useState(null);   // null → month immediately before
+  const cmp = monthComparison(state, todayISO, compareYm);
   const cur = cmp.current, prev = cmp.previous, curYm = cmp.curYm;
+  const cmpOptions = monthOptions(curYm, 12);
 
   const allConsultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const dayOf = (iso) => Number(String(iso).slice(8, 10)) || 0;
@@ -236,13 +238,21 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: DARK, margin: 0 }}>Statistiques &amp; Revenus</h1>
-          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Vos performances ce mois-ci, comparées au mois dernier</p>
+          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Vos performances ce mois-ci, comparées au mois de votre choix</p>
         </div>
-        {/* Month context — everything below is “ce mois-ci” (jusqu'à aujourd'hui). */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '8px 16px' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        {/* Month context — current month to date, compared to a month the doctor
+            chooses from the dropdown. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '6px 8px 6px 15px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{cmp.curLabel}</span>
-          <span style={{ fontSize: 12, color: MUTED }}>vs {cmp.prevLabel}</span>
+          <span style={{ fontSize: 12, color: MUTED }}>vs</span>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <select value={compareYm || cmp.prevYm} onChange={(e) => setCompareYm(e.target.value)} aria-label="Mois de comparaison"
+              style={{ appearance: 'none', WebkitAppearance: 'none', border: '1px solid #DCE6E1', background: '#F4FAF7', color: '#0C4A37', fontSize: 12.5, fontWeight: 600, borderRadius: 16, padding: '5px 26px 5px 12px', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+              {cmpOptions.map((o) => <option key={o.ym} value={o.ym}>{o.label}</option>)}
+            </select>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 9, pointerEvents: 'none' }}><path d="M6 9l6 6 6-6"/></svg>
+          </div>
         </div>
       </div>
 

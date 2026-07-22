@@ -163,6 +163,21 @@ const RAIL2_W  = 196;
 // prescribing — an ordonnance is a medical act signed by the doctor only).
 const STAFF_HIDDEN = new Set(['dabo', 'dstaff', 'dprescribe']);
 
+// One cohesive top-bar utility button — cool glass pill, consistent hover +
+// active state, optional notification badge. Grouped in a translucent tray so
+// the header reads as one professional utility cluster (not scattered icons).
+function TopUtil({ title, onClick, active = false, badge = null, children }) {
+  return (
+    <button onClick={onClick} title={title} aria-label={title}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+      style={{ position: 'relative', background: active ? 'rgba(255,255,255,0.20)' : 'transparent', border: 'none', cursor: 'pointer', width: 32, height: 32, borderRadius: 9, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background .12s', boxShadow: active ? 'inset 0 0 0 1px rgba(255,255,255,0.12)' : 'none' }}>
+      {children}
+      {badge}
+    </button>
+  );
+}
+
 export default function DoctorApp() {
   const { state, setState, go, reloadAppointments, authSignOut } = useApp();
   const { screen, newApptOpen, apptCreated, addPatientOpen, patientAdded, newAppt, newPatient, patients, pop } = state;
@@ -523,45 +538,37 @@ export default function DoctorApp() {
             <span style={{ fontSize:isMobile?20:14, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
-          {/* Aide → page Contact */}
-          {!isMobile && (
-            <button onClick={() => goNav('contact')} title="Aide & contact" aria-label="Aide" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
-            </button>
-          )}
-
-          {/* Œil → ma page publique de réservation (lien + QR) */}
-          {!isMobile && (
-            <button onClick={() => goNav('dshare')} title="Ma page publique" aria-label="Ma page publique" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          )}
-
-          {/* Bell → full Notifications page */}
-          <button onClick={() => goNav('dnotif')} title="Notifications" aria-label="Notifications" style={{ position:'relative', background: screen==='dnotif' ? 'rgba(255,255,255,0.18)' : 'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.88)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>{ if (screen!=='dnotif') e.currentTarget.style.background='transparent'; }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            {unreadNotif > 0 && <span style={{ position:'absolute', top:6, right:7, width:7, height:7, borderRadius:'50%', background:'#FF8FA5', border:'1.5px solid #0C4A37' }} />}
-          </button>
-
-          {/* Chat → full Messages page */}
-          <button onClick={() => goNav('dchat')} title="Messages" aria-label="Messages" style={{ position:'relative', background: screen==='dchat' ? 'rgba(255,255,255,0.18)' : 'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.88)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>{ if (screen!=='dchat') e.currentTarget.style.background='transparent'; }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            {unreadChat > 0 && (
-              <span style={{ position:'absolute', top:2, right:2, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#FF8FA5', border:'1.5px solid #0C4A37', color:'#0C2A1F', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
-                {unreadChat > 9 ? '9+' : unreadChat}
-              </span>
+          {/* Utility tray — one cohesive glass cluster (aide · page publique ·
+              notifications · messages · verrouiller). Reads as a professional
+              toolbar, not scattered icons. */}
+          <div style={{ display:'flex', alignItems:'center', gap:3, padding:3, borderRadius:12, background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.10)', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+            {!isMobile && (
+              <TopUtil title="Aide & contact" onClick={() => goNav('contact')} active={screen==='contact'}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
+              </TopUtil>
             )}
-          </button>
-
-          {/* Cadenas → verrouiller la session (déconnexion) */}
-          {!isMobile && state.appUser && (
-            <button onClick={() => authSignOut()} title="Verrouiller la session" aria-label="Se déconnecter" style={{ background:'transparent', border:'none', cursor:'pointer', width:30, height:30, borderRadius:8, color:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.14)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            </button>
-          )}
+            {!isMobile && (
+              <TopUtil title="Ma page publique" onClick={() => goNav('dshare')} active={screen==='dshare'}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </TopUtil>
+            )}
+            <TopUtil title="Notifications" onClick={() => goNav('dnotif')} active={screen==='dnotif'}
+              badge={unreadNotif > 0 ? <span style={{ position:'absolute', top:5, right:6, width:7, height:7, borderRadius:'50%', background:'#FF8FA5', border:'1.5px solid #0C4A37' }} /> : null}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            </TopUtil>
+            <TopUtil title="Messages" onClick={() => goNav('dchat')} active={screen==='dchat'}
+              badge={unreadChat > 0 ? <span style={{ position:'absolute', top:1, right:1, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#FF8FA5', border:'1.5px solid #0C4A37', color:'#0C2A1F', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{unreadChat > 9 ? '9+' : unreadChat}</span> : null}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </TopUtil>
+            {!isMobile && state.appUser && (
+              <TopUtil title="Verrouiller la session" onClick={() => authSignOut()}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              </TopUtil>
+            )}
+          </div>
 
           {/* Avatar */}
-          <div style={{ position:'relative', zIndex:40 }}>
+          <div style={{ position:'relative', zIndex:40, marginLeft:2 }}>
             <button onClick={() => setPopAvatar(a=>!a)} style={{ width:32, height:32, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.4)', marginLeft:4, padding:0, cursor:'pointer', background:'linear-gradient(150deg,#D7EFE3,#BFE6D2)', display:'flex', alignItems:'flex-end', justifyContent:'center', overflow:'hidden' }}>
               {docAvatar
                 ? <img src={docAvatar} alt={docName} style={{ width:'100%', height:'100%', objectFit:'cover' }} />

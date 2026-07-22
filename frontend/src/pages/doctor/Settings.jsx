@@ -8,7 +8,7 @@ import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 const villes = CITY_OPTS.map((c) => (typeof c === 'string' ? c : c.label));
 
-const PRIMARY = '#16A06A';
+const PRIMARY = '#0F6E56';
 const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
@@ -543,16 +543,17 @@ export default function Settings({ state, setState, go, openNewAppt, openAddPati
                 </div>
               )}
               <button onClick={changePassword} disabled={pwBusy} style={{
-                background: 'transparent',
-                color: PRIMARY,
-                border: `2px solid ${PRIMARY}`,
-                borderRadius: 8,
+                background: '#0F6E56',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 9,
                 padding: '10px 0',
                 fontWeight: 600,
-                fontSize: 14,
+                fontSize: 13.5,
                 cursor: pwBusy ? 'default' : 'pointer',
                 opacity: pwBusy ? 0.6 : 1,
                 marginTop: 4,
+                boxShadow: '0 1px 2px rgba(12,74,55,0.16)',
               }}>
                 {pwBusy ? 'Modification…' : 'Changer le mot de passe'}
               </button>

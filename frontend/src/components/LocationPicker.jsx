@@ -211,13 +211,13 @@ export default function LocationPicker({ city, value, initialQuery = '', onChang
             onClick={handleSave}
             disabled={saving || !hasLoc}
             style={{
-              background: saved ? '#E7F6EE' : 'linear-gradient(135deg, #1AAE74 0%, #12875A 52%, #0B6A46 100%)',
-              color: saved ? '#0E7C52' : '#fff',
-              border: saved ? '1px solid #BFE6D2' : 'none',
-              borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 700,
+              background: saved ? '#E9F5F0' : '#0F6E56',
+              color: saved ? '#0F6E56' : '#fff',
+              border: saved ? '1px solid #BFE0D4' : 'none',
+              borderRadius: 8, padding: '6px 14px', minHeight: 30, fontSize: 12.5, fontWeight: 600,
               cursor: (saving || !hasLoc) ? 'default' : 'pointer', opacity: hasLoc ? 1 : 0.6,
               whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6,
-              boxShadow: saved ? 'none' : '0 6px 14px -7px rgba(22,160,106,0.7)',
+              boxShadow: saved ? 'none' : '0 1px 2px rgba(12,74,55,0.16)',
             }}
           >
             {saving ? 'Enregistrement…' : saved ? 'Position enregistrée ✓' : 'Enregistrer la position'}

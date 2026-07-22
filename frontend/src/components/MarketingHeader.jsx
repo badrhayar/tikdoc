@@ -66,10 +66,14 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
       <button
         onClick={() => (stacked ? goMobile(loginKey) : go(loginKey))}
         style={{
-          background: '#fff', border: `1px solid ${BORDER}`, borderRadius: stacked ? 11 : 8,
+          // Stacked (mobile menu, white surface) keeps the light look; inline
+          // (desktop, deep-green bar) becomes a translucent ghost button.
+          background: stacked ? '#fff' : 'transparent',
+          border: stacked ? `1px solid ${BORDER}` : '1px solid rgba(255,255,255,0.28)',
+          borderRadius: stacked ? 11 : 8,
           padding: stacked ? '13px' : '7px 16px', minHeight: stacked ? 48 : undefined,
           cursor: 'pointer', fontSize: stacked ? 15 : 13, fontWeight: stacked ? 700 : 600,
-          color: DARK, width: stacked ? '100%' : undefined,
+          color: stacked ? DARK : '#fff', width: stacked ? '100%' : undefined, whiteSpace: 'nowrap',
         }}
       >
         {loginLabel}
@@ -77,10 +81,11 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
       <button
         onClick={() => (stacked ? goMobile(registerKey) : go(registerKey))}
         style={{
-          background: PRIMARY, border: 'none', borderRadius: stacked ? 11 : 8,
+          background: stacked ? PRIMARY : '#fff', border: 'none', borderRadius: stacked ? 11 : 8,
           padding: stacked ? '13px' : '7px 16px', minHeight: stacked ? 48 : undefined,
           cursor: 'pointer', fontSize: stacked ? 15 : 13, fontWeight: stacked ? 700 : 600,
-          color: '#fff', width: stacked ? '100%' : undefined, whiteSpace: 'nowrap',
+          color: stacked ? '#fff' : '#0C4A37', width: stacked ? '100%' : undefined, whiteSpace: 'nowrap',
+          boxShadow: stacked ? 'none' : '0 2px 6px -2px rgba(0,0,0,0.3)',
         }}
       >
         {registerLabel}
@@ -100,11 +105,13 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
           <Wordmark size={22} />
         </button>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — Doctolib-style links: clean white text, no pills; hover /
+            active turn the text the brand's light green (the same mint used on the map). */}
         {!isMobile && (
-          <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+          <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             {navItems.map((item) => {
               const active = item.key === activeKey;
+              const lit = active || hoveredNav === item.key;
               return (
                 <button
                   key={item.key}
@@ -112,15 +119,16 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
                   onMouseEnter={() => setHoveredNav(item.key)}
                   onMouseLeave={() => setHoveredNav(null)}
                   style={{
-                    background: active ? 'rgba(255,255,255,0.16)' : (hoveredNav === item.key ? 'rgba(255,255,255,0.09)' : 'none'),
-                    border: 'none', cursor: 'pointer',
-                    padding: '8px 14px', fontSize: 14,
+                    position: 'relative', background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '8px 8px', fontSize: 14,
                     fontWeight: active ? 700 : 600,
-                    color: active ? '#fff' : 'rgba(255,255,255,0.78)',
-                    borderRadius: 10, transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    color: lit ? '#5AD6A0' : '#fff',
+                    transition: 'color 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
                   }}
                 >
                   {item.label}
+                  {/* subtle light-green underline on the active page */}
+                  <span style={{ position: 'absolute', left: 8, right: 8, bottom: 2, height: 2, borderRadius: 2, background: '#5AD6A0', opacity: active ? 1 : 0, transition: 'opacity .15s' }} />
                 </button>
               );
             })}

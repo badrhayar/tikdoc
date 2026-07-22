@@ -10,7 +10,7 @@ import { BOOK_SLOTS, genSlots, greenBtn, greenBtnBusy } from '../../shared.jsx';
 import { moroccoNow, moDateKeyOf } from '../../lib/time.js';
 import { fetchPrayerTimes, PRAYER_FALLBACK, PRAYER_LABELS, prayerBlockedSlots } from '../../lib/prayer.js';
 
-const PRIMARY = '#16A06A';
+const PRIMARY = '#0F6E56';
 const DARK = '#15314A';
 const BG = '#F4F8F5';
 const BORDER = '#EAEFEC';
@@ -60,7 +60,16 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
   const [prayerBlock, setPrayerBlock] = useState(true);
   const [prayerSet, setPrayerSet] = useState(new Set(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']));
   const [maxPerDay, setMaxPerDay] = useState(10);
-  const [slotDuration, setSlotDuration] = useState(20);
+  // Initialise the slot duration synchronously so the grid paints at the
+  // doctor's real takt on the FIRST frame — no flash of the default 20-min
+  // slots before the async fetch resolves. Source order: the doctor record
+  // already in global state → a cached value → the default.
+  const [slotDuration, setSlotDuration] = useState(() => {
+    const fromState = state?.myDoctor?.slot_minutes;
+    if (SLOT_DURATIONS.includes(fromState)) return fromState;
+    try { const c = Number(localStorage.getItem('tabibo_slot_min')); if (SLOT_DURATIONS.includes(c)) return c; } catch { /* private mode */ }
+    return 20;
+  });
   const [prayerTimes, setPrayerTimes] = useState(PRAYER_FALLBACK);
 
   const [saving, setSaving] = useState(false);
@@ -119,7 +128,10 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
         if (doc.max_per_day != null) setMaxPerDay(doc.max_per_day || 0);
         setPrayerBlock(!!doc.prayer_block);
         if (Array.isArray(doc.prayer_ids) && doc.prayer_ids.length) setPrayerSet(new Set(doc.prayer_ids));
-        if ([15, 20, 30, 45, 60].includes(doc.slot_minutes)) setSlotDuration(doc.slot_minutes);
+        if (SLOT_DURATIONS.includes(doc.slot_minutes)) {
+          setSlotDuration(doc.slot_minutes);
+          try { localStorage.setItem('tabibo_slot_min', String(doc.slot_minutes)); } catch { /* private mode */ }
+        }
         // working hours
         const rows = await fetchAvailability(doc.id);
         if (active && rows.length) {
@@ -586,7 +598,7 @@ export default function Availability({ state, setState, go, openNewAppt, openAdd
             {SLOT_DURATIONS.map((d) => {
               const active = slotDuration === d;
               return (
-                <button key={d} onClick={() => setSlotDuration(d)} style={{ padding: '6px 15px', borderRadius: 20, minHeight: 32, border: `1px solid ${active ? '#0F6E56' : BORDER}`, background: active ? '#0F6E56' : '#fff', color: active ? '#fff' : MUTED, fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{d} min</button>
+                <button key={d} onClick={() => { setSlotDuration(d); try { localStorage.setItem('tabibo_slot_min', String(d)); } catch { /* private mode */ } }} style={{ padding: '6px 15px', borderRadius: 20, minHeight: 32, border: `1px solid ${active ? '#0F6E56' : BORDER}`, background: active ? '#0F6E56' : '#fff', color: active ? '#fff' : MUTED, fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{d} min</button>
               );
             })}
           </div>
