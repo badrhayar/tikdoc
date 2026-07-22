@@ -81,11 +81,12 @@ export default function MarketingHeader({ activeKey, audience = 'patient' }) {
       <button
         onClick={() => (stacked ? goMobile(registerKey) : go(registerKey))}
         style={{
-          background: stacked ? PRIMARY : '#fff', border: 'none', borderRadius: stacked ? 11 : 8,
-          padding: stacked ? '13px' : '7px 16px', minHeight: stacked ? 48 : undefined,
-          cursor: 'pointer', fontSize: stacked ? 15 : 13, fontWeight: stacked ? 700 : 600,
-          color: stacked ? '#fff' : '#0C4A37', width: stacked ? '100%' : undefined, whiteSpace: 'nowrap',
-          boxShadow: stacked ? 'none' : '0 2px 6px -2px rgba(0,0,0,0.3)',
+          background: stacked ? PRIMARY : 'linear-gradient(135deg, #1FBB7C 0%, #12905E 100%)', border: 'none', borderRadius: stacked ? 11 : 8,
+          padding: stacked ? '13px' : '8px 16px', minHeight: stacked ? 48 : undefined,
+          cursor: 'pointer', fontSize: stacked ? 15 : 13, fontWeight: 700,
+          letterSpacing: stacked ? undefined : '0.2px', fontFamily: stacked ? undefined : "'Plus Jakarta Sans', Inter, sans-serif",
+          color: '#fff', width: stacked ? '100%' : undefined, whiteSpace: 'nowrap',
+          boxShadow: stacked ? 'none' : '0 4px 14px -5px rgba(18,144,94,0.65)',
         }}
       >
         {registerLabel}

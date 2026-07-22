@@ -534,8 +534,8 @@ export default function DoctorApp() {
           <CommandPalette state={state} setState={setState} go={goNav} isMobile={isMobile} dark />
           <div style={{ flex:1 }} />
           {/* Nouveau rendez-vous — white on the dark bar so it pops */}
-          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:5, background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', fontWeight:600, fontSize:isMobile?20:12.5, padding:isMobile?0:'5px 12px', width:isMobile?42:'auto', height:isMobile?42:30, borderRadius:isMobile?'50%':8, justifyContent:'center', boxShadow:'0 2px 6px -2px rgba(0,0,0,0.3)', flexShrink:0, marginRight:6 }}>
-            <span style={{ fontSize:isMobile?20:14, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
+          <button onClick={openNewAppt} aria-label="Nouveau rendez-vous" style={{ display:'flex', alignItems:'center', gap:6, background:'linear-gradient(135deg, #1FBB7C 0%, #12905E 100%)', color:'#fff', border:'none', cursor:'pointer', fontWeight:700, fontSize:isMobile?20:12.5, letterSpacing:'0.2px', fontFamily:"'Plus Jakarta Sans', Inter, sans-serif", padding:isMobile?0:'0 14px', width:isMobile?42:'auto', height:isMobile?42:32, borderRadius:isMobile?'50%':9, justifyContent:'center', boxShadow:'0 4px 14px -5px rgba(18,144,94,0.65)', flexShrink:0, marginRight:6 }}>
+            <span style={{ fontSize:isMobile?20:15, lineHeight:1 }}>+</span>{!isMobile && ' Nouveau rendez-vous'}
           </button>
 
           {/* Utility tray — one cohesive glass cluster (aide · page publique ·

@@ -77,10 +77,10 @@ export default function AuthChoice() {
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setOpen((v) => (v === 'register' ? null : 'register'))}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: 'none', borderRadius: 8, padding: '7px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#0C4A37', boxShadow: '0 2px 6px -2px rgba(0,0,0,0.3)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg, #1FBB7C 0%, #12905E 100%)', border: 'none', borderRadius: 8, padding: '8px 15px', cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: '0.2px', fontFamily: "'Plus Jakarta Sans', Inter, sans-serif", color: '#fff', boxShadow: '0 4px 14px -5px rgba(18,144,94,0.65)' }}
         >
           {tr('Créer un compte', 'Create an account', 'إنشاء حساب')}
-          <span style={{ fontSize: 9, opacity: 0.7, transform: open === 'register' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+          <span style={{ fontSize: 9, opacity: 0.85, transform: open === 'register' ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
         </button>
         {open === 'register' && <Menu patientTo="pregister" doctorTo="docregister" />}
       </div>

@@ -425,7 +425,7 @@ export default function PatientAccount() {
               {!isMobile && tr('Espace cabinet', 'Practice space', 'فضاء العيادة')}
             </button>
           )}
-          <button onClick={() => go('search')} style={{ background:'#fff', color:'#0C4A37', border:'none', cursor:'pointer', padding: isMobile?0:'7px 14px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13, fontWeight:600, whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:5, boxShadow:'0 2px 6px -2px rgba(0,0,0,0.3)' }}>
+          <button onClick={() => go('search')} style={{ background:'linear-gradient(135deg, #1FBB7C 0%, #12905E 100%)', color:'#fff', border:'none', cursor:'pointer', padding: isMobile?0:'0 15px', width: isMobile?44:'auto', height: isMobile?44:34, borderRadius:9, fontSize:13, fontWeight:700, letterSpacing:'0.2px', fontFamily:"'Plus Jakarta Sans', Inter, sans-serif", whiteSpace:'nowrap', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:'0 4px 14px -5px rgba(18,144,94,0.65)' }}>
             <span style={{ fontSize:15, lineHeight:1 }}>+</span>{isMobile ? tr('RDV', 'Book', 'حجز') : tr('Prendre un rendez-vous', 'Book an appointment', 'حجز موعد')}
           </button>
           <button onClick={() => authSignOut()} aria-label="Déconnexion" title="Déconnexion" style={{ background:'transparent', color:'rgba(255,255,255,0.85)', border:'1px solid rgba(255,255,255,0.22)', cursor:'pointer', padding: isMobile?0:'7px 13px', width: isMobile?44:'auto', height: isMobile?44:'auto', borderRadius:9, fontSize:13, fontWeight:600, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}

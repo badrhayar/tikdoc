@@ -3,6 +3,7 @@ import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG } from '../shared.jsx';
+import BrandMark, { Wordmark } from '../components/BrandMark';
 import PhoneField from '../components/PhoneField';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
 import { authErrorMessage } from '../lib/auth';
@@ -128,8 +129,8 @@ export default function PatientRegister() {
             onClick={() => go('home')}
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
           >
-            <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 34, height: 34, borderRadius: 9 }} />
-            <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
+            <BrandMark size={34} />
+            <Wordmark size={20} color="#0C4A37" />
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 700, color: DARK, margin: '0 0 6px' }}>Créer un compte</h1>

@@ -653,7 +653,7 @@ export default function ForDoctors() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '64px 24px', background: DARK }}>
+      <section style={{ padding: '64px 24px', background: 'linear-gradient(135deg, #0C4A37 0%, #0A3D2D 100%)' }}>
         <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 14, letterSpacing: '-0.3px' }}>
             {lang === 'ar' ? 'ابدأ مع Tabibo اليوم' : lang === 'en' ? 'Get started with Tabibo today' : 'Lancez-vous avec Tabibo dès aujourd\'hui'}

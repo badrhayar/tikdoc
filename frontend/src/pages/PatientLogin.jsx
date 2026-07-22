@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { authErrorMessage } from '../lib/auth';
 import PasswordInput from '../components/PasswordInput';
-import BrandMark from '../components/BrandMark';
+import BrandMark, { Wordmark } from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { GOOGLE_SVG } from '../shared.jsx';
 import Turnstile, { isCaptchaEnabled } from '../components/Turnstile';
@@ -79,7 +79,7 @@ export default function PatientLogin() {
           style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
         >
           <BrandMark size={34} />
-          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
+          <Wordmark size={20} color="#0C4A37" />
         </div>
 
         {/* Heading */}

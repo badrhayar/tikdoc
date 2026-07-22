@@ -4,6 +4,7 @@ import PasswordInput from '../components/PasswordInput';
 import { useApp } from '../context/AppContext';
 import { useViewport } from '../hooks/useViewport';
 import { GOOGLE_SVG, CITY_OPTS as CITY_LIST, CREDENTIAL_DOCS, SPEC_OPTS, cityCoord } from '../shared.jsx';
+import BrandMark, { Wordmark } from '../components/BrandMark';
 import LocationPicker from '../components/LocationPicker';
 import PhoneField from '../components/PhoneField';
 import Icon from '../components/Icon';
@@ -220,8 +221,8 @@ export default function DoctorRegister() {
             onClick={() => go('home')}
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 36 }}
           >
-            <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 36, height: 36, borderRadius: 10 }} />
-            <span style={{ fontWeight: 700, fontSize: 22, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
+            <BrandMark size={36} />
+            <Wordmark size={21} color="#0C4A37" />
           </div>
 
           {/* Free-trial banner */}
@@ -586,8 +587,8 @@ export default function DoctorRegister() {
             boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
           }}
         >
-          <img src="/icons/icon-192.png" alt="Tabibo" style={{ width: 36, height: 36, borderRadius: 9 }} />
-          <span style={{ fontWeight: 700, fontSize: 20, color: DARK, letterSpacing: '-0.3px' }}>Tabib<span style={{ color: '#16A06A' }}>o</span></span>
+          <BrandMark size={36} />
+          <Wordmark size={20} color="#0C4A37" />
           <span
             style={{
               fontSize: 11,
