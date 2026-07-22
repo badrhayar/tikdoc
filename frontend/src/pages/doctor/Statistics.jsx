@@ -143,15 +143,21 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
   // One source of truth (lib/metrics) shared with the dashboard, so every figure
   // agrees — real accounts AND the sales demo.
   const todayISO = moroccoNow().dateISO;
-  const [compareYm, setCompareYm] = useState(null);   // null → month immediately before
-  const cmp = monthComparison(state, todayISO, compareYm);
+  const realCurYm = ymOf(todayISO);
+  const [analyzedYm, setAnalyzedYm] = useState(null); // null → current real month
+  const [compareYm, setCompareYm] = useState(null);   // null → month immediately before analyzed
+  const cmp = monthComparison(state, todayISO, compareYm, analyzedYm);
   const cur = cmp.current, prev = cmp.previous, curYm = cmp.curYm;
-  const cmpOptions = monthOptions(curYm, 12);
+  // Analyzed month: the current month + the last 12; comparison month: any other
+  // month (excluding the one being analyzed).
+  const analyzedOptions = monthOptions(realCurYm, 13, true);
+  const cmpOptions = monthOptions(realCurYm, 13, true).filter((o) => o.ym !== curYm);
 
   const allConsultations = [...(state?.manualConsults || []), ...(state?.consultations || [])];
   const dayOf = (iso) => Number(String(iso).slice(8, 10)) || 0;
-  // Every section on this page is scoped to the current month, to date.
-  const consultations = allConsultations.filter(c => c.date && ymOf(c.date) === curYm && dayOf(c.date) <= cmp.toDay);
+  // Scoped to the analysed month. For the current month we cap at today (fair
+  // month-to-date); for a chosen past month cmp.toDay is null → the whole month.
+  const consultations = allConsultations.filter(c => c.date && ymOf(c.date) === curYm && (cmp.toDay == null || dayOf(c.date) <= cmp.toDay));
   const paid = consultations.filter(c => c.status === 'Payé');
   const totalRevenue = cur.revenue;
 
@@ -192,7 +198,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
     { label: 'Revenus encaissés', value: cur.revenue.toLocaleString('fr-FR') + ' MAD', cur: cur.revenue, prev: prev.revenue },
     { label: 'Consultations payées', value: String(cur.paidCount), cur: cur.paidCount, prev: prev.paidCount },
     { label: 'Panier moyen', value: cur.panier.toLocaleString('fr-FR') + ' MAD', cur: cur.panier, prev: prev.panier },
-    { label: "En attente d'encaissement", value: cur.pendingAmount.toLocaleString('fr-FR') + ' MAD', cur: cur.pendingAmount, prev: prev.pendingAmount, goodWhenDown: true },
+    { label: "En attente d'encaissement", value: cur.pendingAmount.toLocaleString('fr-FR') + ' MAD', cur: cur.pendingAmount, prev: prev.pendingAmount },
   ];
 
   // Consultation KPI cards — this month to date, vs last month.
@@ -238,21 +244,28 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: DARK, margin: 0 }}>Statistiques &amp; Revenus</h1>
-          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Vos performances ce mois-ci, comparées au mois de votre choix</p>
+          <p style={{ color: MUTED, margin: '6px 0 0', fontSize: 14 }}>Comparez deux mois de votre choix — analysez vos performances dans le temps</p>
         </div>
-        {/* Month context — current month to date, compared to a month the doctor
-            chooses from the dropdown. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '6px 8px 6px 15px' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK }}>{cmp.curLabel}</span>
-          <span style={{ fontSize: 12, color: MUTED }}>vs</span>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <select value={compareYm || cmp.prevYm} onChange={(e) => setCompareYm(e.target.value)} aria-label="Mois de comparaison"
-              style={{ appearance: 'none', WebkitAppearance: 'none', border: '1px solid #DCE6E1', background: '#F4FAF7', color: '#0C4A37', fontSize: 12.5, fontWeight: 600, borderRadius: 16, padding: '5px 26px 5px 12px', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
-              {cmpOptions.map((o) => <option key={o.ym} value={o.ym}>{o.label}</option>)}
-            </select>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 9, pointerEvents: 'none' }}><path d="M6 9l6 6 6-6"/></svg>
-          </div>
+        {/* Month context — the doctor picks BOTH the month to analyse and the
+            month to compare it against (so two past months can be compared even
+            at the very start of a new month). */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: '#fff', border: `1px solid ${BORDER_STRONG}`, borderRadius: 24, padding: '6px 8px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 6 }}><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          {[
+            { val: analyzedYm || realCurYm, set: (v) => { setAnalyzedYm(v === realCurYm ? null : v); setCompareYm(null); }, opts: analyzedOptions, label: 'Mois analysé', primary: true },
+            { val: compareYm || cmp.prevYm, set: (v) => setCompareYm(v), opts: cmpOptions, label: 'Mois de comparaison', primary: false },
+          ].map((d, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              {i === 1 && <span style={{ fontSize: 12, color: MUTED }}>vs</span>}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <select value={d.val} onChange={(e) => d.set(e.target.value)} aria-label={d.label}
+                  style={{ appearance: 'none', WebkitAppearance: 'none', border: `1px solid ${d.primary ? '#BFE0D4' : '#DCE6E1'}`, background: d.primary ? '#E9F5F0' : '#F4FAF7', color: '#0C4A37', fontSize: 12.5, fontWeight: d.primary ? 700 : 600, borderRadius: 16, padding: '5px 26px 5px 12px', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                  {d.opts.map((o) => <option key={o.ym} value={o.ym}>{o.label}</option>)}
+                </select>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C4A37" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 9, pointerEvents: 'none' }}><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -276,7 +289,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
 
         {/* Revenue by service — horizontal bars, this month, vs last month */}
         <div style={{ marginBottom: 34 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: '0 0 16px' }}>Revenus par service <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· ce mois-ci</span></h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: '0 0 16px' }}>Revenus par service <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· {cmp.curLabel}</span></h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {services.map(([label, amount], i) => {
               const pct = totalRevenue > 0 ? Math.round(amount / totalRevenue * 100) : 0;
@@ -312,7 +325,7 @@ export default function Statistics({ state, setState, go, openNewAppt, openAddPa
         {/* Weekday distribution — TWO bars per day: revenue + rendez-vous */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: 0 }}>Répartition par jour <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· ce mois-ci</span></h3>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: DARK, margin: 0 }}>Répartition par jour <span style={{ fontSize: 12, fontWeight: 500, color: MUTED }}>· {cmp.curLabel}</span></h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: MUTED, fontWeight: 600 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: PRIMARY }} /> Revenus (MAD)

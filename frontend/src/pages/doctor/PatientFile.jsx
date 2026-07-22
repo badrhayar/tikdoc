@@ -69,7 +69,7 @@ function CardHead({ icon, title, sub, right }) {
 const SECTIONS = [
   { id: 'consult',  label: 'Consultation en cours',      icon: 'steth' },
   { id: 'admin',    label: 'Infos administratives',      icon: 'admin' },
-  { id: 'histo',    label: 'Historique',                 icon: 'clock' },
+  { id: 'histo',    label: 'Historique du patient',      icon: 'clock' },
   { id: 'antec',    label: 'Antécédents et mode de vie', icon: 'heart' },
   { id: 'ttt',      label: 'Traitement en cours',        icon: 'pill' },
   { id: 'suivi',    label: 'Données de suivi',           icon: 'chart' },
@@ -313,10 +313,19 @@ export default function PatientFile({ state, setState, go }) {
   const [bioTab, setBioTab] = useState('hemato');
   const [bioAdd, setBioAdd] = useState(null);   // { date, cat, param, value } | null
 
-  // Consultation timer.
-  const [timerOn, setTimerOn] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => { if (!timerOn) return undefined; const t = setInterval(() => setElapsed((s) => s + 1), 1000); return () => clearInterval(t); }, [timerOn]);
+  // Consultation timer — anchored to a START TIMESTAMP, not a tick counter, so
+  // the chrono keeps the right elapsed time even if the doctor navigates away
+  // and comes back (the draft restores `startedAt`). timerOn = is a consult running.
+  const [startedAt, setStartedAt] = useState(null);   // ISO string or null
+  const [elapsed, setElapsed] = useState(0);           // seconds
+  const timerOn = !!startedAt;
+  useEffect(() => {
+    if (!startedAt) return undefined;
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [startedAt]);
   const timerLbl = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
 
   // Notes + prescriptions history.
@@ -324,6 +333,14 @@ export default function PatientFile({ state, setState, go }) {
   const [rx, setRx] = useState([]);
   const [q, setQ] = useState('');
   const [expanded, setExpanded] = useState(null);
+
+  // Restore an in-progress consultation draft (observation + running chrono) so
+  // the doctor can leave the page and come back to exactly where they were.
+  const restoreDraft = (draft) => {
+    if (!draft) return;
+    if (draft.obs) setObs((o) => ({ ...o, ...draft.obs }));
+    if (draft.startedAt) setStartedAt(draft.startedAt);
+  };
 
   // ── Load everything for this patient ───────────────────────────────────────
   useEffect(() => {
@@ -334,13 +351,15 @@ export default function PatientFile({ state, setState, go }) {
       try {
         if (isDemo) {
           const rec = (state?.demoMedical || {})[pkey];
-          if (on) setMh({ ...EMPTY_MH, ...(rec || seedFromRoster(patient)) });
+          const full = { ...EMPTY_MH, ...(rec || seedFromRoster(patient)) };
+          if (on) { setMh(full); restoreDraft(full._draft); }
           if (on) setNotes(((state?.demoNotes || [])).filter((n) => n.patient_key === pkey));
           const nm = (patient.name || '').trim().toLowerCase();
           if (on) setRx(((state?.demoRx || [])).filter((r) => (r.patient_name || '').trim().toLowerCase() === nm));
         } else {
           const row = await fetchMedicalHistory(doctorId, pkey);
-          if (on) setMh({ ...EMPTY_MH, ...(row?.data || seedFromRoster(patient)) });
+          const full = { ...EMPTY_MH, ...(row?.data || seedFromRoster(patient)) };
+          if (on) { setMh(full); restoreDraft(full._draft); }
           const ns = await fetchConsultationNotes(doctorId, pkey);
           if (on) setNotes(ns);
           try {
@@ -399,13 +418,40 @@ export default function PatientFile({ state, setState, go }) {
   };
   const patchMh = (patch) => setMh((m) => ({ ...m, ...patch }));
 
-  const saveObs = async () => {
-    const data = { ...obs, durationSec: elapsed };
-    if (!stripHtml(obs.interrogatoire) && !stripHtml(obs.examen) && !stripHtml(obs.conclusion) && !obs.motif && !obs.oral) {
-      setState({ toast: 'Rien à enregistrer — la consultation est vide.', toastShow: true }); return;
-    }
+  const obsIsEmpty = () => !stripHtml(obs.interrogatoire) && !stripHtml(obs.examen) && !stripHtml(obs.conclusion) && !obs.motif && !obs.oral;
+
+  // Persist the medical-history record (used for both the dossier and the draft).
+  const persistMh = async (next) => {
+    if (isDemo) setState({ demoMedical: { ...(state.demoMedical || {}), [pkey]: next } });
+    else await saveMedicalHistory(doctorId, pkey, next);
+  };
+
+  // « Enregistrer » — save the consultation as a DRAFT (in-progress). It does NOT
+  // create a history entry; it just persists what's typed + the running chrono so
+  // leaving the page and returning restores everything. Nothing is committed.
+  const saveDraft = async () => {
+    const draft = { obs, startedAt, savedAt: new Date().toISOString() };
+    const next = { ...mh, _draft: draft };
+    setMh(next);
     setObsSaving(true);
     try {
+      await persistMh(next);
+      flash('Brouillon enregistré ✓');
+    } catch (e) { setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true }); }
+    finally { setObsSaving(false); }
+  };
+
+  // « Terminer la consultation » — COMMIT: writes the consultation (with its
+  // duration) to the patient's Historique, marks the appointment « Vu », then
+  // clears the draft. This is the only action that sends the consultation to
+  // history.
+  const finishConsult = async () => {
+    if (obsIsEmpty()) { setState({ toast: 'Renseignez au moins un élément de la consultation avant de la terminer.', toastShow: true }); return; }
+    if (typeof window !== 'undefined' && !window.confirm(`Terminer la consultation${elapsed ? ` (${timerLbl})` : ''} ? Elle sera enregistrée dans l'historique du patient et le rendez-vous marqué « Vu ».`)) return;
+    const data = { ...obs, durationSec: elapsed, endedAt: new Date().toISOString() };
+    setObsSaving(true);
+    try {
+      // 1) commit the consultation note
       if (isDemo) {
         const row = { id: `local_n${Date.now()}`, patient_key: pkey, appointment_id: state?.pfileApptId || null, data, created_at: new Date().toISOString() };
         setState({ demoNotes: [row, ...(state.demoNotes || [])] });
@@ -415,27 +461,39 @@ export default function PatientFile({ state, setState, go }) {
         const row = await createConsultationNote(doctorId, { patientKey: pkey, appointmentId: apptId, data });
         setNotes((l) => [row, ...l]);
       }
-      flash('Consultation enregistrée ✓');
-      return true;
-    } catch (e) { setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true }); return false; }
+      // 2) clear the draft from the dossier record
+      const cleared = { ...mh, _draft: null };
+      setMh(cleared);
+      try { await persistMh(cleared); } catch (_) { /* non-blocking */ }
+      // 3) mark the linked appointment completed
+      const apptId = state?.pfileApptId;
+      if (apptId) {
+        setState({
+          manualAppts: (state.manualAppts || []).map((a) => a.id === apptId ? { ...a, status: 'completed', inConsultAt: null } : a),
+          myAppointments: (state.myAppointments || []).map((a) => a.id === apptId ? { ...a, status: 'completed', inConsultAt: null } : a),
+        });
+        if (!isLocalId(apptId)) { try { await updateAppointmentStatus(apptId, 'completed'); } catch (_) {} }
+      }
+      // 4) reset the live consultation
+      setStartedAt(null); setElapsed(0);
+      setObs({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '' });
+      setSection('histo');
+      setState({ toast: 'Consultation enregistrée dans l\'historique ✓', toastShow: true });
+    } catch (e) { setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true }); }
     finally { setObsSaving(false); }
   };
 
-  // Terminer la consultation → save note + mark the appointment completed.
-  const finishConsult = async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Terminer la consultation en cours ? La note sera enregistrée et le rendez-vous marqué « Vu ».')) return;
-    const ok = await saveObs();
-    if (ok === false) return;
-    const apptId = state?.pfileApptId;
-    if (apptId) {
-      setState({
-        manualAppts: (state.manualAppts || []).map((a) => a.id === apptId ? { ...a, status: 'completed', inConsultAt: null } : a),
-        myAppointments: (state.myAppointments || []).map((a) => a.id === apptId ? { ...a, status: 'completed', inConsultAt: null } : a),
-      });
-      if (!isLocalId(apptId)) { try { await updateAppointmentStatus(apptId, 'completed'); } catch (_) {} }
-    }
-    setTimerOn(false); setElapsed(0);
+  // « Commencer la consultation » — start the chrono (anchored to now).
+  const beginConsult = () => { setStartedAt(new Date().toISOString()); setElapsed(0); setSection('consult'); };
+
+  // « Annuler » — abandon the in-progress consultation and wipe its draft.
+  const cancelConsult = async () => {
+    if (typeof window !== 'undefined' && !window.confirm('Annuler la consultation en cours ? Les informations non terminées seront effacées.')) return;
+    setStartedAt(null); setElapsed(0);
     setObs({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '' });
+    const cleared = { ...mh, _draft: null };
+    setMh(cleared);
+    try { await persistMh(cleared); } catch (_) { /* non-blocking */ }
   };
 
   // FACTURER — record the payment of the linked appointment.
@@ -456,16 +514,47 @@ export default function PatientFile({ state, setState, go }) {
     if (!isLocalId(id)) { try { await markAppointmentPaid(id, { amount, method: methodKey }); } catch (e) { setState({ toast: 'Paiement non synchronisé : ' + (e?.message || 'erreur'), toastShow: true }); } }
   };
 
-  // ── History feed (consultations + notes + ordonnances), searchable ─────────
+  // ── History feed — the PATIENT's medical timeline: past consultations, the
+  //    compte-rendus written during them (with their content + duration), and
+  //    the ordonnances issued. Searchable, each entry expandable to its detail.
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])]
     .filter((c) => (c.patient || '').trim().toLowerCase() === (patient.name || '').trim().toLowerCase());
+  const durLbl = (sec) => (sec ? `${Math.max(1, Math.round(sec / 60))} min` : null);
+  // Rich, labelled render of a saved compte-rendu (the finalized observation).
+  const noteRich = (n) => {
+    const rows = [
+      ['Motif', n.data?.motif],
+      ['Interrogatoire', stripHtml(n.data?.interrogatoire)],
+      ['Examen', stripHtml(n.data?.examen)],
+      ['Conclusion', stripHtml(n.data?.conclusion)],
+      ["Informations complémentaires", n.data?.oral],
+    ].filter(([, v]) => v && String(v).trim());
+    const d = durLbl(n.data?.durationSec);
+    return (
+      <div>
+        {d && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: TEAL, background: '#E9F5F0', borderRadius: 6, padding: '3px 9px', marginBottom: 10 }}>{IC.clock} Durée {d}</div>}
+        {rows.length === 0 && <div style={{ color: MUTED }}>Compte-rendu sans contenu détaillé.</div>}
+        {rows.map(([label, v]) => (
+          <div key={label} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.6 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
   const feed = [
-    ...consults.map((c) => ({ kind: 'Consultation', icon: IC.steth, date: c.date, title: c.service || 'Consultation', sub: `${c.time} · ${c.status}`, detail: c.notes || c.consultNote || '', id: `c_${c.id}` })),
-    ...notes.map((n) => ({ kind: 'Note', icon: IC.file, date: String(n.created_at).slice(0, 10), title: n.data?.motif || 'Observation médicale', sub: 'Note de consultation', detail: [stripHtml(n.data?.interrogatoire), stripHtml(n.data?.examen), stripHtml(n.data?.conclusion)].filter(Boolean).join(' — '), id: `n_${n.id}` })),
-    ...rx.map((r) => ({ kind: 'Ordonnance', icon: IC.rx, date: String(r.created_at).slice(0, 10), title: 'Ordonnance', sub: (r.items || []).map((i) => i.drug).filter(Boolean).slice(0, 3).join(', '), detail: (r.items || []).map((i) => `${i.drug} — ${i.dosage || ''} ${i.duration || ''}`).join(' · '), id: `r_${r.id}` })),
+    ...consults.map((c) => ({ kind: 'Consultation', icon: IC.steth, date: c.date, title: c.service || 'Consultation', sub: `${c.time} · ${c.status}`, detail: c.notes || c.consultNote || '', searchText: `${c.service} ${c.status} ${c.notes || c.consultNote || ''}`, id: `c_${c.id}` })),
+    ...notes.map((n) => ({ kind: 'Compte-rendu', icon: IC.file, date: String(n.created_at).slice(0, 10),
+      title: n.data?.motif || 'Compte-rendu de consultation',
+      sub: [durLbl(n.data?.durationSec) && `Durée ${durLbl(n.data?.durationSec)}`, [stripHtml(n.data?.interrogatoire), stripHtml(n.data?.examen), stripHtml(n.data?.conclusion)].filter(Boolean).join(' · ').slice(0, 60)].filter(Boolean).join(' — ') || 'Observation médicale',
+      rich: noteRich(n),
+      searchText: `${n.data?.motif || ''} ${stripHtml(n.data?.interrogatoire)} ${stripHtml(n.data?.examen)} ${stripHtml(n.data?.conclusion)}`,
+      id: `n_${n.id}` })),
+    ...rx.map((r) => ({ kind: 'Ordonnance', icon: IC.rx, date: String(r.created_at).slice(0, 10), title: 'Ordonnance', sub: (r.items || []).map((i) => i.drug).filter(Boolean).slice(0, 3).join(', '), detail: (r.items || []).map((i) => `${i.drug} — ${i.dosage || ''} ${i.duration || ''}`).join(' · '), searchText: (r.items || []).map((i) => i.drug).join(' '), id: `r_${r.id}` })),
   ]
     .filter((x) => x.date)
-    .filter((x) => !q.trim() || (x.title + ' ' + x.sub + ' ' + x.detail).toLowerCase().includes(q.trim().toLowerCase()))
+    .filter((x) => !q.trim() || (x.title + ' ' + x.sub + ' ' + (x.searchText || '')).toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => b.date.localeCompare(a.date));
   const feedGroups = [];
   feed.forEach((x) => {
@@ -520,9 +609,9 @@ export default function PatientFile({ state, setState, go }) {
               {[['Paramètres', IC.gear], ['Dictée', IC.mic]].map(([t, ic]) => (
                 <span key={t} title={t} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #E2EAE6', background: '#fff', color: MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ic}</span>
               ))}
-              <button onClick={() => setTimerOn((v) => !v)} title={timerOn ? 'Mettre en pause' : 'Démarrer le chronomètre'}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28, border: `1px solid ${timerOn ? '#BFE0D4' : '#E2EAE6'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 15, padding: '0 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: timerOn ? TEAL : '#C9D6D1' }} />
+              <button onClick={() => { if (!timerOn) beginConsult(); }} title={timerOn ? 'Consultation en cours' : 'Commencer la consultation'}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28, border: `1px solid ${timerOn ? '#BFE0D4' : '#E2EAE6'}`, background: timerOn ? '#E9F5F0' : '#fff', color: timerOn ? TEAL : DARK, borderRadius: 15, padding: '0 12px', fontSize: 12, fontWeight: 600, cursor: timerOn ? 'default' : 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: timerOn ? '#16A06A' : '#C9D6D1', animation: timerOn ? 'pfPulse 1.6s infinite' : 'none' }} />
                 {timerLbl}
               </button>
               <button onClick={() => setIaOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, background: TEAL, color: '#fff', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)' }}>
@@ -536,7 +625,7 @@ export default function PatientFile({ state, setState, go }) {
 
       {/* Observation médicale */}
       <div style={card}>
-        <CardHead icon={IC.steth} title="Observation médicale" sub="Enregistrée dans l'historique du patient." />
+        <CardHead icon={IC.steth} title="Observation médicale" sub="« Enregistrer » garde un brouillon ; « Terminer la consultation » l'ajoute à l'historique." />
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
           <div><label style={lbl}>Nom du modèle</label><input value={obs.modele} onChange={(e) => setObs((o) => ({ ...o, modele: e.target.value }))} style={inp} /></div>
           <div><label style={lbl}>Motif</label><input value={obs.motif} onChange={(e) => setObs((o) => ({ ...o, motif: e.target.value }))} placeholder="Entrez le motif" style={inp} /></div>
@@ -553,11 +642,16 @@ export default function PatientFile({ state, setState, go }) {
         {suiviOpen && renderSuiviFields()}
         <label style={lbl}>Conclusion</label>
         <RichText value={obs.conclusion} onChange={(v) => setObs((o) => ({ ...o, conclusion: v }))} placeholder="Entrez votre conclusion" minHeight={64} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-          {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL, alignSelf: 'center' }}>{savedMsg}</span>}
-          <button onClick={saveObs} disabled={obsSaving} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: obsSaving ? 0.7 : 1 }}>
-            {obsSaving ? 'Enregistrement…' : 'Enregistrer la consultation'}
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11.5, color: MUTED }}>« Enregistrer » sauvegarde un brouillon ; « Terminer la consultation » l'ajoute à l'historique.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {savedMsg && <span style={{ fontSize: 12.5, fontWeight: 600, color: TEAL }}>{savedMsg}</span>}
+            <button onClick={saveDraft} disabled={obsSaving} title="Enregistrer un brouillon — vous pourrez y revenir plus tard"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: obsSaving ? 0.7 : 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              {obsSaving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -670,7 +764,7 @@ export default function PatientFile({ state, setState, go }) {
 
   const renderHisto = () => (
     <div style={card}>
-      <h3 style={h3s}>Historique du patient</h3>
+      <CardHead icon={IC.clock} title="Historique du patient" sub="Le parcours médical : consultations, comptes-rendus et ordonnances de ce patient." />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #D8E2DD', borderRadius: 9, padding: '8px 12px', background: '#fff' }}>
           <span style={{ color: MUTED, display: 'flex' }}>{IC.search}</span>
@@ -684,8 +778,8 @@ export default function PatientFile({ state, setState, go }) {
           <div style={{ fontSize: 11.5, fontWeight: 600, color: MUTED, textTransform: 'capitalize', letterSpacing: '0.3px', margin: '0 0 8px' }}>{g.key}</div>
           {g.items.map((x) => {
             const open = expanded === x.id;
-            const hasDetail = !!x.detail;
-            const KIND_C = { Consultation: ['#0E7C52', '#E7F6EE'], Note: ['#3B6FB0', '#E8F1FC'], Ordonnance: ['#6B57A6', '#EFEAFB'] }[x.kind] || ['#0E7C52', '#E7F6EE'];
+            const hasDetail = !!(x.detail || x.rich);
+            const KIND_C = { Consultation: ['#0E7C52', '#E7F6EE'], 'Compte-rendu': ['#3B6FB0', '#E8F1FC'], Ordonnance: ['#6B57A6', '#EFEAFB'] }[x.kind] || ['#0E7C52', '#E7F6EE'];
             return (
               <div key={x.id} onClick={() => hasDetail && setExpanded(open ? null : x.id)}
                 onMouseEnter={(e) => { if (hasDetail && !open) e.currentTarget.style.borderColor = '#CFE4DB'; }}
@@ -705,7 +799,7 @@ export default function PatientFile({ state, setState, go }) {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="M6 9l6 6 6-6"/></svg>
                   )}
                 </div>
-                {open && hasDetail && <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.65, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>{x.detail}</div>}
+                {open && hasDetail && <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.65, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>{x.rich || x.detail}</div>}
               </div>
             );
           })}
@@ -932,15 +1026,16 @@ export default function PatientFile({ state, setState, go }) {
         )}
         <div style={{ flex: 1 }} />
         {!timerOn ? (
-          <button onClick={() => { setTimerOn(true); setSection('consult'); }}
+          <button onClick={beginConsult}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)', fontFamily: 'inherit' }}>
             {IC.play} Commencer la consultation
           </button>
         ) : (
           <>
-            <button onClick={() => { if (window.confirm('Annuler la consultation en cours ? Le chronomètre sera remis à zéro.')) { setTimerOn(false); setElapsed(0); } }}
+            <button onClick={cancelConsult}
               style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #D8E2DD', background: '#fff', color: DARK, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button onClick={finishConsult} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={finishConsult} disabled={obsSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: TEAL, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 2px rgba(12,74,55,0.16)', opacity: obsSaving ? 0.7 : 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               Terminer la consultation
             </button>
             <button onClick={() => { if (linkedAppt && !linkedAppt.paid) { setPayAmount(String(linkedAppt.fee || '')); setPayOpen(true); } }}

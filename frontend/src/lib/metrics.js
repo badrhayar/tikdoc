@@ -131,30 +131,33 @@ export function deltaPct(cur, prev) {
 }
 
 /**
- * Convenience: this month (to-date) + a comparison month (to the same day) + labels.
- * @param {string|null} compareYm  the baseline month to compare against; defaults
- *                                  to the month immediately before the current one.
+ * Convenience: an analyzed month + a comparison month + labels.
+ * @param {string|null} compareYm   baseline month; defaults to the month before the analyzed one.
+ * @param {string|null} analyzedYm  the month under review; defaults to the current (real) month.
+ * When the analyzed month IS the current calendar month, both months are capped
+ * to today's day-of-month (fair month-to-date). When the doctor picks a past
+ * month to analyze, the FULL month is used for both (the month is complete).
  */
-export function monthComparison(state, todayISO, compareYm = null) {
-  const curYm = ymOf(todayISO);
+export function monthComparison(state, todayISO, compareYm = null, analyzedYm = null) {
+  const realCurYm = ymOf(todayISO);
+  const curYm = analyzedYm || realCurYm;
   const prev = compareYm || prevYm(curYm);
-  const toDay = Number(String(todayISO).slice(8, 10)) || 31;
+  const isCurrentMonth = curYm === realCurYm;
+  const toDay = isCurrentMonth ? (Number(String(todayISO).slice(8, 10)) || 31) : null;
   return {
-    curYm, prevYm: prev, toDay,
+    curYm, prevYm: prev, toDay, isCurrentMonth,
     curLabel: monthLabel(curYm), prevLabel: monthLabel(prev),
     current: monthlyReport(state, curYm, toDay),
-    // Compare the same portion of each month (to the same day-of-month) so the
-    // figures are apples-to-apples whichever baseline the doctor picks.
     previous: monthlyReport(state, prev, toDay),
     // Full current month (not capped) — for the dashboard "ce mois" totals.
-    currentFull: monthlyReport(state, curYm, null),
+    currentFull: monthlyReport(state, realCurYm, null),
   };
 }
 
-/** The N months strictly before `curYm`, newest first: [{ ym, label }]. */
-export function monthOptions(curYm, n = 12) {
+/** The N months up to and including `curYm`, newest first: [{ ym, label }]. */
+export function monthOptions(curYm, n = 13, includeCurrent = false) {
   const out = [];
-  let ym = prevYm(curYm);
+  let ym = includeCurrent ? curYm : prevYm(curYm);
   for (let i = 0; i < n; i++) { out.push({ ym, label: monthLabel(ym) }); ym = prevYm(ym); }
   return out;
 }

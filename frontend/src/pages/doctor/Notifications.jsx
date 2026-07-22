@@ -88,26 +88,30 @@ import { useViewport } from '../../hooks/useViewport';
 export default function Notifications({ state, setState, go, openNewAppt, openAddPatient }) {
   const { isMobile } = useViewport();
   const [activeTab, setActiveTab] = useState(0);
-  const [toggles, setToggles] = useState({ j1: true, j2: false, confirmation: true, followup: false });
-  const [log, setLog] = useState([]);
+  // Seed from the session cache so navigating back to this screen shows the data
+  // instantly (no blank flash); the fetch below refreshes it in the background.
+  const [toggles, setToggles] = useState(() => state?.reminderSettingsCache || { j1: true, j2: false, confirmation: true, followup: false });
+  const [log, setLog] = useState(() => state?.reminderLogCache || []);
   const logPager = usePager(log, 12);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !state?.reminderLogCache);
 
   const doctorId = state?.myDoctor?.id;
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setLoading(true);
+      if (!state?.reminderLogCache) setLoading(true);
       try {
         const [rows, settings] = await Promise.all([fetchReminderLog(doctorId), fetchReminderSettings(doctorId)]);
         if (!alive) return;
         setLog(rows);
         setToggles(settings);
+        setState?.({ reminderLogCache: rows, reminderSettingsCache: settings });
       } catch (e) { console.warn('[Tabibo] reminders load failed', e); }
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctorId]);
 
   // Optimistic toggle that persists to reminder_settings.

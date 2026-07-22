@@ -138,6 +138,9 @@ const initialState = {
   moveAppt: null,
   // Dossier patient deep-link (patient object + optional linked appointment).
   pfilePatient: null, pfileApptId: null,
+  // Session caches so Messagerie / Rappels show instantly on re-visit (no blank
+  // flash). Cleared on sign-out — they hold patient data.
+  chatConvsCache: null, reminderLogCache: null, reminderSettingsCache: null,
   activeChatId: 1,
   consultations: [],
   now: Date.now(),
@@ -464,6 +467,7 @@ export function AppProvider({ children }) {
       naMatch: null,
       manualAppts: [], manualConsults: [], patients: [], chats: [], demoChats: [],
       demoMedical: {}, demoNotes: [], demoRx: [], demoTimeOff: [], apptPanel: null, moveAppt: null, pfilePatient: null, pfileApptId: null, pfileFrom: null,
+      chatConvsCache: null, reminderLogCache: null, reminderSettingsCache: null,
       bookForRel: null,
     });
   };

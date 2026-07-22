@@ -44,7 +44,9 @@ export default function Chat({ state, setState }) {
   const isDoctor = appUser?.role === 'doctor' || isDemo;
   const { isMobile } = useViewport();
 
-  const [convs, setConvs] = useState([]);
+  // Seed the conversation list from the session cache so returning to Messagerie
+  // shows it instantly instead of a blank pane while the fetch runs.
+  const [convs, setConvs] = useState(() => state?.chatConvsCache || []);
   const [activeId, setActiveId] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const [inputVal, setInputVal] = useState('');
@@ -67,6 +69,7 @@ export default function Chat({ state, setState }) {
       const list = await fetchConversations();
       const mapped = list.map((c, i) => ({ id: c.id, ci: i, peer: isDoctor ? c.patientName : c.doctorName, peerId: isDoctor ? c.patientId : c.doctorId }));
       setConvs(mapped);
+      setState?.({ chatConvsCache: mapped });
       if (autoOpen) setActiveId((prev) => prev || (isMobile ? null : (mapped[0]?.id ?? null)));
       return mapped;
     } catch (e) { console.warn('[Tabibo] fetchConversations failed', e); return []; }
