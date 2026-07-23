@@ -20,11 +20,15 @@ import { DEMO_PATIENTS, initials } from '../../shared.jsx';
 const TEAL = '#0F6E56';
 const DARK = '#15314A';
 const MUTED = '#6B7B76';
-const BORDER = '#E5ECE9';
-const BG = '#F4F8F5';
+const BORDER = '#E8EFEB';
+const BG = '#F5F9F7';
 
-const card = { background: '#fff', border: '1px solid #E7EEEA', borderRadius: 16, padding: 22, marginBottom: 16, boxShadow: '0 1px 3px rgba(21,49,74,0.04)' };
-const inp = { width: '100%', padding: '10px 13px', fontSize: 13.5, border: '1px solid #DCE6E1', borderRadius: 10, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none', transition: 'border-color .12s, box-shadow .12s' };
+// Premium surface tokens — layered soft shadows (iOS-grade depth), generous
+// radii, hairline borders. Kept in one place so the whole dossier reads as one
+// clean design system.
+const SHADOW = '0 1px 2px rgba(16,42,32,0.04), 0 14px 34px -22px rgba(16,42,32,0.20)';
+const card = { background: '#fff', border: '1px solid #EAF1ED', borderRadius: 18, padding: 24, marginBottom: 16, boxShadow: SHADOW };
+const inp = { width: '100%', padding: '11px 13px', fontSize: 13.5, border: '1px solid #DCE6E1', borderRadius: 11, color: DARK, background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none', transition: 'border-color .12s, box-shadow .12s' };
 const lbl = { display: 'block', fontSize: 12, fontWeight: 600, color: '#5A6B65', margin: '0 0 6px', letterSpacing: '0.1px' };
 const h3s = { fontSize: 14, fontWeight: 600, color: DARK, margin: '0 0 12px', letterSpacing: '-0.2px' };
 
@@ -50,6 +54,8 @@ const IC = {
   receipt:<svg {...I}><path d="M6 2.5h12v19l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 7.5h5M9.5 11h5M9.5 14.5h3"/></svg>,
   star:  <svg {...I}><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.2 6.3 20.2l1.2-6.3L2.8 9.5l6.4-.8z"/></svg>,
   play:  <svg {...I}><path d="M7 4.5l12 7.5-12 7.5z"/></svg>,
+  idcard:<svg {...I}><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.1"/><path d="M5.4 16.2c.5-1.7 1.7-2.6 3.1-2.6s2.6.9 3.1 2.6"/><path d="M14.5 10h4M14.5 13.5h4"/></svg>,
+  print: <svg {...I}><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/></svg>,
 };
 
 // Premium card header: tinted icon chip + title + optional subtitle + right slot.
@@ -68,6 +74,7 @@ function CardHead({ icon, title, sub, right }) {
 
 const SECTIONS = [
   { id: 'consult',  label: 'Consultation en cours',      icon: 'steth' },
+  { id: 'profil',   label: 'Profil patient',             icon: 'idcard' },
   { id: 'admin',    label: 'Infos administratives',      icon: 'admin' },
   { id: 'histo',    label: 'Historique du patient',      icon: 'clock' },
   { id: 'antec',    label: 'Antécédents et mode de vie', icon: 'heart' },
@@ -139,6 +146,82 @@ const bioNum = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.'));
 const bioAbnormal = (p, v) => { const n = bioNum(v); return p && n != null && (n < p.min || n > p.max); };
 const bioDateLbl = (iso) => { const [y, m, d] = String(iso).split('-'); return `${d}/${m}/${y}`; };
 
+// ── Consultation detail bank ─────────────────────────────────────────────────
+// Structured write-up per service type. Every past consultation in the patient's
+// Historique opens onto a genuine, fully-labelled observation (interrogatoire,
+// examen, données de suivi, conclusion, ordonnance + durée). Demo data only —
+// real consultations store exactly this shape from the live workflow.
+const CONSULT_BANK = {
+  'Consultation générale': {
+    interrogatoire: "Asthénie et céphalées évoluant depuis 5 jours, sans fièvre rapportée. Sommeil perturbé, pas de trouble du transit ni signe urinaire. Pas de notion de contage.",
+    examen: "Patient apyrétique, conscient, bien orienté. TA 12/8, FC 74/min. Auscultation cardio-pulmonaire normale, abdomen souple et indolore, gorge discrètement érythémateuse.",
+    suivi: { taille: '174', poids: '72', tas: '120' },
+    conclusion: "Syndrome viral bénin. Traitement symptomatique, repos et hydratation. Reconsulter en cas de persistance au-delà de 5 jours ou d'apparition de fièvre.",
+    ordonnance: [{ drug: 'Paracétamol 1 g', dose: '1 cp x3/jour si douleur', duree: '5 jours' }, { drug: 'Vitamine C 500 mg', dose: '1 cp/jour le matin', duree: '10 jours' }],
+    dur: 18 * 60,
+  },
+  'Téléconsultation': {
+    interrogatoire: "Toux sèche et rhinorrhée depuis 3 jours, pas de fièvre ni de dyspnée. État général conservé, activité maintenue.",
+    examen: "Téléconsultation — pas d'examen physique. Patient eupnéique, voix claire, pas de signe de détresse à l'observation vidéo.",
+    suivi: {},
+    conclusion: "Virose ORL banale. Traitement symptomatique, consignes de surveillance données. Reconsulter en présentiel en cas d'aggravation ou de fièvre persistante.",
+    ordonnance: [{ drug: 'Sérum physiologique', dose: '2 pulvérisations/narine x3/jour', duree: '7 jours' }],
+    dur: 12 * 60,
+  },
+  'Bilan complet': {
+    interrogatoire: "Bilan de santé annuel, patient asymptomatique. Pas de plainte particulière. Antécédents et mode de vie revus, à jour.",
+    examen: "Examen clinique complet sans anomalie. IMC normal, TA 12/7, auscultation normale, pas d'adénopathie, aires ganglionnaires libres.",
+    suivi: { taille: '176', poids: '74', tas: '122' },
+    conclusion: "Examen rassurant. Bilan biologique prescrit (NFS, glycémie à jeun, bilan lipidique, TSH). Résultats à revoir en consultation dédiée.",
+    ordonnance: [{ drug: 'Bilan sanguin à jeun', dose: 'NFS, glycémie, bilan lipidique, TSH', duree: '—' }],
+    dur: 32 * 60,
+  },
+  'Suivi': {
+    interrogatoire: "Consultation de suivi. Patient asymptomatique, bonne tolérance du traitement en cours, bonne observance rapportée.",
+    examen: "État général conservé. Constantes stables, examen clinique sans anomalie nouvelle.",
+    suivi: { taille: '170', poids: '68', tas: '118' },
+    conclusion: "Bonne évolution clinique. Poursuite du traitement à l'identique. Prochain contrôle programmé dans 3 mois.",
+    ordonnance: [],
+    dur: 15 * 60,
+  },
+  'Échographie': {
+    interrogatoire: "Échographie de contrôle programmée dans le cadre du suivi. Pas de symptomatologie associée.",
+    examen: "Aspect échographique dans les limites de la normale. Pas d'épanchement, structures explorées d'échostructure homogène, sans particularité.",
+    suivi: {},
+    conclusion: "Contrôle échographique normal. Prochain contrôle programmé selon protocole de suivi.",
+    ordonnance: [],
+    dur: 20 * 60,
+  },
+  'Contraception': {
+    interrogatoire: "Consultation de contraception. Bonne tolérance du contraceptif en cours, cycles réguliers, pas d'effet indésirable signalé.",
+    examen: "TA et poids stables. Examen gynécologique sans anomalie, frottis à jour.",
+    suivi: { taille: '165', poids: '60', tas: '112' },
+    conclusion: "Poursuite de la contraception. Renouvellement de l'ordonnance pour 6 mois. Contrôle annuel programmé.",
+    ordonnance: [{ drug: 'Contraceptif œstroprogestatif', dose: '1 cp/jour', duree: '6 mois' }],
+    dur: 16 * 60,
+  },
+  'Suivi de grossesse': {
+    interrogatoire: "Suivi de grossesse. Grossesse bien vécue, mouvements actifs fœtaux perçus. Pas de métrorragie, pas de contraction, pas de signe fonctionnel urinaire.",
+    examen: "Hauteur utérine conforme au terme. Vitalité fœtale présente, biométrie conforme. TA normale, absence d'œdèmes, bandelette urinaire négative.",
+    suivi: { poids: '66', tas: '115' },
+    conclusion: "Grossesse d'évolution normale. Bilan du trimestre à jour. Prochain rendez-vous dans 4 semaines.",
+    ordonnance: [{ drug: 'Acide folique 0,4 mg', dose: '1 cp/jour', duree: '1 mois' }, { drug: 'Fer + acide folique', dose: '1 cp/jour', duree: '1 mois' }],
+    dur: 22 * 60,
+  },
+  'Suivi hypertension': {
+    interrogatoire: "Suivi d'hypertension artérielle. Automesures rapportées correctes, bonne observance thérapeutique, pas de céphalée ni de vertige.",
+    examen: "TA 13/8 sous traitement. Auscultation cardio-pulmonaire normale, pas de signe de retentissement, pouls périphériques présents.",
+    suivi: { taille: '172', poids: '80', tas: '132' },
+    conclusion: "HTA équilibrée sous traitement. Poursuite du traitement, automesures conseillées. Contrôle dans 3 mois avec bilan rénal.",
+    ordonnance: [{ drug: 'Amlodipine 5 mg', dose: '1 cp/jour le matin', duree: '3 mois' }],
+    dur: 17 * 60,
+  },
+  _default: {
+    interrogatoire: "", examen: "", suivi: {}, conclusion: "", ordonnance: [], dur: 15 * 60,
+  },
+};
+const consultStruct = (service) => CONSULT_BANK[service] || CONSULT_BANK._default;
+
 // ── Small building blocks ────────────────────────────────────────────────────
 function ItemList({ items, onAdd, onRemove, placeholder }) {
   const [val, setVal] = useState('');
@@ -155,6 +238,34 @@ function ItemList({ items, onAdd, onRemove, placeholder }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <input value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={placeholder} style={{ ...inp, flex: 1 }} />
         <button onClick={add} style={{ padding: '6px 13px', borderRadius: 8, border: `1px solid #CFE4DB`, background: '#E9F5F0', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Ajouter</button>
+      </div>
+    </div>
+  );
+}
+
+// Medication editor for the consultation's ordonnance (drug · posologie · durée).
+function MedList({ items, onChange }) {
+  const [drug, setDrug] = useState(''); const [dose, setDose] = useState(''); const [duree, setDuree] = useState('');
+  const add = () => { const d = drug.trim(); if (!d) return; onChange([...items, { drug: d, dose: dose.trim(), duree: duree.trim() }]); setDrug(''); setDose(''); setDuree(''); };
+  return (
+    <div>
+      {items.map((m, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', border: `1px solid ${BORDER}`, borderRadius: 11, marginBottom: 8, background: '#FAFDFB' }}>
+          <span style={{ width: 26, height: 26, borderRadius: 8, background: '#EFEAFB', color: '#6B57A6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2.6" y="8.8" width="18.8" height="6.4" rx="3.2" transform="rotate(-38 12 12)"/><path d="M8.9 8.2l6.2 7.6"/></svg>
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DARK, letterSpacing: '-0.1px' }}>{m.drug}</div>
+            <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{[m.dose, m.duree].filter(Boolean).join(' · ') || 'Posologie non précisée'}</div>
+          </div>
+          <button onClick={() => onChange(items.filter((_, k) => k !== i))} aria-label="Retirer" style={{ background: 'none', border: 'none', color: '#C2466A', cursor: 'pointer', fontSize: 17, lineHeight: 1, flexShrink: 0 }}>×</button>
+        </div>
+      ))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.4fr 0.9fr auto', gap: 8 }}>
+        <input value={drug} onChange={(e) => setDrug(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Médicament (ex. Amoxicilline 500 mg)" style={inp} />
+        <input value={dose} onChange={(e) => setDose(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Posologie (ex. 1 cp x3/j)" style={inp} />
+        <input value={duree} onChange={(e) => setDuree(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Durée" style={inp} />
+        <button onClick={add} style={{ padding: '0 15px', borderRadius: 10, border: '1px solid #CFE4DB', background: '#E9F5F0', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Ajouter</button>
       </div>
     </div>
   );
@@ -299,7 +410,7 @@ export default function PatientFile({ state, setState, go }) {
   const [savedMsg, setSavedMsg] = useState('');
 
   // Observation médicale (consultation en cours).
-  const [obs, setObs] = useState({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '' });
+  const [obs, setObs] = useState({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '', rx: [] });
   const [obsSaving, setObsSaving] = useState(false);
   const [suiviOpen, setSuiviOpen] = useState(false);
   const [iaOpen, setIaOpen] = useState(false);
@@ -332,7 +443,7 @@ export default function PatientFile({ state, setState, go }) {
   const [notes, setNotes] = useState([]);
   const [rx, setRx] = useState([]);
   const [q, setQ] = useState('');
-  const [expanded, setExpanded] = useState(null);
+  const [detail, setDetail] = useState(null);   // history entry shown in the detail window
 
   // Restore an in-progress consultation draft (observation + running chrono) so
   // the doctor can leave the page and come back to exactly where they were.
@@ -418,7 +529,7 @@ export default function PatientFile({ state, setState, go }) {
   };
   const patchMh = (patch) => setMh((m) => ({ ...m, ...patch }));
 
-  const obsIsEmpty = () => !stripHtml(obs.interrogatoire) && !stripHtml(obs.examen) && !stripHtml(obs.conclusion) && !obs.motif && !obs.oral;
+  const obsIsEmpty = () => !stripHtml(obs.interrogatoire) && !stripHtml(obs.examen) && !stripHtml(obs.conclusion) && !obs.motif && !obs.oral && !(obs.rx && obs.rx.length);
 
   // Persist the medical-history record (used for both the dossier and the draft).
   const persistMh = async (next) => {
@@ -448,7 +559,7 @@ export default function PatientFile({ state, setState, go }) {
   const finishConsult = async () => {
     if (obsIsEmpty()) { setState({ toast: 'Renseignez au moins un élément de la consultation avant de la terminer.', toastShow: true }); return; }
     if (typeof window !== 'undefined' && !window.confirm(`Terminer la consultation${elapsed ? ` (${timerLbl})` : ''} ? Elle sera enregistrée dans l'historique du patient et le rendez-vous marqué « Vu ».`)) return;
-    const data = { ...obs, durationSec: elapsed, endedAt: new Date().toISOString() };
+    const data = { ...obs, suivi: { ...(mh.suivi || {}), imc }, durationSec: elapsed, endedAt: new Date().toISOString() };
     setObsSaving(true);
     try {
       // 1) commit the consultation note
@@ -476,7 +587,7 @@ export default function PatientFile({ state, setState, go }) {
       }
       // 4) reset the live consultation
       setStartedAt(null); setElapsed(0);
-      setObs({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '' });
+      setObs({ modele: '', motif: '', interrogatoire: '', examen: '', conclusion: '', oral: '', rx: [] });
       setSection('histo');
       setState({ toast: 'Consultation enregistrée dans l\'historique ✓', toastShow: true });
     } catch (e) { setState({ toast: 'Enregistrement échoué : ' + (e?.message || 'erreur'), toastShow: true }); }
@@ -520,38 +631,36 @@ export default function PatientFile({ state, setState, go }) {
   const consults = [...(state?.manualConsults || []), ...(state?.consultations || [])]
     .filter((c) => (c.patient || '').trim().toLowerCase() === (patient.name || '').trim().toLowerCase());
   const durLbl = (sec) => (sec ? `${Math.max(1, Math.round(sec / 60))} min` : null);
-  // Rich, labelled render of a saved compte-rendu (the finalized observation).
-  const noteRich = (n) => {
-    const rows = [
-      ['Motif', n.data?.motif],
-      ['Interrogatoire', stripHtml(n.data?.interrogatoire)],
-      ['Examen', stripHtml(n.data?.examen)],
-      ['Conclusion', stripHtml(n.data?.conclusion)],
-      ["Informations complémentaires", n.data?.oral],
-    ].filter(([, v]) => v && String(v).trim());
-    const d = durLbl(n.data?.durationSec);
-    return (
-      <div>
-        {d && <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: TEAL, background: '#E9F5F0', borderRadius: 6, padding: '3px 9px', marginBottom: 10 }}>{IC.clock} Durée {d}</div>}
-        {rows.length === 0 && <div style={{ color: MUTED }}>Compte-rendu sans contenu détaillé.</div>}
-        {rows.map(([label, v]) => (
-          <div key={label} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.6 }}>{v}</div>
-          </div>
-        ))}
-      </div>
-    );
-  };
+  const previewOf = (full) => [full.motif, stripHtml(full.interrogatoire), stripHtml(full.examen), stripHtml(full.conclusion)].filter(Boolean).join(' · ').slice(0, 74);
   const feed = [
-    ...consults.map((c) => ({ kind: 'Consultation', icon: IC.steth, date: c.date, title: c.service || 'Consultation', sub: `${c.time} · ${c.status}`, detail: c.notes || c.consultNote || '', searchText: `${c.service} ${c.status} ${c.notes || c.consultNote || ''}`, id: `c_${c.id}` })),
-    ...notes.map((n) => ({ kind: 'Compte-rendu', icon: IC.file, date: String(n.created_at).slice(0, 10),
-      title: n.data?.motif || 'Compte-rendu de consultation',
-      sub: [durLbl(n.data?.durationSec) && `Durée ${durLbl(n.data?.durationSec)}`, [stripHtml(n.data?.interrogatoire), stripHtml(n.data?.examen), stripHtml(n.data?.conclusion)].filter(Boolean).join(' · ').slice(0, 60)].filter(Boolean).join(' — ') || 'Observation médicale',
-      rich: noteRich(n),
-      searchText: `${n.data?.motif || ''} ${stripHtml(n.data?.interrogatoire)} ${stripHtml(n.data?.examen)} ${stripHtml(n.data?.conclusion)}`,
-      id: `n_${n.id}` })),
-    ...rx.map((r) => ({ kind: 'Ordonnance', icon: IC.rx, date: String(r.created_at).slice(0, 10), title: 'Ordonnance', sub: (r.items || []).map((i) => i.drug).filter(Boolean).slice(0, 3).join(', '), detail: (r.items || []).map((i) => `${i.drug} — ${i.dosage || ''} ${i.duration || ''}`).join(' · '), searchText: (r.items || []).map((i) => i.drug).join(' '), id: `r_${r.id}` })),
+    ...consults.map((c) => {
+      const completed = c.status === 'Payé' || c.booking === 'completed';
+      const b = consultStruct(c.service);
+      // Past consultations open onto a full observation; upcoming ones show as planned.
+      const full = completed ? {
+        motif: c.service, interrogatoire: b.interrogatoire, examen: b.examen,
+        suivi: b.suivi, conclusion: b.conclusion, oral: '',
+        ordonnance: b.ordonnance || [], durationSec: c.durationMin ? c.durationMin * 60 : b.dur,
+      } : null;
+      return { kind: 'Consultation', icon: IC.steth, date: c.date, title: c.service || 'Consultation',
+        sub: `${c.time} · ${c.status}`, status: c.status, planned: !completed, full,
+        searchText: `${c.service} ${c.status} ${completed ? `${b.interrogatoire} ${b.conclusion}` : ''}`, id: `c_${c.id}` };
+    }),
+    ...notes.map((n) => {
+      const full = { motif: n.data?.motif, interrogatoire: n.data?.interrogatoire, examen: n.data?.examen,
+        suivi: n.data?.suivi || {}, conclusion: n.data?.conclusion, oral: n.data?.oral,
+        ordonnance: n.data?.rx || [], durationSec: n.data?.durationSec };
+      return { kind: 'Compte-rendu', icon: IC.file, date: String(n.created_at).slice(0, 10),
+        title: n.data?.motif || 'Compte-rendu de consultation',
+        sub: [durLbl(n.data?.durationSec) && `Durée ${durLbl(n.data?.durationSec)}`, previewOf(full)].filter(Boolean).join(' — ') || 'Observation médicale',
+        full,
+        searchText: `${n.data?.motif || ''} ${stripHtml(n.data?.interrogatoire)} ${stripHtml(n.data?.examen)} ${stripHtml(n.data?.conclusion)}`,
+        id: `n_${n.id}` };
+    }),
+    ...rx.map((r) => ({ kind: 'Ordonnance', icon: IC.rx, date: String(r.created_at).slice(0, 10), title: 'Ordonnance',
+      sub: (r.items || []).map((i) => i.drug).filter(Boolean).slice(0, 3).join(', '),
+      full: { ordonnance: (r.items || []).map((i) => ({ drug: i.drug, dose: i.dosage || '', duree: i.duration || '' })) },
+      searchText: (r.items || []).map((i) => i.drug).join(' '), id: `r_${r.id}` })),
   ]
     .filter((x) => x.date)
     .filter((x) => !q.trim() || (x.title + ' ' + x.sub + ' ' + (x.searchText || '')).toLowerCase().includes(q.trim().toLowerCase()))
@@ -597,6 +706,99 @@ export default function PatientFile({ state, setState, go }) {
     : from === 'dappts' ? 'Retour aux rendez-vous'
     : from === 'dpatients' ? 'Retour aux patients'
     : 'Retour à la liste';
+
+  // ── Consultation detail — the full, labelled observation shown when a
+  //    history entry is opened. Every field the doctor recorded, plus the
+  //    chrono and the ordonnance issued during that visit.
+  const suiviChips = (s) => {
+    const t = Number(s?.taille) / 100, p = Number(s?.poids);
+    const bmi = t && p ? Math.round((p / (t * t)) * 10) / 10 : (s?.imc || null);
+    return [
+      s?.taille && ['Taille', `${s.taille} cm`],
+      s?.poids && ['Poids', `${s.poids} kg`],
+      bmi && ['IMC', `${bmi} kg/m²`],
+      s?.tas && ['PA syst.', `${s.tas} mmHg`],
+    ].filter(Boolean);
+  };
+  const DetailSection = ({ label, children }) => (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>{label}</div>
+      {children}
+    </div>
+  );
+  const detailBody = (full) => {
+    const chips = suiviChips(full.suivi);
+    const rx = full.ordonnance || [];
+    const rows = [
+      ['Interrogatoire', stripHtml(full.interrogatoire)],
+      ['Examen clinique', stripHtml(full.examen)],
+      ['Conclusion', stripHtml(full.conclusion)],
+      ['Informations complémentaires', full.oral],
+    ].filter(([, v]) => v && String(v).trim());
+    const empty = rows.length === 0 && chips.length === 0 && rx.length === 0;
+    return (
+      <div>
+        {full.motif && <DetailSection label="Motif"><div style={{ fontSize: 14, color: DARK, fontWeight: 600 }}>{full.motif}</div></DetailSection>}
+        {rows.map(([label, v]) => (
+          <DetailSection key={label} label={label}><div style={{ fontSize: 13.5, color: '#33433E', lineHeight: 1.7 }}>{v}</div></DetailSection>
+        ))}
+        {chips.length > 0 && (
+          <DetailSection label="Données de suivi">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {chips.map(([k, v]) => (
+                <span key={k} style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, padding: '7px 13px', borderRadius: 11, background: '#F3F8F5', border: `1px solid ${BORDER}` }}>
+                  <span style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>{k}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: DARK, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+                </span>
+              ))}
+            </div>
+          </DetailSection>
+        )}
+        {rx.length > 0 && (
+          <DetailSection label="Ordonnance">
+            {rx.map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 11, marginBottom: 7, background: '#FAFDFB' }}>
+                <span style={{ width: 26, height: 26, borderRadius: 8, background: '#EFEAFB', color: '#6B57A6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{IC.pill}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: DARK }}>{m.drug}</div>
+                  <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{[m.dose, m.duree].filter(Boolean).join(' · ') || 'Posologie non précisée'}</div>
+                </div>
+              </div>
+            ))}
+          </DetailSection>
+        )}
+        {empty && <div style={{ fontSize: 13, color: MUTED }}>Aucun détail enregistré pour cet élément.</div>}
+      </div>
+    );
+  };
+
+  // Print a consultation compte-rendu (clean A4 sheet).
+  const printDetail = (entry) => {
+    const f = entry.full || {};
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const docName = state?.appUser?.full_name || state?.myDoctor?.full_name || 'Docteur';
+    const dstr = new Date(`${entry.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const sec = (label, v) => v && String(v).trim() ? `<h3>${esc(label)}</h3><p>${esc(stripHtml(v))}</p>` : '';
+    const chips = suiviChips(f.suivi);
+    const suiviHtml = chips.length ? `<h3>Données de suivi</h3><p>${chips.map(([k, v]) => `${esc(k)} : <strong>${esc(v)}</strong>`).join(' · ')}</p>` : '';
+    const rxHtml = (f.ordonnance || []).length ? `<h3>Ordonnance</h3><ul>${f.ordonnance.map((m) => `<li><strong>${esc(m.drug)}</strong>${m.dose ? ` — ${esc(m.dose)}` : ''}${m.duree ? ` · ${esc(m.duree)}` : ''}</li>`).join('')}</ul>` : '';
+    const w = window.open('', '_blank', 'width=720,height=860');
+    if (!w) return;
+    w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(entry.title)} — ${esc(patient.name)}</title>
+      <style>body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1b2b26;max-width:600px;margin:0 auto;padding:44px;line-height:1.6}
+      .hd{border-bottom:2px solid #0F6E56;padding-bottom:14px;margin-bottom:20px}
+      .hd .t{font-size:20px;font-weight:800;color:#0C4A37;letter-spacing:-.3px}
+      .hd .s{font-size:13px;color:#5A6B65;margin-top:3px}
+      h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#0F6E56;margin:18px 0 4px}
+      p{margin:0 0 4px;font-size:14px}ul{margin:4px 0;padding-left:18px}li{font-size:14px;margin-bottom:3px}
+      .ft{margin-top:34px;padding-top:14px;border-top:1px solid #e0e8e4;font-size:12px;color:#8a988f}</style></head><body>
+      <div class="hd"><div class="t">${esc(entry.title)}</div><div class="s">${esc(civ)} ${esc(patient.name)}${age != null ? ` · ${age} ans` : ''} — ${esc(dstr)}${f.durationSec ? ` · Durée ${durLbl(f.durationSec)}` : ''}</div></div>
+      ${f.motif ? `<h3>Motif</h3><p>${esc(f.motif)}</p>` : ''}
+      ${sec('Interrogatoire', f.interrogatoire)}${sec('Examen clinique', f.examen)}${suiviHtml}${sec('Conclusion', f.conclusion)}${rxHtml}
+      <div class="ft">${esc(docName)} — compte-rendu édité via Tabibo</div>
+      <script>window.onload=()=>window.print()</` + `script></body></html>`);
+    w.document.close();
+  };
 
   // ── Section contents ───────────────────────────────────────────────────────
   const renderConsult = () => (
@@ -653,6 +855,22 @@ export default function PatientFile({ state, setState, go }) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Ordonnance de la consultation — médicaments prescrits lors de cette visite.
+          Enregistrés avec la consultation et repris dans son compte-rendu (historique). */}
+      <div style={card}>
+        <CardHead icon={IC.rx} title="Ordonnance de la consultation" sub="Les médicaments prescrits lors de cette visite — joints au compte-rendu."
+          right={
+            <button onClick={rxGo} title="Éditer une ordonnance imprimable complète"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+              {IC.print} Ordonnance imprimable
+            </button>
+          } />
+        <MedList items={obs.rx || []} onChange={(rx) => setObs((o) => ({ ...o, rx }))} />
+        {(obs.rx || []).length === 0 && (
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 10 }}>Ajoutez chaque médicament prescrit ; il apparaîtra dans l'historique du patient avec le compte-rendu.</div>
+        )}
       </div>
     </>
   );
@@ -766,7 +984,7 @@ export default function PatientFile({ state, setState, go }) {
     <div style={card}>
       <CardHead icon={IC.clock} title="Historique du patient" sub="Le parcours médical : consultations, comptes-rendus et ordonnances de ce patient." />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #D8E2DD', borderRadius: 9, padding: '8px 12px', background: '#fff' }}>
+        <div style={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '9px 13px', background: '#fff' }}>
           <span style={{ color: MUTED, display: 'flex' }}>{IC.search}</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher (ex. Diabète)…" style={{ border: 'none', outline: 'none', flex: 1, fontSize: 13.5, color: DARK, background: 'none' }} />
         </div>
@@ -777,29 +995,27 @@ export default function PatientFile({ state, setState, go }) {
         <div key={g.key} style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: MUTED, textTransform: 'capitalize', letterSpacing: '0.3px', margin: '0 0 8px' }}>{g.key}</div>
           {g.items.map((x) => {
-            const open = expanded === x.id;
-            const hasDetail = !!(x.detail || x.rich);
+            const clickable = !!x.full || x.planned;
             const KIND_C = { Consultation: ['#0E7C52', '#E7F6EE'], 'Compte-rendu': ['#3B6FB0', '#E8F1FC'], Ordonnance: ['#6B57A6', '#EFEAFB'] }[x.kind] || ['#0E7C52', '#E7F6EE'];
             return (
-              <div key={x.id} onClick={() => hasDetail && setExpanded(open ? null : x.id)}
-                onMouseEnter={(e) => { if (hasDetail && !open) e.currentTarget.style.borderColor = '#CFE4DB'; }}
-                onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = BORDER; }}
-                style={{ border: `1px solid ${open ? '#BFE0D4' : BORDER}`, borderRadius: 12, padding: '11px 14px', marginBottom: 8, cursor: hasDetail ? 'pointer' : 'default', background: open ? '#F7FBF9' : '#fff', transition: 'border-color .12s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: KIND_C[1], color: KIND_C[0], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</span>
+              <div key={x.id} onClick={() => clickable && setDetail(x)}
+                onMouseEnter={(e) => { if (clickable) { e.currentTarget.style.borderColor = '#CFE4DB'; e.currentTarget.style.boxShadow = '0 6px 18px -12px rgba(13,43,30,0.22)'; } }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = 'none'; }}
+                style={{ border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 15px', marginBottom: 9, cursor: clickable ? 'pointer' : 'default', background: '#fff', transition: 'border-color .14s, box-shadow .14s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 11, background: KIND_C[1], color: KIND_C[0], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <span style={{ fontSize: 10.5, fontWeight: 600, color: KIND_C[0], background: KIND_C[1], borderRadius: 20, padding: '2px 8px', flexShrink: 0, letterSpacing: '0.1px' }}>{x.kind}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 600, color: KIND_C[0], background: KIND_C[1], borderRadius: 20, padding: '2px 9px', flexShrink: 0, letterSpacing: '0.1px' }}>{x.kind}</span>
                       <span style={{ fontSize: 13.5, fontWeight: 600, color: DARK, letterSpacing: '-0.1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.title}</span>
                     </div>
                     <div style={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{x.sub}</div>
                   </div>
                   <span style={{ fontSize: 11.5, color: MUTED, flexShrink: 0 }}>{new Date(`${x.date}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                  {hasDetail && (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><path d="M6 9l6 6 6-6"/></svg>
+                  {clickable && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6"/></svg>
                   )}
                 </div>
-                {open && hasDetail && <div style={{ fontSize: 13, color: '#3A4A45', lineHeight: 1.65, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>{x.rich || x.detail}</div>}
               </div>
             );
           })}
@@ -807,6 +1023,188 @@ export default function PatientFile({ state, setState, go }) {
       ))}
     </div>
   );
+
+  // ── Profil patient — a one-page (A4) clinical summary, auto-filled from every
+  //    section of the dossier. What the doctor reads first to remember who the
+  //    patient is: identity, an auto-written clinical synthesis, and the key
+  //    facts (antécédents, allergies, traitements, mode de vie, suivi, bio,
+  //    vaccination, prévention) + the last consultations. Printable.
+  const profilData = () => {
+    const A = mh;
+    const med = A.noMedicaux ? [] : (A.medicaux || []);
+    const chir = A.noChirurgicaux ? [] : (A.chirurgicaux || []);
+    const fam = A.noFamiliaux ? [] : (A.familiaux || []);
+    const fond = A.tttFond || [], ponct = A.tttPonctuels || [];
+    const allerg = A.allergies || [];
+    const prof = A.vie?.profession;
+    const tabac = A.vie?.tabac && A.vie.tabac !== 'Non' ? `${A.vie.tabac}${A.vie.tabacAge ? ` (depuis ${A.vie.tabacAge} ans)` : ''}` : (A.vie?.tabac === 'Non' ? 'Non-fumeur' : null);
+    const bioLatest = (A.bio?.fav || []).map((k) => {
+      const p = bioParam(k); if (!p) return null;
+      const res = A.bio?.res?.[k] || {}; const dates = Object.keys(res).sort();
+      const last = dates[dates.length - 1];
+      return last ? { p, val: res[last], date: last, abn: bioAbnormal(p, res[last]) } : null;
+    }).filter(Boolean);
+    const lastConsults = feed.filter((x) => x.kind === 'Consultation' || x.kind === 'Compte-rendu').slice(0, 3);
+    const synth = [
+      `${civ} ${patient.name}${age != null ? `, ${age} ans` : ''}${prof ? `, ${prof}` : ''}.`,
+      allerg.length ? `Allergie(s) : ${allerg.join(', ')}.` : 'Aucune allergie connue à ce jour.',
+      med.length ? `Antécédents médicaux : ${med.join(', ')}.` : (A.noMedicaux ? 'Pas d\'antécédent médical.' : ''),
+      chir.length ? `Antécédents chirurgicaux : ${chir.join(', ')}.` : '',
+      fam.length ? `Antécédents familiaux : ${fam.join(', ')}.` : '',
+      fond.length ? `Traitement de fond : ${fond.join(' ; ')}.` : 'Aucun traitement de fond en cours.',
+      tabac ? `Tabac : ${tabac}.` : '',
+      imc ? `IMC ${imc} kg/m²${A.suivi?.tas ? `, PA ${A.suivi.tas} mmHg` : ''}.` : '',
+    ].filter(Boolean).join(' ');
+    return { med, chir, fam, fond, ponct, allerg, prof, tabac, bioLatest, lastConsults, synth };
+  };
+
+  const printProfil = () => {
+    const d = profilData();
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const docName = state?.appUser?.full_name || state?.myDoctor?.full_name || 'Docteur';
+    const li = (arr, empty) => arr.length ? `<ul>${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="mut">${empty}</p>`;
+    const idRows = [['CIN', patient.cin], ['Téléphone', patient.phone], ['Groupe sanguin', patient.blood], ['Assurance', patient.insurance], ['N° AMO', patient.amoNumber]]
+      .filter(([, v]) => v && v !== '—').map(([k, v]) => `<span><b>${esc(k)}</b> ${esc(v)}</span>`).join('');
+    const w = window.open('', '_blank', 'width=820,height=1000');
+    if (!w) return;
+    w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Profil patient — ${esc(patient.name)}</title>
+      <style>body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1b2b26;max-width:720px;margin:0 auto;padding:40px;line-height:1.55}
+      .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0F6E56;padding-bottom:14px;margin-bottom:18px}
+      .hd .t{font-size:22px;font-weight:800;color:#0C4A37;letter-spacing:-.4px}
+      .hd .s{font-size:13px;color:#5A6B65;margin-top:4px}
+      .id{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:#3A4A45;margin-bottom:16px}
+      .synth{background:#F3F8F5;border:1px solid #E3EEE8;border-radius:12px;padding:14px 16px;font-size:13.5px;margin-bottom:20px}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+      h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#0F6E56;margin:0 0 5px;border-bottom:1px solid #eef3f0;padding-bottom:4px}
+      ul{margin:4px 0;padding-left:16px}li{font-size:13px;margin-bottom:2px}p{font-size:13px;margin:3px 0}.mut{color:#8a988f}
+      .ft{margin-top:28px;padding-top:12px;border-top:1px solid #e0e8e4;font-size:11.5px;color:#8a988f}</style></head><body>
+      <div class="hd"><div><div class="t">Profil patient</div><div class="s">${esc(civ)} ${esc(patient.name)}${age != null ? ` · ${age} ans` : ''}${patient.sex ? ` · ${patient.sex === 'M' ? 'Homme' : 'Femme'}` : ''}</div></div><div class="s">Édité le ${esc(new Date(`${todayISO}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }))}</div></div>
+      <div class="id">${idRows}</div>
+      <div class="synth"><b>Synthèse clinique</b><br>${esc(d.synth)}${mh.profilNote ? `<br><br>${esc(mh.profilNote)}` : ''}</div>
+      <div class="grid">
+        <div><h3>Antécédents médicaux</h3>${li(d.med, 'Aucun renseigné')}</div>
+        <div><h3>Antécédents chirurgicaux</h3>${li(d.chir, 'Aucun renseigné')}</div>
+        <div><h3>Antécédents familiaux</h3>${li(d.fam, 'Aucun renseigné')}</div>
+        <div><h3>Allergies</h3>${li(d.allerg, 'Aucune connue')}</div>
+        <div><h3>Traitement en cours</h3>${li([...d.fond, ...d.ponct], 'Aucun')}</div>
+        <div><h3>Mode de vie</h3><p>${[d.prof && `Profession : ${esc(d.prof)}`, d.tabac && `Tabac : ${esc(d.tabac)}`, mh.vie?.alcool && `Alcool : ${esc(mh.vie.alcool)}`].filter(Boolean).join('<br>') || '<span class="mut">Non renseigné</span>'}</p></div>
+        <div><h3>Données de suivi</h3><p>${[mh.suivi?.taille && `Taille : ${esc(mh.suivi.taille)} cm`, mh.suivi?.poids && `Poids : ${esc(mh.suivi.poids)} kg`, imc && `IMC : ${imc} kg/m²`, mh.suivi?.tas && `PA syst. : ${esc(mh.suivi.tas)} mmHg`].filter(Boolean).join('<br>') || '<span class="mut">Non renseigné</span>'}</p></div>
+        <div><h3>Vaccination</h3>${li(mh.vaccins || [], 'Non renseignée')}</div>
+        <div><h3>Prévention</h3><p>${mh.prevention ? esc(mh.prevention) : '<span class="mut">Aucune note</span>'}</p></div>
+      </div>
+      <div class="ft">${esc(docName)} — profil édité via Tabibo · document confidentiel</div>
+      <script>window.onload=()=>window.print()</` + `script></body></html>`);
+    w.document.close();
+  };
+
+  const renderProfil = () => {
+    const d = profilData();
+    const Block = ({ title, children }) => (
+      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px 16px', background: '#fff' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 9 }}>{title}</div>
+        {children}
+      </div>
+    );
+    const List = ({ items, empty, danger }) => items.length
+      ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{items.map((it, i) => (
+          <span key={i} style={{ fontSize: 12.5, fontWeight: 600, color: danger ? '#C2466A' : DARK, background: danger ? '#FCE7EE' : '#F3F8F5', border: `1px solid ${danger ? '#F6D0DD' : BORDER}`, borderRadius: 8, padding: '4px 10px' }}>{it}</span>
+        ))}</div>
+      : <span style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>{empty}</span>;
+    const Kv = ({ rows }) => rows.filter(([, v]) => v).length
+      ? <div style={{ display: 'grid', gap: 5 }}>{rows.filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', gap: 8, fontSize: 13 }}><span style={{ color: MUTED, minWidth: 78 }}>{k}</span><span style={{ fontWeight: 600, color: DARK }}>{v}</span></div>
+        ))}</div>
+      : <span style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>Non renseigné</span>;
+    const av = (patient.name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    return (
+      <div style={{ ...card, maxWidth: 840, margin: '0 auto', padding: isMobile ? 18 : 30 }}>
+        {/* A4 header band */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', paddingBottom: 18, borderBottom: `2px solid ${TEAL}`, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+            <span style={{ width: 54, height: 54, borderRadius: 15, background: 'linear-gradient(140deg,#DCEFE7,#BFE0D4)', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>{av}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.6px' }}>Profil patient</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: DARK, letterSpacing: '-0.4px', lineHeight: 1.2 }}>{civ} {patient.name}</div>
+              <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{[age != null ? `${age} ans` : null, patient.sex === 'M' ? 'Homme' : patient.sex === 'F' ? 'Femme' : null, dobLbl ? `Né(e) ${dobLbl}` : null].filter(Boolean).join(' · ')}</div>
+            </div>
+          </div>
+          <button onClick={printProfil} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', borderRadius: 10, border: `1px solid ${TEAL}`, background: '#fff', color: TEAL, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{IC.print} Imprimer le profil</button>
+        </div>
+
+        {/* Identity chips */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginBottom: 16 }}>
+          {[['CIN', patient.cin], ['Téléphone', patient.phone], ['Groupe sanguin', patient.blood], ['Assurance', patient.insurance], ['N° AMO', patient.amoNumber]]
+            .filter(([, v]) => v && v !== '—').map(([k, v]) => (
+              <span key={k} style={{ fontSize: 12.5, color: '#3A4A45' }}><span style={{ color: MUTED }}>{k} </span><b>{v}</b></span>
+            ))}
+        </div>
+
+        {/* Synthèse clinique (auto) */}
+        <div style={{ background: '#F3F8F5', border: `1px solid #E3EEE8`, borderRadius: 14, padding: '15px 17px', marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Synthèse clinique</div>
+          <div style={{ fontSize: 13.5, color: '#33433E', lineHeight: 1.7 }}>{d.synth}</div>
+        </div>
+
+        {/* Fact blocks */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 18 }}>
+          <Block title="Antécédents médicaux"><List items={d.med} empty="Aucun renseigné" /></Block>
+          <Block title="Antécédents chirurgicaux"><List items={d.chir} empty="Aucun renseigné" /></Block>
+          <Block title="Antécédents familiaux"><List items={d.fam} empty="Aucun renseigné" /></Block>
+          <Block title="Allergies"><List items={d.allerg} empty="Aucune connue" danger /></Block>
+          <Block title="Traitement en cours"><List items={[...d.fond, ...d.ponct]} empty="Aucun" /></Block>
+          <Block title="Mode de vie"><Kv rows={[['Profession', d.prof], ['Tabac', d.tabac], ['Alcool', mh.vie?.alcool]]} /></Block>
+          <Block title="Données de suivi"><Kv rows={[['Taille', mh.suivi?.taille && `${mh.suivi.taille} cm`], ['Poids', mh.suivi?.poids && `${mh.suivi.poids} kg`], ['IMC', imc && `${imc} kg/m²`], ['PA syst.', mh.suivi?.tas && `${mh.suivi.tas} mmHg`]]} /></Block>
+          {patient.sex !== 'M' && (mh.gyneco?.g || mh.gyneco?.p || mh.gyneco?.enceinte != null) && (
+            <Block title="Gynécologie"><Kv rows={[['Grossesses', mh.gyneco?.g], ['Parités', mh.gyneco?.p], ['Enceinte', mh.gyneco?.enceinte == null ? null : (mh.gyneco.enceinte ? 'Oui' : 'Non')], ['Allaitement', mh.gyneco?.allaitement == null ? null : (mh.gyneco.allaitement ? 'Oui' : 'Non')]]} /></Block>
+          )}
+          {d.bioLatest.length > 0 && (
+            <Block title="Biologie récente">
+              <div style={{ display: 'grid', gap: 5 }}>
+                {d.bioLatest.map(({ p, val, date, abn }) => (
+                  <div key={p.k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                    <span style={{ color: MUTED, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</span>
+                    <span style={{ fontWeight: 700, color: abn ? '#C2466A' : DARK, background: abn ? '#FCE7EE' : 'transparent', borderRadius: 6, padding: abn ? '1px 7px' : 0 }}>{val} {p.unit}</span>
+                    <span style={{ fontSize: 11, color: MUTED }}>{bioDateLbl(date)}</span>
+                  </div>
+                ))}
+              </div>
+            </Block>
+          )}
+          <Block title="Vaccination"><List items={mh.vaccins || []} empty="Non renseignée" /></Block>
+          <Block title="Prévention">{mh.prevention ? <div style={{ fontSize: 13, color: '#33433E', lineHeight: 1.6 }}>{mh.prevention}</div> : <span style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic' }}>Aucune note</span>}</Block>
+        </div>
+
+        {/* Dernières consultations */}
+        {d.lastConsults.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 9 }}>Dernières consultations</div>
+            {d.lastConsults.map((x) => (
+              <button key={x.id} onClick={() => x.full && setDetail(x)} style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 11, padding: '9px 13px', marginBottom: 7, background: '#fff', cursor: x.full ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                <span style={{ width: 30, height: 30, borderRadius: 9, background: '#E7F6EE', color: '#0E7C52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{IC.steth}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: DARK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.title}</span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: MUTED }}>{new Date(`${x.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </span>
+                {x.full && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA8A2" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Note de synthèse du médecin (éditable, enregistrée dans le dossier) */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 7 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Note de synthèse du médecin</div>
+            {savedMsg && <span style={{ fontSize: 12, fontWeight: 600, color: TEAL }}>{savedMsg}</span>}
+          </div>
+          <textarea value={mh.profilNote || ''} onChange={(e) => patchMh({ profilNote: e.target.value })} rows={3} placeholder="Ajoutez une note personnelle pour vous souvenir de ce patient (contexte, préférences, points d'attention…)" style={{ ...inp, resize: 'vertical' }} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <button onClick={() => saveMh()} disabled={mhSaving} style={{ padding: '7px 15px', borderRadius: 9, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: mhSaving ? 0.7 : 1 }}>{mhSaving ? '…' : 'Enregistrer la note'}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderAdmin = () => (
     <div style={card}>
@@ -918,6 +1316,7 @@ export default function PatientFile({ state, setState, go }) {
 
   const sectionBody = {
     consult: renderConsult,
+    profil: renderProfil,
     admin: renderAdmin,
     histo: renderHisto,
     antec: renderAntec,
@@ -976,7 +1375,7 @@ export default function PatientFile({ state, setState, go }) {
               <button key={s.id} onClick={() => setSection(s.id)}
                 onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#F2F7F4'; }}
                 onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: active ? '#E9F5F0' : 'transparent', border: 'none', borderRadius: 10, padding: isMobile ? '7px 12px' : '8px 11px', fontSize: 12.5, fontWeight: active ? 600 : 500, color: active ? TEAL : '#3E4F49', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background .12s', fontFamily: 'inherit' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: active ? '#E9F5F0' : 'transparent', border: 'none', borderRadius: 11, padding: isMobile ? '8px 13px' : '9px 12px', fontSize: 12.5, fontWeight: active ? 600 : 500, color: active ? TEAL : '#3E4F49', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background .12s', fontFamily: 'inherit', boxShadow: active ? '0 1px 2px rgba(15,110,86,0.12)' : 'none' }}>
                 <span style={{ display: 'flex', color: active ? TEAL : '#8FA69D', flexShrink: 0 }}>{IC[s.icon]}</span>
                 <span style={{ flex: isMobile ? 'none' : 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
                 {s.id === 'consult' && timerOn && (
@@ -1121,6 +1520,48 @@ export default function PatientFile({ state, setState, go }) {
           </div>
         </div>
       )}
+
+      {/* ── Fenêtre de détail d'une consultation / compte-rendu / ordonnance ── */}
+      {detail && (() => {
+        const KIND_C = { Consultation: ['#0E7C52', '#E7F6EE'], 'Compte-rendu': ['#3B6FB0', '#E8F1FC'], Ordonnance: ['#6B57A6', '#EFEAFB'] }[detail.kind] || ['#0E7C52', '#E7F6EE'];
+        const printable = !!detail.full && (detail.kind === 'Consultation' || detail.kind === 'Compte-rendu');
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(16,42,32,0.52)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 1400, padding: isMobile ? 0 : 20 }} onClick={() => setDetail(null)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: isMobile ? '18px 18px 0 0' : 20, width: '100%', maxWidth: 560, maxHeight: isMobile ? '92vh' : '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 30px 80px -20px rgba(13,43,30,0.55)' }}>
+              {/* header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13, padding: '20px 22px 16px', borderBottom: `1px solid ${BORDER}` }}>
+                <span style={{ width: 42, height: 42, borderRadius: 13, background: KIND_C[1], color: KIND_C[0], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{detail.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: KIND_C[0], background: KIND_C[1], borderRadius: 20, padding: '2px 9px', letterSpacing: '0.2px' }}>{detail.kind}</span>
+                    {detail.full?.durationSec && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: TEAL, background: '#E9F5F0', borderRadius: 20, padding: '2px 9px' }}>{IC.clock} {durLbl(detail.full.durationSec)}</span>}
+                  </div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: DARK, letterSpacing: '-0.3px', marginTop: 5 }}>{detail.title}</div>
+                  <div style={{ fontSize: 12.5, color: MUTED, marginTop: 2 }}>{civ} {patient.name} · {new Date(`${detail.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                </div>
+                <button onClick={() => setDetail(null)} aria-label="Fermer" style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 17 }}>×</button>
+              </div>
+              {/* body */}
+              <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>
+                {detail.planned && !detail.full
+                  ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '28px 12px', color: MUTED }}>
+                      <span style={{ width: 46, height: 46, borderRadius: 14, background: '#E9F5F0', color: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>{IC.clock}</span>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: DARK, marginBottom: 4 }}>Consultation planifiée</div>
+                      <div style={{ fontSize: 13, maxWidth: 320, lineHeight: 1.6 }}>Le compte-rendu détaillé sera disponible ici une fois la consultation réalisée et terminée.</div>
+                    </div>
+                  : detailBody(detail.full || {})}
+              </div>
+              {/* footer */}
+              {printable && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: `1px solid ${BORDER}`, background: '#FAFDFB' }}>
+                  <button onClick={() => setDetail(null)} style={{ padding: '8px 15px', borderRadius: 10, border: `1px solid ${BORDER}`, background: '#fff', color: DARK, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Fermer</button>
+                  <button onClick={() => printDetail(detail)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 10, border: 'none', background: TEAL, color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(12,74,55,0.16)' }}>{IC.print} Imprimer le compte-rendu</button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
