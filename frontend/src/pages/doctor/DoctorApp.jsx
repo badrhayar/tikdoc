@@ -108,27 +108,27 @@ const PAY_T = {
 };
 
 const IC = {
-  doctor:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
-  dcal:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>,
-  dappts:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
-  davail:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></svg>,
-  dpatients: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>,
-  dhist:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/></svg>,
-  ddocs:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>,
-  dchat:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-  dnotif:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v11H9l-4 4z"/></svg>,
-  dstats:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg>,
-  dabo:      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>,
-  dsettings: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>,
-  dshare:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>,
-  dprescribe:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>,
-  dstaff:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 14.5c2.2.4 3.5 1.8 3.5 4"/></svg>,
+  doctor:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  dcal:      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>,
+  dappts:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+  davail:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></svg>,
+  dpatients: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>,
+  dhist:     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/></svg>,
+  ddocs:     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>,
+  dchat:     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  dnotif:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16v11H9l-4 4z"/></svg>,
+  dstats:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg>,
+  dabo:      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg>,
+  dsettings: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>,
+  dshare:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>,
+  dprescribe:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2 4-4"/></svg>,
+  dstaff:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 14.5c2.2.4 3.5 1.8 3.5 4"/></svg>,
 };
 
 // ── Doctolib-style two-level rail (deep green) ───────────────────────────────
 // Level 1: primary destinations (icon + small label). Items with `items` open
 // a SECOND rail (lighter green) listing the group's screens.
-const IC_TASKS = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></svg>;
+const IC_TASKS = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></svg>;
 const NAV = [
   { key:'doctor',   screen:'doctor', icon:IC.doctor, label:'Accueil' },
   { key:'dcal',     screen:'dcal',   icon:IC.dcal,   label:'Agenda' },
@@ -428,7 +428,7 @@ export default function DoctorApp() {
                 {g.items.map(({ screen:sc, icon, label }) => {
                   const active = screen === sc;
                   return (
-                    <button key={sc} onClick={() => goNav(sc)} style={{ display:'flex', alignItems:'center', gap:12, width:'100%', padding:'10px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
+                    <button key={sc} onClick={() => goNav(sc)} style={{ display:'flex', alignItems:'center', gap:12, width:'100%', padding:'10px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.9)', textAlign:'start' }}>
                       <span style={{ display:'flex' }}>{icon}</span>{label}
                     </button>
                   );
@@ -439,7 +439,7 @@ export default function DoctorApp() {
                 const active = screen === g.screen;
                 const b = badgeOf(g.badge);
                 return (
-                  <button key={g.key} onClick={() => goNav(g.screen)} style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start' }}>
+                  <button key={g.key} onClick={() => goNav(g.screen)} style={{ position:'relative', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', cursor:'pointer', borderRadius:11, fontSize:13.5, fontWeight: active ? 700 : 500, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.9)', textAlign:'start' }}>
                     <span style={{ display:'flex', position:'relative' }}>{g.icon}
                       {b > 0 && <span style={{ position:'absolute', top:-4, right:-7, minWidth:14, height:14, padding:'0 3px', borderRadius:7, background:'#E2748A', color:'#fff', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{b > 9 ? '9+' : b}</span>}
                     </span>
@@ -469,7 +469,7 @@ export default function DoctorApp() {
                   <button key={g.key} ref={el => { if (g.items) groupBtnRefs.current[g.key] = el; }} onClick={() => clickNav(g)} aria-label={g.label}
                     onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = active ? 'rgba(255,255,255,0.16)' : 'transparent'; }}
-                    style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.72)', transition:'background .15s, color .15s', flexShrink:0 }}>
+                    style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:5, width:'calc(100% - 16px)', margin:'0 8px', padding:'9px 2px 8px', border:'none', cursor:'pointer', borderRadius:12, background: active ? 'rgba(255,255,255,0.16)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.9)', transition:'background .15s, color .15s', flexShrink:0 }}>
                     <span style={{ display:'flex', position:'relative' }}>
                       {g.icon}
                       {b > 0 && <span style={{ position:'absolute', top:-5, right:-8, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#E2748A', color:'#fff', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1, border:'1.5px solid #0C4A37' }}>{b > 9 ? '9+' : b}</span>}
@@ -507,7 +507,7 @@ export default function DoctorApp() {
                     <button key={sc} onClick={() => goNav(sc)}
                       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = active ? 'rgba(255,255,255,0.18)' : 'transparent'; }}
-                      style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 11px', border:'none', cursor:'pointer', borderRadius:10, fontSize:12.5, fontWeight: active ? 800 : 600, background: active ? 'rgba(255,255,255,0.18)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.78)', textAlign:'start', transition:'background .12s' }}>
+                      style={{ display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 11px', border:'none', cursor:'pointer', borderRadius:10, fontSize:12.5, fontWeight: active ? 800 : 600, background: active ? 'rgba(255,255,255,0.18)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.92)', textAlign:'start', transition:'background .12s' }}>
                       <span style={{ display:'flex', flexShrink:0 }}>{icon}</span>
                       <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</span>
                       {sc === 'dnotif' && unreadNotif > 0 && <span style={{ marginLeft:'auto', width:8, height:8, borderRadius:'50%', background:'#E2748A', flexShrink:0 }} />}
@@ -544,25 +544,25 @@ export default function DoctorApp() {
           <div style={{ display:'flex', alignItems:'center', gap:3, padding:3, borderRadius:12, background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.10)', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)' }}>
             {!isMobile && (
               <TopUtil title="Aide & contact" onClick={() => goNav('contact')} active={screen==='contact'}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.7c0 1.8-2.7 2.2-2.7 3.8"/><path d="M12 17.5v.1"/></svg>
               </TopUtil>
             )}
             {!isMobile && (
               <TopUtil title="Ma page publique" onClick={() => goNav('dshare')} active={screen==='dshare'}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
               </TopUtil>
             )}
             <TopUtil title="Notifications" onClick={() => goNav('dnotif')} active={screen==='dnotif'}
               badge={unreadNotif > 0 ? <span style={{ position:'absolute', top:5, right:6, width:7, height:7, borderRadius:'50%', background:'#FF8FA5', border:'1.5px solid #0C4A37' }} /> : null}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
             </TopUtil>
             <TopUtil title="Messages" onClick={() => goNav('dchat')} active={screen==='dchat'}
               badge={unreadChat > 0 ? <span style={{ position:'absolute', top:1, right:1, minWidth:15, height:15, padding:'0 3px', borderRadius:8, background:'#FF8FA5', border:'1.5px solid #0C4A37', color:'#0C2A1F', fontSize:9.5, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{unreadChat > 9 ? '9+' : unreadChat}</span> : null}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </TopUtil>
             {!isMobile && state.appUser && (
               <TopUtil title="Verrouiller la session" onClick={() => authSignOut()}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
               </TopUtil>
             )}
           </div>
